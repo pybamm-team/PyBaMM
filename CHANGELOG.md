@@ -25,6 +25,7 @@
 
 ## Features
 
+- `IDAKLUSolver` events can use time derivatives, e.g. `x.diff(pybamm.t)`, with `pybammsolvers` v0.13.0, which `pybamm` now requires. ([#6056](https://github.com/pybamm-team/PyBaMM/pull/6056))
 - Added `Solution.save_vtu`, which exports variables on unstructured finite-volume meshes to ParaView as one `.vtu` per output time plus a `.pvd` time index. Requires `vtk`. ([#5853](https://github.com/pybamm-team/PyBaMM/pull/5853))
 - Added flux boundary conditions for 1D finite volume method. This is an alternative way to apply Neumann boundary conditions without specifying them as an explicit expression for the gradient. ([#5524](https://github.com/pybamm-team/PyBaMM/pull/5524))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
@@ -42,6 +43,7 @@
 
 ## Bug fixes
 
+- `symbol.diff(pybamm.t)` now works through functions, concatenations, `CoupledVariable`s, variables with a reference or bounds, and spatial operators that do not use boundary conditions. `CoupledVariable`s in events are now resolved. ([#6056](https://github.com/pybamm-team/PyBaMM/pull/6056))
 - `FiniteVolume` now averages a node-valued divisor of a gradient, as in `grad(u) / w`, onto faces as a series resistance, matching `grad(u) * (1 / w)`, and a term added to a gradient arithmetically; both took the harmonic mean. ([#5863](https://github.com/pybamm-team/PyBaMM/issues/5863), [#5940](https://github.com/pybamm-team/PyBaMM/pull/5940))
 - Experiments run on models without summary variables, such as a `pybamm.BaseModel`, and `Simulation` raises a `ModelError` when the model reads neither `"Current function [A]"` nor, for steps with a temperature, `"Ambient temperature [K]"`, rather than ignoring the steps. ([#6013](https://github.com/pybamm-team/PyBaMM/issues/6013), [#6014](https://github.com/pybamm-team/PyBaMM/pull/6014))
 - `IDAKLUSolver` solves forward sensitivities with IDAS's staggered corrector instead of the simultaneous one, so sensitivity solves at tight tolerances no longer fail with `IDA_CONV_FAIL`. ([#6045](https://github.com/pybamm-team/PyBaMM/pull/6045))
