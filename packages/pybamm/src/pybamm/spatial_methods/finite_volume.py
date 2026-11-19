@@ -199,8 +199,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         dirichlet_type_bc = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
         neumann_type_bc = [side for side, bc in bcs.items() if bc[1] == "Neumann"]
-        flux_type_bc = [
-            side for side, bc in bcs.items() if _is_flux_boundary_condition(bc[1])
+        not_dirichlet_type_bc = [
+            side for side in ["left", "right"] if side not in dirichlet_type_bc
         ]
 
         # Add Dirichlet boundary conditions, if defined
@@ -217,9 +217,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         out = self._apply_matrix(gradient_matrix, discretised_symbol)
 
         # Extrapolate to the boundary edges to ensure gradient has the expected length
-        not_dirichlet_type_bc = [
-            side for side in ["left", "right"] if side not in dirichlet_type_bc
-        ]
         if not_dirichlet_type_bc:
             out = self._extrapolate_gradient_to_boundaries(
                 symbol, out, not_dirichlet_type_bc, domain
