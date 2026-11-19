@@ -28,7 +28,7 @@ inline const char* sundials_error_message(int flag) {
     case IDA_RES_FAIL:
       return "IDA_RES_FAIL: The user-provided residual function failed in an unrecoverable manner";
     case IDA_REP_RES_ERR:
-      return "IDA_REP_RES_ERR: The residual kept evaluating to NaN or inf as the step size was cut";
+      return "IDA_REP_RES_ERR: The user's residual function repeatedly returned a recoverable error flag";
     case IDA_SRES_FAIL:
       return "IDA_SRES_FAIL: The sensitivity residual function failed in an unrecoverable manner";
     case IDA_REP_SRES_ERR:

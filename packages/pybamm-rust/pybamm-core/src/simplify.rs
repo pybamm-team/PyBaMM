@@ -21,7 +21,7 @@ use rustc_hash::{FxHashMap, FxHasher};
 use crate::arena::{Arena, Dag, DagRef, NodeId, NodeMap};
 use crate::ir::{BinaryOp, NodeWidths, UnaryOp};
 use crate::node::{ArrayData, Node, Shape, structural_hash, structurally_identical};
-use crate::zero_propagate::zero_propagate;
+use crate::zero_propagate::zero_propagate_tracking;
 
 /// Constant-fold and apply algebraic identities, as `CasADi`'s SX simplifies on the fly.
 ///
@@ -30,12 +30,18 @@ use crate::zero_propagate::zero_propagate;
 /// Constant powers lower only where the rewrite takes `pow`'s value bitwise.
 #[must_use]
 pub fn simplify(arena: &mut Arena, root: NodeId) -> NodeId {
+    simplify_tracking(arena, root, &mut [])
+}
+
+/// [`simplify`], also simplifying each of `tracked` and moving it to its simplified node.
+fn simplify_tracking(arena: &mut Arena, root: NodeId, tracked: &mut [NodeId]) -> NodeId {
     let mut simplified: NodeMap<NodeId> = NodeMap::new(arena.len());
     let mut widths = NodeWidths::new(arena.len());
-    for id in arena.topological_order(root) {
+    for id in arena.topological_order_with(root, tracked) {
         let result = simplify_node(arena, id, &simplified, &mut widths);
         simplified.insert(id, result);
     }
+    simplified.remap(tracked);
     simplified.rebuilt(root)
 }
 
@@ -357,6 +363,12 @@ fn simplify_neg(arena: &mut Arena, child: NodeId) -> Option<NodeId> {
 /// The output is laid out in [`dce`]'s order, so a `dce` after it is the identity.
 #[must_use]
 pub fn cse(dag: DagRef<'_>) -> Dag {
+    cse_tracking(dag, &mut [])
+}
+
+/// [`cse`], keeping each of `tracked` as a further root and moving it to its node in the
+/// result.
+fn cse_tracking(dag: DagRef<'_>, tracked: &mut [NodeId]) -> Dag {
     let (arena, root) = (dag.arena(), dag.root());
     let mut new_arena = Arena::new();
     let mut old_to_new: NodeMap<NodeId> = NodeMap::new(arena.len());
@@ -364,7 +376,7 @@ pub fn cse(dag: DagRef<'_>) -> Dag {
     let mut newest_with_hash: FxHashMap<u64, NodeId> = FxHashMap::default();
     let mut older_with_hash: Vec<Option<NodeId>> = Vec::new();
 
-    for old_id in arena.topological_order(root) {
+    for old_id in arena.topological_order_with(root, tracked) {
         let remapped = arena[old_id].map_children(|c| old_to_new.rebuilt(c));
         let mut hasher = FxHasher::default();
         structural_hash(&remapped, &mut hasher);
@@ -382,34 +394,73 @@ pub fn cse(dag: DagRef<'_>) -> Dag {
         old_to_new.insert(old_id, new_id);
     }
 
+    old_to_new.remap(tracked);
     Dag::new(new_arena, old_to_new.rebuilt(root))
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Runs of the compile-prep pipeline on this thread, so tests can pin how often it runs.
+    pub static PIPELINE_RUNS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// Compile-prep pipeline: simplify -> zero propagation -> CSE.
 ///
 /// The result is dead-code free: CSE keeps only what the root reaches.
 #[must_use]
-pub fn simplify_pipeline(mut dag: Dag) -> Dag {
-    dag.rewrite_in_place(simplify);
-    let propagated = zero_propagate(dag.as_ref());
+pub fn simplify_pipeline(dag: Dag) -> Dag {
+    simplify_pipeline_tracking(dag, &mut [])
+}
+
+/// [`simplify_pipeline`] over `roots` together, with each root's node in the result.
+///
+/// The result's root is the lone root, or a `Concat` of all of them, so what they share is
+/// simplified once. A root stays in the result even where a pass folds the `Concat` away.
+///
+/// # Panics
+/// If `roots` is empty.
+#[must_use]
+pub fn simplify_family(arena: &Arena, roots: &[NodeId]) -> (Dag, Vec<NodeId>) {
+    assert!(!roots.is_empty(), "a family needs at least one root");
+    let (mut family, copies) = copy_reachable(arena, roots);
+    let mut members = roots.to_vec();
+    copies.remap(&mut members);
+    let root = match *members.as_slice() {
+        [lone] => lone,
+        _ => family.alloc(Node::Concat(members.clone())),
+    };
+    let family = simplify_pipeline_tracking(Dag::new(family, root), &mut members);
+    (family, members)
+}
+
+/// [`simplify_pipeline`], keeping each of `tracked` as a further root and moving it to its node
+/// in the result.
+fn simplify_pipeline_tracking(mut dag: Dag, tracked: &mut [NodeId]) -> Dag {
+    #[cfg(test)]
+    PIPELINE_RUNS.with(|runs| runs.set(runs.get() + 1));
+    dag.rewrite_in_place(|arena, root| simplify_tracking(arena, root, tracked));
+    let propagated = zero_propagate_tracking(dag.as_ref(), tracked);
     // The largest of the three arenas, so free it before `cse` builds its own.
     drop(dag);
-    cse(propagated.as_ref())
+    cse_tracking(propagated.as_ref(), tracked)
 }
 
 /// Dead code elimination into a new arena of nodes reachable from the root.
 #[must_use]
 pub fn dce(dag: DagRef<'_>) -> Dag {
-    let (arena, root) = (dag.arena(), dag.root());
+    let (arena, copies) = copy_reachable(dag.arena(), &[dag.root()]);
+    Dag::new(arena, copies.rebuilt(dag.root()))
+}
+
+/// The nodes `roots` reach, copied in order into a new arena, and where each went.
+fn copy_reachable(arena: &Arena, roots: &[NodeId]) -> (Arena, NodeMap<NodeId>) {
     let mut new_arena = Arena::new();
     let mut old_to_new: NodeMap<NodeId> = NodeMap::new(arena.len());
-
-    for old_id in arena.topological_order(root) {
+    for old_id in arena.topological_order_of(roots.iter().copied()) {
         let copy = arena[old_id].map_children(|c| old_to_new.rebuilt(c));
         old_to_new.insert(old_id, new_arena.alloc(copy));
     }
-
-    Dag::new(new_arena, old_to_new.rebuilt(root))
+    (new_arena, old_to_new)
 }
 
 #[cfg(test)]
@@ -417,6 +468,8 @@ mod tests {
     use super::*;
     use crate::eval::CompiledExpr;
     use crate::ir::infer_sizes;
+    use crate::zero_propagate::tests::eval;
+    use crate::zero_propagate::zero_propagate;
 
     #[test]
     fn simplify_pipeline_matches_manual_pass_order() {
@@ -442,6 +495,55 @@ mod tests {
             &simplified.arena()[simplified.root()],
             &pruned.arena()[pruned.root()]
         );
+    }
+
+    #[test]
+    fn a_family_simplifies_each_root_as_the_pipeline_does_alone() {
+        let mut arena = Arena::new();
+        let x = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let y = arena.alloc(Node::StateVector { start: 1, end: 2 });
+        let zero = arena.alloc(Node::Scalar(0.0));
+        let padded = arena.alloc(Node::Add(x, zero));
+        let shared = arena.alloc(Node::Mul(padded, y));
+        let first = arena.alloc(Node::Sin(shared));
+        let second = arena.alloc(Node::Add(shared, x));
+
+        let (family, members) = simplify_family(&arena, &[first, second]);
+        let values = [0.3, -1.2];
+        for (&member, root) in members.iter().zip([first, second]) {
+            let alone = simplify_pipeline(dce(DagRef::new(&arena, root)));
+            let together = eval(DagRef::new(family.arena(), member), &values);
+            let alone = eval(alone.as_ref(), &values);
+            assert!(
+                together
+                    .iter()
+                    .map(|v| v.to_bits())
+                    .eq(alone.iter().map(|v| v.to_bits()))
+            );
+        }
+        let nodes = family.arena().nodes();
+        let products = nodes.iter().filter(|node| matches!(node, Node::Mul(..)));
+        assert_eq!(
+            products.count(),
+            1,
+            "the roots share one simplified product"
+        );
+    }
+
+    #[test]
+    fn a_family_keeps_each_root_where_zero_propagation_folds_the_concat() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let cancelled = arena.alloc(Node::Sub(y, y));
+        let zero = arena.alloc(Node::Scalar(0.0));
+        let scaled = arena.alloc(Node::Mul(zero, y));
+
+        let (family, members) = simplify_family(&arena, &[cancelled, scaled]);
+        assert!(!matches!(family.arena()[family.root()], Node::Concat(_)));
+        for member in members {
+            let values = eval(DagRef::new(family.arena(), member), &[1.0, 2.0]);
+            assert!(values.iter().map(|v| v.to_bits()).eq([0.0f64.to_bits(); 2]));
+        }
     }
 
     #[test]

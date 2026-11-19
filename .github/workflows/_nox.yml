@@ -70,7 +70,7 @@ env:
 
 jobs:
   nox:
-    # The same map as _build_solver_wheels.yml's resolve job.
+    # The same map as _build_solver_wheels.yml's resolve job and _target.yml's rust job.
     runs-on: >-
       ${{ (inputs.target == 'linux-x64' && (vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
       || (inputs.target == 'linux-arm64' && (vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))

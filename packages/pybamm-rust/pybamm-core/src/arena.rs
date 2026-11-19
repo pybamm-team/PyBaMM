@@ -98,11 +98,26 @@ impl Arena {
 
     /// Nodes reachable from `root`, children before parents and each visited once.
     pub fn topological_order(&self, root: NodeId) -> Vec<NodeId> {
+        self.topological_order_of([root])
+    }
+
+    pub(crate) fn topological_order_with(&self, root: NodeId, also: &[NodeId]) -> Vec<NodeId> {
+        self.topological_order_of(std::iter::once(root).chain(also.iter().copied()))
+    }
+
+    /// Nodes reachable from any of `roots`, children before parents and each visited once.
+    ///
+    /// Each root's unvisited nodes follow the earlier roots'.
+    pub(crate) fn topological_order_of(
+        &self,
+        roots: impl IntoIterator<Item = NodeId>,
+    ) -> Vec<NodeId> {
         let n = self.len();
         let mut visited = vec![false; n];
         let mut order = Vec::with_capacity(n);
         let mut stack: Vec<TopoFrame> = Vec::with_capacity(n);
-        stack.push(TopoFrame::Pending(root));
+        stack.extend(roots.into_iter().map(TopoFrame::Pending));
+        stack.reverse();
         while let Some(frame) = stack.pop() {
             match frame {
                 // Pushed once per node: any other `Pending(id)` sits below this frame, since one
@@ -125,6 +140,36 @@ impl Arena {
             }
         }
         order
+    }
+
+    /// One value per node of `order` (children first), returning the last node's.
+    ///
+    /// `visit` reads its children's values from the map. Each value is dropped once its
+    /// last parent has run, so only the frontier stays live.
+    pub(crate) fn fold_frontier<T>(
+        &self,
+        order: &[NodeId],
+        mut visit: impl FnMut(NodeId, &NodeMap<T>) -> T,
+    ) -> T {
+        let mut pending_parents = vec![0usize; self.len()];
+        for &id in order {
+            self[id].for_each_child(|child| pending_parents[child.index()] += 1);
+        }
+        let mut values = NodeMap::new(self.len());
+        for &id in order {
+            let value = visit(id, &values);
+            values.insert(id, value);
+            self[id].for_each_child(|child| {
+                pending_parents[child.index()] -= 1;
+                if pending_parents[child.index()] == 0 {
+                    values.take(child);
+                }
+            });
+        }
+        let root = order.last().expect("a topological order ends at its root");
+        values
+            .take(*root)
+            .expect("the root has no parent to drop it")
     }
 }
 
@@ -379,6 +424,12 @@ impl<T> NodeMap<T> {
         self.slots.get(id.index()).is_some_and(Option::is_some)
     }
 
+    /// Remove and return the value for `id`, if set.
+    #[inline]
+    pub(crate) fn take(&mut self, id: NodeId) -> Option<T> {
+        self.slots.get_mut(id.index()).and_then(Option::take)
+    }
+
     /// Every entry in [`NodeId`] order, `None` where unset.
     #[inline]
     pub(crate) fn into_entries(self) -> impl Iterator<Item = Option<T>> {
@@ -393,6 +444,13 @@ impl NodeMap<NodeId> {
         *self
             .get(id)
             .expect("children are rebuilt before their parents")
+    }
+
+    /// Move each of `ids` to its [`rebuilt`](Self::rebuilt) counterpart.
+    pub(crate) fn remap(&self, ids: &mut [NodeId]) {
+        for id in ids {
+            *id = self.rebuilt(*id);
+        }
     }
 }
 
@@ -461,6 +519,20 @@ mod tests {
         assert_eq!(order.len(), 2);
         assert!(order.contains(&a));
         assert!(order.contains(&neg_a));
+    }
+
+    #[test]
+    fn a_multi_root_order_visits_each_shared_node_once() {
+        let mut arena = Arena::new();
+        let a = arena.alloc(Node::Scalar(1.0));
+        let neg_a = arena.alloc(Node::Neg(a));
+        let _unreachable = arena.alloc(Node::Time);
+        let abs_a = arena.alloc(Node::Abs(a));
+
+        assert_eq!(
+            arena.topological_order_of([neg_a, abs_a, a]),
+            [a, neg_a, abs_a]
+        );
     }
 
     #[test]
