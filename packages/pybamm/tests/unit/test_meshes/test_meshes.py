@@ -705,7 +705,10 @@ class TestPrebuiltSubMesh:
         x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
         z = pybamm.SpatialVariable("z_2d", domain=["negative electrode"])
         geometry = {
-            "negative electrode": {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 2.0}}
+            "negative electrode": {
+                x: {"min": 0.0, "max": 1.0},
+                z: {"min": 0.0, "max": 2.0},
+            }
         }
         return geometry, {x: 3, z: 4}
 
@@ -765,7 +768,9 @@ class TestPrebuiltSubMesh:
 
         geometry, var_pts = self._box_inputs()
         expected = solve(
-            geometry, {"negative electrode": pybamm.UnstructuredMeshGenerator()}, var_pts
+            geometry,
+            {"negative electrode": pybamm.UnstructuredMeshGenerator()},
+            var_pts,
         )
         submesh = self._generated_mesh()["negative electrode"]
         prebuilt = solve({}, {"negative electrode": submesh}, {})
