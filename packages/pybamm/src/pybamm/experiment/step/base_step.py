@@ -278,6 +278,7 @@ class BaseStep:
         keyed by control name.
         """
         return {CURRENT_CONTROL: self.control_target_value(parameter_values)}
+
     #: The scalar output the solver's ``upsampling_tolerance`` resolves. An
     #: algebraic state adds no points, as the integrator already resolves it.
     upsampling_variable = "Voltage [V]"
