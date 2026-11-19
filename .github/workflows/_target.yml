@@ -1,5 +1,6 @@
-# Reusable workflow: one target's solver wheels, then its nox sessions. Callers run
-# it as a matrix over targets, so a shortage in one runner pool delays only its entry.
+# Reusable workflow: one target's solver wheels, then its nox sessions and Rust tests.
+# Callers run it as a matrix over targets, so a shortage in one runner pool delays only
+# its entry.
 name: Test a target (reusable)
 
 on:
@@ -48,3 +49,28 @@ jobs:
       pythons: ${{ inputs.pythons }}
       sessions: ${{ inputs.sessions }}
       max_parallel: ${{ inputs.max_parallel }}
+
+  # The Rust crate's bitwise tests hold per target, so each target runs them too.
+  rust:
+    needs: wheels
+    if: inputs.pythons != '[]'
+    name: Rust tests
+    runs-on: ${{ needs.wheels.outputs.runner }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/check-target-runner
+        with:
+          target: ${{ inputs.target }}
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Run the Rust test suite
+        run: >
+          cargo test --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --workspace --all-features
