@@ -541,7 +541,7 @@ class Simulation(BaseSimulation):
             if step.is_implicit():
                 check_keys.update(step.get_parameter_values([]).keys())
             else:
-                check_keys.add("Current function [A]")
+                check_keys.add(self._CURRENT_CONTROL)
 
         restricted = pv_input_parameters.intersection(check_keys)
         if restricted:
@@ -554,21 +554,36 @@ class Simulation(BaseSimulation):
             )
 
     def _check_model_reads_experiment_controls(self) -> None:
-        # Every step drives the model through the current function, so a model that
-        # does not read it would silently ignore the whole experiment
-        if any(
-            isinstance(parameter, pybamm.Parameter | pybamm.FunctionParameter)
-            and parameter.name == self._CURRENT_CONTROL
+        # A step sets the current function and, if it has a temperature, the ambient
+        # temperature; a model that reads none of them would silently ignore it
+        parameter_names = {
+            parameter.name
             for parameter in self._model.parameters
-        ):
+            if isinstance(parameter, pybamm.Parameter | pybamm.FunctionParameter)
+        }
+        steps_by_controls = {}
+        for step in self.experiment.steps:
+            controls = (self._CURRENT_CONTROL,)
+            if step.temperature is not None:
+                controls += (self._AMBIENT_TEMPERATURE_INPUT,)
+            if parameter_names.isdisjoint(controls):
+                steps_by_controls.setdefault(controls, {})[str(step)] = None
+        if not steps_by_controls:
             return
-        steps = list(dict.fromkeys(str(step) for step in self.experiment.steps))
-        steps_str = ", ".join(f"'{step}'" for step in steps)
-        raise pybamm.ModelError(
-            f"The experiment steps {steps_str} set '{self._CURRENT_CONTROL}', which "
-            f"the model '{self._model.name}' does not read, so they would have no "
-            "effect on it."
-        )
+        messages = []
+        for controls, steps in steps_by_controls.items():
+            steps_str = ", ".join(f"'{step}'" for step in steps)
+            controls_str = " and ".join(f"'{control}'" for control in controls)
+            reads = (
+                f"which the model '{self._model.name}' does not read"
+                if len(controls) == 1
+                else f"neither of which the model '{self._model.name}' reads"
+            )
+            messages.append(
+                f"The experiment steps {steps_str} set {controls_str}, {reads}, so "
+                "they would have no effect on it."
+            )
+        raise pybamm.ModelError(" ".join(messages))
 
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
