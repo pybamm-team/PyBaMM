@@ -36,10 +36,9 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
 
     def _get_hysteresis_state_variables(self):
         domain, Domain = self.domain_Domain
-        domain_options = getattr(self.options, domain)
         phase_name = self.phase_name
 
-        if domain_options["particle size"] == "distribution":
+        if self.size_distribution:
             return self._get_hysteresis_state_distribution_variables()
 
         if self.x_average is False:
@@ -117,7 +116,7 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         dom = Domain if self.x_average is False else domain
         T = variables[f"{prefix}{dom} electrode temperature [K]"]
 
-        if getattr(self.options, domain)["particle size"] == "distribution":
+        if self.size_distribution:
             j = variables[
                 f"{prefix}{dom} electrode {phase_name}"
                 "interfacial current density distribution [A.m-2]"
@@ -128,7 +127,7 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
             sto_surf = variables[
                 f"{prefix}{dom} {phase_name}particle surface stoichiometry distribution"
             ]
-            T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
+            T = pybamm.PrimaryBroadcast(T, j.domain)
             h = variables[
                 f"{prefix}{dom} electrode {phase_name}hysteresis state distribution"
             ]
@@ -232,14 +231,11 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         return variables
 
     def set_initial_conditions(self, variables):
-        domain = self.domain
         h, *_ = self._get_hysteresis_rhs_inputs(variables)
         h_init = self.phase_param.h_init
         if self.x_average:
             h_init = pybamm.x_average(h_init)
-        if getattr(self.options, domain)["particle size"] == "distribution":
-            h_init = pybamm.PrimaryBroadcast(
-                h_init, [f"{domain} {self.phase_name}particle size"]
-            )
+        if self.size_distribution:
+            h_init = pybamm.PrimaryBroadcast(h_init, h.domain)
 
         self.initial_conditions[h] = h_init

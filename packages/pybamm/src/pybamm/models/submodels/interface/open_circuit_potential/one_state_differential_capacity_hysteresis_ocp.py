@@ -94,7 +94,7 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
             dQdU = variables[
                 f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ]
-        if getattr(self.options, domain)["particle size"] == "distribution":
+        if self.size_distribution:
             # dQdU is electrode-level; broadcast it to the per-size rate's shape
             if dQdU.domain != rate.domains["secondary"]:
                 dQdU = pybamm.PrimaryBroadcast(dQdU, rate.domains["secondary"])
