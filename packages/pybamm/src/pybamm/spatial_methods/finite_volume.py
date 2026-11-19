@@ -15,6 +15,7 @@ from scipy.sparse import (
 )
 
 import pybamm
+from pybamm.util import _is_flux_boundary_condition
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -27,14 +28,27 @@ class FiniteVolume(pybamm.SpatialMethod):
     Parameters
     ----------
     options : dict-like, optional
-        A dictionary of options to be passed to the spatial method. The only option
-        currently available is "extrapolation", which has options for "order" and "use_bcs".
-        It sets the order separately for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`.
-        Default is "linear" for the value and quadratic for the gradient.
+        A dictionary of options to be passed to the spatial method:
+
+        - "extrapolation", which has options for "order" and "use_bcs". It sets the
+          order separately for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`.
+          Default is "linear" for the value and quadratic for the gradient.
+        - "harmonic flux coefficients" (bool, default False). If True, a coefficient
+          multiplying a signed sum of gradient terms, such as the electrolyte
+          conductivity in ``kappa * (chi * grad(c_e) - grad(phi_e))``, is averaged
+          onto faces with the harmonic mean, which is second order across a jump in
+          the coefficient. A coefficient of a single gradient always takes the
+          harmonic mean.
     """
 
     def __init__(self, options=None):
         super().__init__(options)
+        self.options.setdefault("harmonic flux coefficients", False)
+        if not isinstance(self.options["harmonic flux coefficients"], bool):
+            raise pybamm.OptionError(
+                "'harmonic flux coefficients' must be a bool, not "
+                f"{self.options['harmonic flux coefficients']!r}"
+            )
 
     def build(self, mesh):
         super().build(mesh)
@@ -172,14 +186,29 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Discretise symbol
         domain = symbol.domain
 
-        # Add Dirichlet boundary conditions, if defined
-        if symbol in boundary_conditions:
-            bcs = boundary_conditions[symbol]
-            if any(bc[1] == "Dirichlet" for bc in bcs.values()):
-                # add ghost nodes and update domain
-                discretised_symbol, domain = self.add_ghost_nodes(
-                    symbol, discretised_symbol, bcs
+        # Validate boundary conditions once
+        bcs = boundary_conditions.get(symbol, {})
+        for bc in bcs.values():
+            if bc[1] not in [
+                "Dirichlet",
+                "Neumann",
+            ] and not _is_flux_boundary_condition(bc[1]):
+                raise pybamm.ModelError(
+                    f"boundary condition must be Dirichlet, Neumann or ('Flux', pybamm.Symbol), not '{bc[1]}'"
                 )
+
+        dirichlet_type_bc = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
+        neumann_type_bc = [side for side, bc in bcs.items() if bc[1] == "Neumann"]
+        flux_type_bc = [
+            side for side, bc in bcs.items() if _is_flux_boundary_condition(bc[1])
+        ]
+
+        # Add Dirichlet boundary conditions, if defined
+        if dirichlet_type_bc:
+            # add ghost nodes and update domain
+            discretised_symbol, domain = self.add_ghost_nodes(
+                symbol, discretised_symbol, bcs
+            )
 
         # note in 1D cartesian, cylindrical and spherical grad are the same
         gradient_matrix = self.gradient_matrix(domain, symbol.domains)
@@ -188,10 +217,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         out = self._apply_matrix(gradient_matrix, discretised_symbol)
 
         # Add Neumann boundary conditions, if defined
-        if symbol in boundary_conditions:
-            bcs = boundary_conditions[symbol]
-            if any(bc[1] == "Neumann" for bc in bcs.values()):
-                out = self.add_neumann_values(symbol, out, bcs, domain)
+        if neumann_type_bc:
+            out = self.add_neumann_values(symbol, out, bcs, domain)
+
+        # Extrapolate to the boundary edges to ensure gradient has the expected length
+        if flux_type_bc:
+            out = self._extrapolate_gradient_to_boundaries(
+                symbol, out, flux_type_bc, domain
+            )
 
         return out
 
@@ -316,6 +349,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
         """
+        discretised_symbol = self.add_flux_values(
+            symbol, discretised_symbol, boundary_conditions
+        )
+
         submesh = self.mesh[symbol.domain]
 
         divergence_matrix = self.divergence_matrix(symbol.domains)
@@ -872,12 +909,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_ghost_constant = bc_factor * lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
-        elif lbc_type in ["Neumann", None]:
-            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{lbc_type}'"
-            )
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
 
         if rbc_type == "Dirichlet":
             rbc_sub_matrix = coo_matrix(
@@ -891,12 +924,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_ghost_constant = bc_factor * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
-        elif rbc_type in ["Neumann", None]:
-            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
-            )
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
 
         bcs_vector = lbc_vector + rbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
@@ -967,8 +996,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts - 1
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        lbc_value, lbc_type = bcs["left"]
-        rbc_value, rbc_type = bcs["right"]
+        lbc_value, lbc_type = bcs.get("left", (None, None))
+        rbc_value, rbc_type = bcs.get("right", (None, None))
 
         # Count number of Neumann boundary conditions
         n_bcs = 0
@@ -986,12 +1015,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
-        elif lbc_type == "Dirichlet" or (lbc_type == "Neumann" and lbc_value == 0):
-            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
-            )
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         if rbc_type == "Neumann" and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(
                 ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
@@ -1002,12 +1027,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
-        elif rbc_type == "Dirichlet" or (rbc_type == "Neumann" and rbc_value == 0):
-            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
-            )
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
 
         bcs_vector = lbc_vector + rbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
@@ -1035,6 +1056,156 @@ class FiniteVolume(pybamm.SpatialMethod):
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
         return new_gradient
+
+    def _extrapolate_gradient_to_boundaries(
+        self, symbol, discretised_gradient, boundaries, domain
+    ):
+        """
+        Extrapolate the discretised gradient to the boundary edges.
+        This enables more accurate plotting before flux boundary conditions are applied.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_gradient : :class:`pybamm.Vector`
+            Contains the discretised gradient of symbol
+        boundaries : list of strings
+            The sides on which the discretised gradient should be extrapolated to the boundary edges
+        domain : list of strings
+            The domain of the gradient of the symbol (may include ghost nodes)
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            `Matrix @ discretised_gradient`. When evaluated, this gives the
+            discretised_gradient with the extrapolated values concatenated at each end.
+
+        """
+        # get relevant grid points
+        submesh = self.mesh[domain]
+
+        # Prepare sizes
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+        n = discretised_gradient.shape[0] // second_dim_repeats
+
+        # Make matrix which appends extrapolated values of the discretised gradient.
+        if "left" in boundaries:
+            # Linear extrapolation of discretised gradient to boundary edge
+            dx0_dx1 = submesh.d_edges[0] / submesh.d_edges[1]
+            left_vector = csr_matrix(
+                ([1 + dx0_dx1, -dx0_dx1], ([0, 0], [0, 1])),
+                shape=(1, n),
+            )
+        else:
+            left_vector = None
+        if "right" in boundaries:
+            # Linear extrapolation of discretised gradient to boundary edge
+            dxN_dxNm1 = submesh.d_edges[-1] / submesh.d_edges[-2]
+            right_vector = csr_matrix(
+                ([-dxN_dxNm1, 1 + dxN_dxNm1], ([0, 0], [n - 2, n - 1])),
+                shape=(1, n),
+            )
+        else:
+            right_vector = None
+        sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
+
+        # repeat matrix for secondary dimensions
+        matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
+
+        return pybamm.Matrix(matrix) @ discretised_gradient
+
+    def add_flux_values(self, symbol, discretised_symbol, boundary_conditions):
+        """Add Flux boundary conditions, if defined."""
+        if boundary_conditions:
+            # Search all boundary conditions to see if this symbol appears as a flux
+            for key_id in boundary_conditions:
+                for bc in boundary_conditions[key_id].values():
+                    if _is_flux_boundary_condition(bc[1]) and bc[1][1] == symbol:
+                        discretised_symbol = self._add_flux_values(
+                            symbol, discretised_symbol, boundary_conditions[key_id]
+                        )
+                        break
+        return discretised_symbol
+
+    def _add_flux_values(self, symbol, processed_symbol, bcs):
+        """
+        Add the known values of the flux boundary conditions to
+        the discretised symbol.
+
+        Flux boundary are a variation of Neumann boundary conditions that
+        instead of being directly implemented for the gradient,
+        are given terms of an expression(gradient).
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+        processed_symbol : :class:`pybamm.Symbol`
+            Contains the discretised symbol without boundary conditions
+        bcs : dict of tuples (:class:`pybamm.Scalar`, str)
+            Dictionary (with keys "left" and "right") of boundary conditions. Each
+            boundary condition consists of a value and a flag indicating its type
+            (e.g. "Dirichlet")
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            `processed_symbol + bcs_vector`.
+
+        """
+        # get relevant grid points
+        domain = symbol.domain
+        submesh = self.mesh[domain]
+
+        lbc_value, lbc_type = bcs.get("left", (None, None))
+        rbc_value, rbc_type = bcs.get("right", (None, None))
+
+        # Prepare sizes
+        n = submesh.npts + 1
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+
+        # Add any values from flux boundary conditions to the bcs vector
+        if _is_flux_boundary_condition(lbc_type) and lbc_value != 0:
+            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n, 1))
+            lbc_matrix = self._block_diagonal(lbc_sub_matrix, second_dim_repeats)
+            if lbc_value.evaluates_to_number():
+                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                left_bc = lbc_value
+            lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
+        else:
+            lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
+        if _is_flux_boundary_condition(rbc_type) and rbc_value != 0:
+            rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
+            rbc_matrix = self._block_diagonal(rbc_sub_matrix, second_dim_repeats)
+            if rbc_value.evaluates_to_number():
+                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+            else:
+                right_bc = rbc_value
+            rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
+        else:
+            rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
+
+        bcs_vector = lbc_vector + rbc_vector
+
+        # As for neumann boundary conditions, need to match the domain.
+        bcs_vector = bcs_vector.with_domains(processed_symbol)
+
+        # Make matrix which makes "gaps" in the discretised symbol into which
+        # the known flux values will be added
+        diag_entries = np.ones(n, dtype=np.float64)
+        if _is_flux_boundary_condition(lbc_type):
+            diag_entries[0] = 0
+        if _is_flux_boundary_condition(rbc_type):
+            diag_entries[n - 1] = 0
+        sub_matrix = diags(diag_entries, shape=(n, n), dtype=np.float64)
+
+        # repeat matrix for secondary dimensions
+        matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
+
+        new_processed_symbol = pybamm.Matrix(matrix) @ processed_symbol + bcs_vector
+
+        return new_processed_symbol
 
     def _get_boundary_submesh_length(self, side: str, domains: list[str]):
         if side == "left":
@@ -1415,10 +1586,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         return out
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
-        """Discretise binary operators in model equations.  Performs appropriate
-        averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up. For this averaging we use the harmonic
-        mean [1].
+        """Discretise binary operators in model equations.  Averages a child that
+        evaluates on nodes onto the edges when the other child evaluates on edges, so
+        that discretised sizes match up. A factor of a bare gradient takes the harmonic
+        mean [1], as does a coefficient multiplying a signed sum of gradient terms
+        when the "harmonic flux coefficients" option is True; anything else takes the
+        arithmetic mean.
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
         the diffusion equation." (2012).
@@ -1457,27 +1630,130 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
-        # using the harmonic mean if the left child is a gradient (i.e. this
-        # binary operator represents a flux)
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            if isinstance(left, pybamm.Gradient):
-                method = "harmonic"
-            else:
-                method = "arithmetic"
+            method = self._face_coefficient_method(
+                bin_op, left, self.options["harmonic flux coefficients"]
+            )
             disc_right = self.node_to_edge(disc_right, method=method)
         # If only right child evaluates on edges, map left child onto edges
-        # using the harmonic mean if the right child is a gradient (i.e. this
-        # binary operator represents a flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            if isinstance(right, pybamm.Gradient):
-                method = "harmonic"
-            else:
-                method = "arithmetic"
+            method = self._face_coefficient_method(
+                bin_op, right, self.options["harmonic flux coefficients"]
+            )
             disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
         out = pybamm.simplify_if_constant(bin_op.create_copy([disc_left, disc_right]))
 
         return out
+
+    @staticmethod
+    def _face_coefficient_method(bin_op, edge_child, gradient_combinations=True):
+        """
+        Choose how to average a node-valued factor onto the edges it shares with
+        ``edge_child``. Any factor of a bare gradient takes the harmonic mean, as
+        does, if ``gradient_combinations`` is True, a coefficient multiplying a
+        signed sum of gradient terms, such as ``K`` in
+        ``K * (grad(u) - a * grad(v))``; anything else takes the arithmetic mean.
+
+        Parameters
+        ----------
+        bin_op : :class:`pybamm.BinaryOperator`
+            Binary operator combining the node-valued factor and ``edge_child``
+        edge_child : :class:`pybamm.Symbol`
+            The child of ``bin_op`` that evaluates on edges
+        gradient_combinations : bool, optional
+            Whether a coefficient of a sum of gradient terms takes the harmonic
+            mean. Default is True.
+
+        Returns
+        -------
+        str
+            ``"harmonic"`` or ``"arithmetic"``
+        """
+        # a coefficient of a flux is a conductance in series between two cells;
+        # a bare gradient keeps the harmonic mean under any operator, as before
+        if isinstance(edge_child, pybamm.Gradient) or (
+            gradient_combinations
+            and isinstance(bin_op, pybamm.Multiplication)
+            and FiniteVolume._is_gradient_combination(edge_child)
+        ):
+            return "harmonic"
+        return "arithmetic"
+
+    @staticmethod
+    def _is_gradient_combination(symbol):
+        """
+        Whether ``symbol`` is a gradient or a signed sum of gradient terms (see
+        :meth:`_is_gradient_term`), up to factors and divisors without a domain.
+        A node-valued factor applied to a single term or to a whole sum, as in
+        ``t * (K * grad(u))`` or ``t * (K * (grad(u) - grad(v)))``, scales a
+        flux that is already formed, so it does not qualify.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to check
+
+        Returns
+        -------
+        bool
+        """
+        if isinstance(symbol, pybamm.Gradient):
+            return True
+        if isinstance(symbol, pybamm.Negate):
+            return FiniteVolume._is_gradient_combination(symbol.child)
+        # a factor without a domain is the same in every cell
+        if isinstance(symbol, pybamm.Multiplication):
+            left, right = symbol.children
+            return (
+                left.domain == [] and FiniteVolume._is_gradient_combination(right)
+            ) or (right.domain == [] and FiniteVolume._is_gradient_combination(left))
+        if isinstance(symbol, pybamm.Division):
+            numerator, denominator = symbol.children
+            return denominator.domain == [] and (
+                FiniteVolume._is_gradient_combination(numerator)
+            )
+        if isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
+            return all(
+                FiniteVolume._is_gradient_combination(child)
+                or FiniteVolume._is_gradient_term(child)
+                for child in symbol.children
+            )
+        return False
+
+    @staticmethod
+    def _is_gradient_term(symbol):
+        """
+        Whether ``symbol`` is a gradient, times or divided by any number of
+        factors that evaluate on nodes, such as ``a * (b * grad(u))`` or
+        ``(a * grad(u)) / b``.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to check
+
+        Returns
+        -------
+        bool
+        """
+        if isinstance(symbol, pybamm.Gradient):
+            return True
+        if isinstance(symbol, pybamm.Multiplication):
+            left, right = symbol.children
+            return (
+                FiniteVolume._is_gradient_term(left)
+                and not right.evaluates_on_edges("primary")
+            ) or (
+                FiniteVolume._is_gradient_term(right)
+                and not left.evaluates_on_edges("primary")
+            )
+        if isinstance(symbol, pybamm.Division):
+            numerator, denominator = symbol.children
+            return FiniteVolume._is_gradient_term(numerator) and not (
+                denominator.evaluates_on_edges("primary")
+            )
+        return False
 
     def concatenation(self, disc_children):
         """Discrete concatenation, taking `edge_to_node` for children that evaluate on

@@ -3,10 +3,11 @@
 #
 from __future__ import annotations
 
+import warnings
+
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
@@ -146,7 +147,7 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self._children[0].evaluate_for_shape()
 
-    def _evaluates_on_edges(self, dimension: str) -> bool:
+    def _evaluates_on_edges(self, dimension: str) -> bool | str:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.child.evaluates_on_edges(dimension)
 
@@ -160,6 +161,8 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -592,9 +595,10 @@ class Divergence(SpatialOperator):
     For tensor fields (rank-2 tensors), returns a vector field.
     """
 
-    __slots__ = ()
+    __slots__ = ("no_simplification",)
+    _json_extra_fields = ("no_simplification",)
 
-    def __init__(self, child):
+    def __init__(self, child, no_simplification=False):
         if child._domains["primary"] == []:
             raise pybamm.DomainError(
                 f"Cannot take divergence of '{child}' since its domain is empty. "
@@ -610,6 +614,23 @@ class Divergence(SpatialOperator):
                 "divergence."
             )
         super().__init__("div", child)
+        self.no_simplification = no_simplification
+
+    @classmethod
+    def _from_json(cls, snippet):
+        """Instantiate from JSON, defaulting the simplification flag for old data."""
+        return cls(
+            snippet["children"][0],
+            no_simplification=snippet.get("no_simplification", False),
+        )
+
+    def __setstate__(self, state):
+        """
+        Set default value for no_simplification if not present in state.
+        This is for backwards compatibility with old pickled objects.
+        """
+        state.setdefault("no_simplification", False)
+        super().__setstate__(state)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -622,10 +643,10 @@ class Divergence(SpatialOperator):
         Uses the convenience function :meth:`div` to cover scenarios where divergence is
         0 or interacts with other functions.
         """
-        if perform_simplifications:
+        if perform_simplifications and not self.no_simplification:
             return div(child)
         else:
-            return Divergence(child)
+            return Divergence(child, no_simplification=self.no_simplification)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -825,6 +846,8 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Integral(child, sympy.Symbol("xn"))
 
 
@@ -1210,6 +1233,8 @@ class BoundaryValue(BoundaryOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        import sympy
+
         if (
             self.child._domains["primary"][0]
             in ["negative particle", "positive particle"]
@@ -1299,6 +1324,8 @@ class BoundaryGradient(BoundaryOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        import sympy
+
         latex_child = (
             r"\nabla " + sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
         )
@@ -1450,12 +1477,23 @@ class NodeToEdge2D(SpatialOperator):
 
 class Magnitude(UnaryOperator):
     """
-    A node in the expression tree representing the magnitude of a vector field.
+    Extract a directional component from a 2D :class:`VectorField`.
+
+    .. deprecated:: 26.11
+        Use :class:`Component` with index ``0`` (``"lr"``) or ``1`` (``"tb"``)
+        instead. ``Magnitude`` will be removed in 27.1.
     """
 
     __slots__ = ("direction",)
 
     def __init__(self, child, direction):
+        warnings.warn(
+            "pybamm.Magnitude is deprecated and will be removed in 27.1. "
+            "Use pybamm.Component(symbol, 0) for the lr/x component "
+            "or pybamm.Component(symbol, 1) for the tb/z component.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__("magnitude" + f"({direction})", child)
         self.direction = direction
 
@@ -1467,12 +1505,19 @@ class Magnitude(UnaryOperator):
         }
 
     @classmethod
+    def _without_warning(cls, child, direction):
+        # Internal copies and loads must not re-warn users who never built one
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return cls(child, direction)
+
+    @classmethod
     def _from_json(cls, snippet):
-        return cls(snippet["children"][0], snippet["direction"])
+        return cls._without_warning(snippet["children"][0], snippet["direction"])
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, self.direction)
+        return self._without_warning(child, self.direction)
 
 
 class Component(UnaryOperator):
@@ -1616,7 +1661,7 @@ def grad(symbol):
         return Gradient(symbol)
 
 
-def div(symbol):
+def div(symbol, no_simplification=False):
     """
     convenience function for creating a :class:`Divergence`
 
@@ -1639,16 +1684,17 @@ def div(symbol):
         else:
             new_child = pybamm.PrimaryBroadcast(0, symbol.child._domains["primary"])
         return pybamm.PrimaryBroadcast(new_child, symbol._domains["primary"])
-    # Divergence commutes with Negate operator
-    if isinstance(symbol, pybamm.Negate):
-        return -div(symbol.orphans[0])
-    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
-        left, right = symbol.orphans
-        if isinstance(left, pybamm.Negate):
-            return -div(symbol._binary_new_copy(left.orphans[0], right))
+    if not no_simplification:
+        # Divergence commutes with Negate operator
+        if isinstance(symbol, pybamm.Negate):
+            return -div(symbol.orphans[0])
+        elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
+            left, right = symbol.orphans
+            if isinstance(left, pybamm.Negate):
+                return -div(symbol._binary_new_copy(left.orphans[0], right))
 
     # Last resort
-    return Divergence(symbol)
+    return Divergence(symbol, no_simplification=no_simplification)
 
 
 def laplacian(symbol):

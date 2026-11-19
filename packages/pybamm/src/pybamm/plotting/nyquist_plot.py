@@ -41,7 +41,11 @@ def nyquist_plot(data, ax=None, show_plot=True, marker="o", linestyle="None", **
     else:
         fig, ax = plt.subplots()
 
+    # Re-enable autoscaling so overlaid spectra extend the square axes
+    ax.set_autoscale_on(True)
     ax.plot(data.real, -data.imag, marker=marker, linestyle=linestyle, **kwargs)
+    ax.relim()
+    ax.autoscale_view()
     _, xmax = ax.get_xlim()
     _, ymax = ax.get_ylim()
     axmax = max(xmax, ymax)

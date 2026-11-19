@@ -1,3 +1,5 @@
+import pickle
+
 import casadi
 import numpy as np
 import pytest
@@ -5,6 +7,7 @@ from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
 import tests
+from pybamm.solvers.processed_variable import ProcessedVariable0D
 
 _hermite_args = [True, False]
 
@@ -135,11 +138,123 @@ class TestProcessedVariable:
 
         data_t1 = processed_var(sol.t)
 
-        assert processed_var.xr_array_raw_initialized
-
         data_t2 = processed_var(sol.t)
 
         np.testing.assert_array_equal(data_t1, data_t2)
+
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_processed_variable_0D_at_solution_times(self, hermite_interp):
+        y = pybamm.StateVector(slice(0, 1))
+        var = pybamm.t * y
+        t_sol = np.linspace(0, 1, 7)
+        y_sol = np.array([np.linspace(0, 5, 7)])
+        yp_sol = self._get_yps(y_sol, hermite_interp)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [to_casadi(var, y_sol)],
+            self._sol_default(t_sol, y_sol, yp_sol),
+        )
+
+        for t in [None, t_sol, list(t_sol)]:
+            data = processed_var(t)
+            np.testing.assert_array_equal(data, processed_var.entries)
+            assert data is not processed_var.entries
+
+        # A spatial coordinate is rejected for a 0D variable
+        with pytest.raises(ValueError, match=r"Cannot interpolate in \['x'\]"):
+            processed_var(t_sol, x=0.5)
+
+    def _build_0D_var(self, t_sol=None):
+        # No Hermite data, and entries are 5 * t, so linear interpolation is exact
+        if t_sol is None:
+            t_sol = np.linspace(0, 1)
+        y_sol = 5 * t_sol[np.newaxis, :]
+        var = pybamm.StateVector(slice(0, 1))
+        return pybamm.process_variable(
+            "test",
+            [var],
+            [to_casadi(var, y_sol)],
+            self._sol_default(t_sol, y_sol, model=pybamm.BaseModel()),
+        )
+
+    @pytest.mark.parametrize(
+        ("t_query", "shape"),
+        [
+            (0.5, ()),
+            (np.float64(0.5), ()),
+            (np.array(0.5), ()),
+            ([0.9, 0.3], (2,)),
+            (np.array([0.9, 0.3, 0.6]), (3,)),
+            (np.array([0.0, 0.5, 1.0, 2.0]), (4,)),
+            (np.array([0.5, -0.5, 2.0]), (3,)),
+        ],
+    )
+    def test_0D_call_interpolates_in_time(self, t_query, shape):
+        processed_var = self._build_0D_var()
+        values = processed_var(t_query)
+
+        assert isinstance(values, np.ndarray)
+        assert values.shape == shape
+        t_array = np.asarray(t_query)
+        in_range = (t_array >= 0) & (t_array <= 1)
+        np.testing.assert_allclose(values[in_range], 5 * t_array[in_range])
+        np.testing.assert_array_equal(
+            values,
+            np.interp(
+                t_query,
+                processed_var.t_pts,
+                processed_var.entries,
+                left=np.nan,
+                right=np.nan,
+            ),
+        )
+        # out-of-range queries take the fill value
+        assert np.isnan(values[~in_range]).all()
+
+    def test_0D_call_checks_its_time_grid_once(self):
+        processed_var = self._build_0D_var()
+        processed_var(0.25)
+        grid = processed_var._grid_raw
+        checked = grid._increasing["t"]
+        processed_var([0.5, 0.75])
+        assert processed_var._grid_raw is grid
+        assert grid._increasing["t"] is checked
+
+    def test_pickling_leaves_out_the_grid(self):
+        processed_var = self._build_0D_var()
+        expected = processed_var([0.25, 0.5])
+        assert "_grid_raw" in vars(processed_var)
+        pickled = pickle.dumps(processed_var)
+        assert b"RectilinearGrid" not in pickled
+        restored = pickle.loads(pickled)
+        assert "_grid_raw" not in vars(restored)
+        np.testing.assert_array_equal(restored([0.25, 0.5]), expected)
+
+    def test_0D_call_fill_value(self):
+        processed_var = self._build_0D_var()
+        t_query = np.array([0.5, 2.0])
+
+        np.testing.assert_array_equal(
+            processed_var(t_query, fill_value=-1.0), [2.5, -1.0]
+        )
+        np.testing.assert_allclose(
+            processed_var(t_query, fill_value="extrapolate"), [2.5, 10.0]
+        )
+
+    def test_0D_call_errors(self):
+        processed_var = self._build_0D_var()
+        with pytest.raises(ValueError, match=r"must be a scalar or 1D, not 2D"):
+            processed_var(np.array([[0.1], [0.2]]))
+
+        # a repeated solution time has no single value to interpolate from
+        processed_var = self._build_0D_var(np.array([0.0, 0.5, 0.5, 1.0]))
+        with pytest.raises(ValueError, match=r"repeats a point"):
+            processed_var(0.25)
+        # but reading at the stored times needs no interpolation
+        np.testing.assert_array_equal(
+            processed_var(processed_var.t_pts), processed_var.entries
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
@@ -241,6 +356,26 @@ class TestProcessedVariable:
         # test no sensitivity raises error
         with pytest.raises(ValueError, match=r"Cannot compute sensitivities"):
             print(processed_var.sensitivities)
+
+    def test_0D_call_at_repeated_solution_times(self):
+        # A repeated time, e.g. at a step boundary, keeps both stored values
+        t_sol = np.array([0.0, 0.5, 0.5, 1.0])
+        y_sol = np.array([[0.0, 1.0, 2.0, 3.0]])
+        var = pybamm.StateVector(slice(0, 1))
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [to_casadi(var, y_sol)],
+            self._sol_default(t_sol, y_sol, model=pybamm.BaseModel()),
+        )
+        for t in [None, t_sol, list(t_sol)]:
+            np.testing.assert_array_equal(processed_var(t), y_sol[0])
+
+    def test_0D_call_fill_value_below_the_first_time(self):
+        # Only the first queried time must not be before the solution starts
+        processed_var = self._build_0D_var()
+        values = processed_var(np.array([0.5, -0.5, 2.0]), fill_value=-1.0)
+        np.testing.assert_array_equal(values, [2.5, -1.0, -1.0])
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D(self, hermite_interp):
@@ -405,7 +540,7 @@ class TestProcessedVariable:
             y_sol.reshape(processed_var.entries.shape),
         )
 
-        var_edges_tb = pybamm.Magnitude(pybamm.grad(var), "tb")
+        var_edges_tb = pybamm.Component(pybamm.grad(var), 1)
         disc.bcs = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -433,7 +568,7 @@ class TestProcessedVariable:
             ),
         )
 
-        var_edges_lr = pybamm.Magnitude(pybamm.grad(var), "lr")
+        var_edges_lr = pybamm.Component(pybamm.grad(var), 0)
         disc.bcs = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -686,6 +821,11 @@ class TestProcessedVariable:
         # scalar
         np.testing.assert_allclose(processed_var(0.5), 2.5, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(processed_var(0.7), 3.5, rtol=1e-7, atol=1e-6)
+        # JAX hands the IDAKLU-JAX primitives a scalar time as a 0-d array
+        assert processed_var(np.array(0.5)).shape == ()
+        np.testing.assert_allclose(
+            processed_var(np.array(0.5)), 2.5, rtol=1e-7, atol=1e-6
+        )
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.process_variable(
@@ -1576,6 +1716,29 @@ class TestProcessedVariable:
         # Check that the unsorted and sorted arrays are the same
         assert np.all(y_unsorted == y_sorted[idxs_unsort])
 
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_unsorted_t_query_returns_query_order(self, hermite_interp):
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        model = pybamm.BaseModel()
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        yp_sol = self._get_yps(y_sol, hermite_interp, values=5)
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+
+        t_unsorted = np.array([0.9, 0.3, 0.6])
+        # var = t * y = 5 t^2; atol covers linear-interp error on the xr route
+        np.testing.assert_allclose(
+            processed_var(t_unsorted), 5 * t_unsorted**2, atol=2e-3
+        )
+
     def test_as_computed_0D(self):
         # 0D
         t = pybamm.t
@@ -1682,7 +1845,8 @@ class TestProcessedVariable:
         r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+        # Varies in space, so a round trip that transposes r and x cannot pass
+        y_sol = np.linspace(1, 2, len(x_sol) * len(r_sol))[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1694,13 +1858,14 @@ class TestProcessedVariable:
         )
 
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
         # 3 vectors
         np.testing.assert_array_equal(
             computed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
         np.testing.assert_allclose(
             computed_var(t_sol, x_sol, r_sol),
-            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            processed_var(t=t_sol, x=x_sol, r=r_sol),
             rtol=1e-7,
             atol=1e-6,
         )
@@ -1733,7 +1898,9 @@ class TestProcessedVariable:
         r_sol = disc.mesh["negative particle"].nodes
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
+        # Varies in space, so a round trip that reorders r, R and x cannot pass
+        n_space = len(x_sol) * len(R_sol) * len(r_sol)
+        y_sol = np.linspace(1, 2, n_space)[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1746,11 +1913,23 @@ class TestProcessedVariable:
             self._sol_default(t_sol, y_sol, yp_sol, model),
         )
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
 
         # 4 vectors
         np.testing.assert_array_equal(
             computed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
         )
+
+    def test_as_computed_spatial_time_integral(self):
+        model = pybamm.lithium_ion.SPM()
+        name = "Time-integrated electrolyte concentration [mol.m-3.s]"
+        model.variables[name] = pybamm.ExplicitTimeIntegral(
+            model.variables["Electrolyte concentration [mol.m-3]"], pybamm.Scalar(0)
+        )
+        solution = pybamm.Simulation(model).solve([0, 600])
+
+        with pytest.raises(NotImplementedError, match=r"spatially varying"):
+            solution[name].as_computed()
 
     def test_processed_variable_unstructured_3d_pouch(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
@@ -2126,6 +2305,46 @@ class TestProcessedVariable:
 
         assert isinstance(processed_var, pybamm.ProcessedVariableUnstructured)
 
+    @staticmethod
+    def _scalar_variable():
+        """A scalar variable, its CasADi function and a solution to read it from."""
+        var = pybamm.t * pybamm.StateVector(slice(0, 1))
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        solution = pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {})
+        return var, to_casadi(var, y_sol), solution
+
+    @pytest.mark.parametrize(
+        "constructor",
+        [pybamm.ProcessedVariable, ProcessedVariable0D, pybamm.process_variable],
+    )
+    def test_base_variables_casadi_keyword_is_deprecated(self, constructor):
+        var, var_casadi, solution = self._scalar_variable()
+        with pytest.warns(DeprecationWarning, match=r"base_variables_casadi"):
+            processed_var = constructor(
+                "test", [var], base_variables_casadi=[var_casadi], solution=solution
+            )
+        assert processed_var._observer.leaves == [var_casadi]
+
+    def test_base_variables_casadi_keyword_cannot_repeat_the_observer(self):
+        var, var_casadi, solution = self._scalar_variable()
+        with pytest.raises(TypeError, match=r"once"):
+            pybamm.ProcessedVariable(
+                "test",
+                [var],
+                [var_casadi],
+                base_variables_casadi=[var_casadi],
+                solution=solution,
+            )
+
+    def test_base_variables_casadi_attribute_is_deprecated(self):
+        var, var_casadi, solution = self._scalar_variable()
+        processed_var = pybamm.process_variable("test", [var], [var_casadi], solution)
+        with pytest.warns(DeprecationWarning, match=r"base_variables_casadi"):
+            assert processed_var.base_variables_casadi == [var_casadi]
+        with pytest.raises(AttributeError):
+            processed_var.base_variables_casadi = [var_casadi]
+
 
 class TestProcessedVariableUnstructuredFVM:
     @staticmethod
@@ -2299,26 +2518,6 @@ class TestProcessedVariableUnstructuredFVM:
         # merging across solution segments is not supported: clear error
         with pytest.raises(NotImplementedError, match="merged across"):
             pv.update(pv, solution)
-
-    def test_scalar_reduction_routes_to_0d(self):
-        # Max/Min of a spatial variable keep the domain (and hence the
-        # unstructured mesh) but evaluate to one value: 0D in space
-        geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
-        max_disc = pybamm.Max(var_disc)
-        max_disc = max_disc.with_mesh(submesh)
-        t_sol = np.array([0.0, 1.0])
-        y_sol = np.arange(submesh.npts)[:, np.newaxis] * (1 + t_sol)[np.newaxis, :]
-        var_casadi = to_casadi(max_disc, y_sol)
-        model = pybamm.BaseModel()
-        model._geometry = geometry
-        solution = pybamm.Solution(t_sol, y_sol, model, {})
-        pv = pybamm.process_variable("max u", [max_disc], [var_casadi], solution)
-        from pybamm.solvers.processed_variable import ProcessedVariable0D
-
-        assert isinstance(pv, ProcessedVariable0D)
-        np.testing.assert_allclose(
-            pv(t_sol), (submesh.npts - 1) * (1 + t_sol), rtol=1e-12
-        )
 
     def test_single_cell_mesh_variable_stays_spatial(self):
         # a one-cell mesh also evaluates to size 1, but it is a genuine

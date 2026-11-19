@@ -55,7 +55,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def now() -> str:
     """The current UTC time, as the timestamp format ``status.json`` carries."""
     return (
-        datetime.datetime.now(datetime.timezone.utc)
+        datetime.datetime.now(datetime.UTC)
         .replace(microsecond=0)
         .isoformat()
         .replace("+00:00", "Z")

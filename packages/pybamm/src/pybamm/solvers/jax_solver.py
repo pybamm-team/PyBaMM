@@ -1,5 +1,3 @@
-import asyncio
-
 import numpy as onp
 
 import pybamm
@@ -51,6 +49,8 @@ class JaxSolver(pybamm.BaseSolver):
         <https://github.com/jax-ml/jax/blob/master/jax/experimental/ode.py>`_
         for details.
     """
+
+    uses_rhs_jacobian = False
 
     def __init__(
         self,
@@ -224,6 +224,8 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        import asyncio
+
         inputs = inputs_list or [{}]
 
         y0_list = model.y0_list

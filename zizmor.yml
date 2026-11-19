@@ -12,3 +12,4 @@ rules:
   dangerous-triggers:
     ignore:
       - benchmarks_track.yml
+      - need_reply_remove.yml # only deletes a label; no checkout or `run:` step

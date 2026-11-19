@@ -321,7 +321,9 @@ class BasicDFN2D(BaseModel):
         ######################
         # (Some) variables
         ######################
-        voltage = pybamm.boundary_value(phi_s_p, "top-right")
+        # z-average of phi_s_p over the positive face: the current density there is
+        # uniform, so this gives the right power; phi_s_n is 0 on the negative face
+        voltage = pybamm.BoundaryIntegral(phi_s_p, "right") / self.param.L_z
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
@@ -373,8 +375,8 @@ class BasicDFN2D(BaseModel):
             "Negative electrode ocp [V]": self.param.n.prim.U(sto_surf_n, T),
             "Positive electrode interfacial current density [A.m-2]": j_p,
             "Negative electrode interfacial current density [A.m-2]": j_n,
-            "Electrolyte flux X-component [mol.m-2.s-1]": pybamm.Magnitude(N_e, "lr"),
-            "Electrolyte flux Z-component [mol.m-2.s-1]": pybamm.Magnitude(N_e, "tb"),
+            "Electrolyte flux X-component [mol.m-2.s-1]": pybamm.Component(N_e, 0),
+            "Electrolyte flux Z-component [mol.m-2.s-1]": pybamm.Component(N_e, 1),
             "Positive solid lithium [mol]": solid_lithium_positive,
             "Negative solid lithium [mol]": solid_lithium_negative,
             "Total solid lithium [mol]": total_solid_lithium,
