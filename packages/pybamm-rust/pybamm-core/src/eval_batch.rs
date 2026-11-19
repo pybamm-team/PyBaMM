@@ -4,15 +4,15 @@
 // The op helpers must inline as one chain into the interpreter loop.
 #![allow(clippy::inline_always)]
 
-use crate::accumulate::{Accumulate, Product, dispatch};
+use crate::accumulate::dispatch;
 use crate::branch_regions::active_branch;
 use crate::eval::{
-    CompiledExpr, arg_reduce, check_scratch, csr_rows, interp_cubic_1d, interp_cubic_1d_deriv,
+    CompiledExpr, arg_reduce, check_scratch, interp_cubic_1d, interp_cubic_1d_deriv,
     interp_linear_1d, interp_linear_1d_deriv, interp_nd_lanes, max_reduce, min_reduce,
     split_read_write, split_two_read_write, unary_apply, with_binary_op, with_unary_op, zip_apply,
 };
 use crate::ir::{BroadcastKind, ConstPool, Instruction, Slot};
-use crate::node::CsrData;
+use crate::products::{CsrLanesProduct, DenseLanesProduct};
 
 /// Error returned when a tape cannot be evaluated by the primal batch path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -259,7 +259,7 @@ fn eval_batch_instructions(
                     dst.index() * k,
                     csr.shape.rows * k,
                 );
-                dispatch(CsrLanes { csr, x, out, k });
+                dispatch(CsrLanesProduct { csr, x, out, k });
             },
 
             Instruction::DenseMatMul {
@@ -276,7 +276,7 @@ fn eval_batch_instructions(
                     (vec_src.index() * k, cols * k),
                     (dst.index() * k, rows * k),
                 );
-                dispatch(DenseLanes { m, v, out, cols, k });
+                dispatch(DenseLanesProduct { m, v, out, cols, k });
             },
 
             Instruction::Interp1DLinear {
@@ -419,57 +419,5 @@ impl CompiledExpr {
         eval_batch_instructions(scratch, ir.instructions(), ir.consts(), lanes)?;
         let root = ir.root_slot();
         Ok(&scratch[root.offset_usize() * k..(root.offset_usize() + root.len_usize()) * k])
-    }
-}
-
-/// `out = A @ x` across `k` lanes, each lane accumulated as the scalar `CsrProduct` does.
-struct CsrLanes<'a> {
-    csr: &'a CsrData,
-    x: &'a [f64],
-    out: &'a mut [f64],
-    k: usize,
-}
-
-impl Product for CsrLanes<'_> {
-    type Output = ();
-
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        let Self { csr, x, out, k } = self;
-        for (acc, (cols, vals)) in out.chunks_exact_mut(k).zip(csr_rows(csr)) {
-            acc.fill(0.0);
-            for (&col, &val) in cols.iter().zip(vals) {
-                for (a, &xi) in acc.iter_mut().zip(&x[col * k..][..k]) {
-                    *a = A::mul_acc(*a, val, xi);
-                }
-            }
-        }
-    }
-}
-
-/// `out = M @ v` across `k` lanes for a row-major `M` with `cols` columns.
-struct DenseLanes<'a> {
-    m: &'a [f64],
-    v: &'a [f64],
-    out: &'a mut [f64],
-    cols: usize,
-    k: usize,
-}
-
-impl Product for DenseLanes<'_> {
-    type Output = ();
-
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        let Self { m, v, out, cols, k } = self;
-        for (row, acc) in out.chunks_exact_mut(k).enumerate() {
-            acc.fill(0.0);
-            let m_row = &m[row * cols * k..][..cols * k];
-            for (m_lanes, v_lanes) in m_row.chunks_exact(k).zip(v.chunks_exact(k)) {
-                for ((a, &mi), &vi) in acc.iter_mut().zip(m_lanes).zip(v_lanes) {
-                    *a = A::mul_acc(*a, mi, vi);
-                }
-            }
-        }
     }
 }
