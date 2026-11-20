@@ -22,52 +22,27 @@ class RCElement(pybamm.BaseSubModel):
         self.element_number = element_number
         self.model_options = options
 
-    def get_fundamental_variables(self):
-        vrc = pybamm.Variable(f"Element-{self.element_number} overpotential [V]")
-        variables = {f"Element-{self.element_number} overpotential [V]": vrc}
-        return variables
+    def build(self):
+        number = self.element_number
+        T_cell = self.coupled_variable("Cell temperature [degC]")
+        current = self.coupled_variable("Current [A]")
+        soc = self.coupled_variable("SoC")
 
-    def get_coupled_variables(self, variables):
-        T_cell = variables["Cell temperature [degC]"]
-        current = variables["Current [A]"]
-        soc = variables["SoC"]
-
-        r = self.param.rcr_element(
-            f"R{self.element_number} [Ohm]", T_cell, current, soc
-        )
-        c = self.param.rcr_element(f"C{self.element_number} [F]", T_cell, current, soc)
+        vrc = pybamm.Variable(f"Element-{number} overpotential [V]")
+        r = self.param.rcr_element(f"R{number} [Ohm]", T_cell, current, soc)
+        c = self.param.rcr_element(f"C{number} [F]", T_cell, current, soc)
         tau = r * c
-
-        vrc = variables[f"Element-{self.element_number} overpotential [V]"]
-
         Q_irr = -current * vrc
 
-        variables.update(
+        self.variables.update(
             {
-                f"R{self.element_number} [Ohm]": r,
-                f"C{self.element_number} [F]": c,
-                f"tau{self.element_number} [s]": tau,
-                f"Element-{self.element_number} "
-                + "irreversible heat generation [W]": Q_irr,
+                f"Element-{number} overpotential [V]": vrc,
+                f"R{number} [Ohm]": r,
+                f"C{number} [F]": c,
+                f"tau{number} [s]": tau,
+                f"Element-{number} irreversible heat generation [W]": Q_irr,
             }
         )
 
-        return variables
-
-    def set_rhs(self, variables):
-        vrc = variables[f"Element-{self.element_number} overpotential [V]"]
-        current = variables["Current [A]"]
-
-        r = variables[f"R{self.element_number} [Ohm]"]
-        tau = variables[f"tau{self.element_number} [s]"]
-
-        self.rhs = {
-            vrc: -vrc / (tau) - current * r / tau,
-        }
-
-    def set_initial_conditions(self, variables):
-        vrc = variables[f"Element-{self.element_number} overpotential [V]"]
-
-        self.initial_conditions = {
-            vrc: self.param.initial_rc_overpotential(self.element_number)
-        }
+        self.rhs[vrc] = -vrc / tau - current * r / tau
+        self.initial_conditions[vrc] = self.param.initial_rc_overpotential(number)
