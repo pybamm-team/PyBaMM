@@ -1727,7 +1727,7 @@ class TestBaseModel:
             "submodel 2": Submodel2(None),
             "submodel 3": Submodel3(None),
         }
-        with pytest.warns(DeprecationWarning, match=r"submodel 1.*submodel 2"):
+        with pytest.warns(DeprecationWarning, match=r"\['submodel 1', 'submodel 2'\]"):
             model.build_model()
         u = model.variables["u"]
         assert model.rhs[u].value == 2

@@ -150,6 +150,14 @@ class BaseSubModel(pybamm.BaseModel):
     )
 
     @property
+    def overrides_deprecated_methods(self):
+        """Whether the submodel's class overrides any deprecated build method."""
+        return any(
+            getattr(type(self), name) is not getattr(BaseSubModel, name)
+            for name in self._legacy_methods
+        )
+
+    @property
     def defines_build(self):
         """
         Whether the submodel defines its equations through :meth:`build`.

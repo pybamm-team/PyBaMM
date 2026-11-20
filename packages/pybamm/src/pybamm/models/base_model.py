@@ -1444,15 +1444,21 @@ class BaseModel:
             self.update(submodel)
             self.check_no_repeated_keys()
 
-        if legacy_submodels:
+        deprecated = [
+            name
+            for name, submodel in legacy_submodels.items()
+            if submodel.overrides_deprecated_methods
+        ]
+        if deprecated:
             warnings.warn(
                 "Building submodels with get_fundamental_variables, "
                 "get_coupled_variables and the set_* methods is deprecated; define "
                 "`build` instead and use `coupled_variable` for variables from other "
-                f"submodels. Submodels using the old methods: {list(legacy_submodels)}",
+                f"submodels. Submodels using the old methods: {deprecated}",
                 DeprecationWarning,
                 stacklevel=3,
             )
+        if legacy_submodels:
             self.build_fundamental(legacy_submodels)
             self.build_coupled_variables(legacy_submodels)
             self.build_model_equations(legacy_submodels)
