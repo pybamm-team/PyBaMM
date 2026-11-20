@@ -156,10 +156,11 @@ gets wrong:
   machine-checks names, arities and defaults against the built extension; the types are
   review-enforced, so keep them as precise as the bindings' own coercions (e.g. the `p`
   mapping-or-array union).
-- Every feature or fix adds a `CHANGELOG.md` bullet under `# [Unreleased]` (Keep a Changelog
-  format), ending with the PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`.
-  Get a prediction from `uv run --no-project scripts/next_pr_number.py`. If another issue, pull
-  request, or discussion takes that number before the PR opens, update the entry manually.
+- Every feature or fix adds a changelog fragment, `changelog.d/<PR number>.<type>.md`, with
+  `<type>` one of `breaking`, `deprecated`, `feature`, `bugfix`, `optimization` (see
+  `changelog.d/README.md`). It holds the entry text only: no leading `- `, no PR link. Never edit
+  `CHANGELOG.md` directly. Get the number from `uv run --no-project scripts/next_pr_number.py`, or
+  open the PR first; CI fails if a fragment the PR adds is named after another number.
 
 ### Tests
 
