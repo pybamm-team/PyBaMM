@@ -121,7 +121,9 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
                     f"X-averaged {domain} electrode {phase_name}OCP hysteresis [V]": pybamm.x_average(
                         H
                     ),
-                    f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": U_eq,
+                    f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": self._broadcast_to_electrode(
+                        U_eq
+                    ),
                     f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": pybamm.x_average(
                         U_eq
                     ),

@@ -106,15 +106,8 @@ class BaseOpenCircuitPotential(BaseInterface):
         # Average, and broadcast if necessary
         dUdT_av = pybamm.x_average(dUdT)
         ocp_surf_av = pybamm.x_average(ocp_surf)
-        if self.options.electrode_types[domain] == "planar":
-            # Half-cell domain, ocp_surf should not be broadcast
-            pass
-        elif ocp_surf.domain == []:
-            ocp_surf = pybamm.FullBroadcast(
-                ocp_surf, f"{domain} electrode", "current collector"
-            )
-        elif ocp_surf.domain == ["current collector"]:
-            ocp_surf = pybamm.PrimaryBroadcast(ocp_surf, f"{domain} electrode")
+        ocp_surf = self._broadcast_to_electrode(ocp_surf)
+        dUdT = self._broadcast_to_electrode(dUdT)
 
         # Particle overpotential is the difference between the average(U(c_surf)) and
         # U(c_bulk), i.e. the overpotential due to concentration gradients in the
@@ -141,6 +134,17 @@ class BaseOpenCircuitPotential(BaseInterface):
             )
 
         return variables
+
+    def _broadcast_to_electrode(self, symbol):
+        """Broadcast a symbol that is uniform in x onto this porous electrode."""
+        domain = self.domain
+        if self.options.electrode_types[domain] == "planar":
+            return symbol
+        if symbol.domain == []:
+            return pybamm.FullBroadcast(symbol, f"{domain} electrode", "current collector")
+        if symbol.domain == ["current collector"]:
+            return pybamm.PrimaryBroadcast(symbol, f"{domain} electrode")
+        return symbol
 
     def _get_standard_size_distribution_ocp_variables(self, ocp, dUdT):
         domain, Domain = self.domain_Domain

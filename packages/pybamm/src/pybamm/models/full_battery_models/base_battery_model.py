@@ -1534,7 +1534,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.param,
             self.options,
             x_average,
-            x_average_particles=self.x_average_particles,
             full_electrolyte_conductivity=any(
                 isinstance(submodel, full_conductivity)
                 for submodel in self.submodels.values()

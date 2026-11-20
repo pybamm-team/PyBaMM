@@ -19,9 +19,6 @@ class BaseThermal(pybamm.BaseSubModel):
     x_average : bool, optional
         Whether the heat of mixing uses the x-averaged particle variables. Default is
         False.
-    x_average_particles : bool, optional
-        Whether the particle submodels solve for x-averaged concentrations. Default is
-        ``x_average``.
     full_electrolyte_conductivity : bool, optional
         Whether the electrolyte potential is resolved through the cell (full rather
         than reduced-order conductivity). Default is False.
@@ -32,7 +29,6 @@ class BaseThermal(pybamm.BaseSubModel):
         param,
         options=None,
         x_average=False,
-        x_average_particles=None,
         full_electrolyte_conductivity=False,
     ):
         super().__init__(param, options=options)
@@ -40,9 +36,6 @@ class BaseThermal(pybamm.BaseSubModel):
             "use lumped thermal capacity", "false"
         )
         self.x_average = x_average
-        self.x_average_particles = (
-            x_average if x_average_particles is None else x_average_particles
-        )
         self.full_electrolyte_conductivity = full_electrolyte_conductivity
 
         if self.options["heat of mixing"] == "true":
@@ -362,12 +355,7 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_rxn += a_j * (eta_r - eta_sei)
             Q_rxn += self._side_reaction_heating(domain, phase_name)
             # Reversible heating
-            ocp_domain = self._open_circuit_domain(domain, ocp_option)
-            if isinstance(self.param, pybamm.LeadAcidParameters):
-                # the lead-acid open-circuit potential does not depend on temperature
-                dUdT = self._coupled(f"{prefix}entropic change [V.K-1]")
-            else:
-                dUdT = self._coupled(f"{prefix}entropic change [V.K-1]", ocp_domain)
+            dUdT = self._coupled(f"{prefix}entropic change [V.K-1]", electrode)
             Q_rev += a_j * T * dUdT
             # Hysteresis heating
             if ocp_option == "single":
@@ -376,25 +364,11 @@ class BaseThermal(pybamm.BaseSubModel):
                 pybamm.citations.register("Wycisk2023")
                 U = self._coupled(f"{prefix}open-circuit potential [V]", electrode)
                 U_eq = self._coupled(
-                    f"{prefix}equilibrium open-circuit potential [V]", ocp_domain
+                    f"{prefix}equilibrium open-circuit potential [V]", electrode
                 )
                 V_hys = U - U_eq
             Q_hys += a_j * V_hys
         return Q_rxn, Q_rev, Q_hys
-
-    def _open_circuit_domain(self, domain, ocp_option):
-        """
-        Domain of the entropic change and equilibrium open-circuit potential of a
-        lithium-ion electrode. Except for MSMR, these are x-averaged when both the
-        particles and the temperature are uniform in x.
-        """
-        if (
-            ocp_option != "MSMR"
-            and self.x_average_particles
-            and self.options["thermal"] != "x-full"
-        ):
-            return "current collector"
-        return f"{domain} electrode"
 
     def _lithium_metal_heating(self):
         """
