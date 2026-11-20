@@ -31,7 +31,11 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
     phase : str, optional
         Phase of the particle (default is "primary")
     x_average : bool
-        Whether the particle concentration is averaged over the x-direction. Default is False.
+        Whether the particle concentration, and hence the hysteresis state, is
+        averaged over the x-direction. Default is False.
+    x_average_particles : bool, optional
+        Whether the particle concentrations the open-circuit potential depends on
+        are uniform in x. Default is ``x_average``.
     """
 
     def __init__(

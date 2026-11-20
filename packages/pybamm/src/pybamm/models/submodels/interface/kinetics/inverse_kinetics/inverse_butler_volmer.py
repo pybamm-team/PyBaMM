@@ -22,7 +22,11 @@ class InverseButlerVolmer(BaseInverseKinetics):
     options: dict
         A dictionary of options to be passed to the model. In this case "SEI film
         resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
-
+    phase : str, optional
+        Phase of the particle (default is "primary")
+    x_average : bool, optional
+        Whether the electrolyte and particle concentrations are uniform in x.
+        Default is False.
     """
 
     def _get_overpotential(self, j, j0, ne, T, u):
