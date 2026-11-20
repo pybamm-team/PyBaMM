@@ -150,6 +150,12 @@ gets wrong:
   `import matplotlib` breaks `import pybamm` for minimal installs.
 - Public, user-facing objects are re-exported through `packages/pybamm/src/pybamm/__init__.py` (users write
   `pybamm.X`) and get a `docs/source/api/*.rst` entry.
+- **The Rust bindings ship hand-written stubs.** Any change to the Python-visible API in
+  `packages/pybamm-rust/pybamm-python/src` must update `packages/pybamm/src/pybamm/rust/_core.pyi`
+  in the same commit. `mypy.stubtest` (run by `packages/pybamm/tests/unit/test_rust_stubs.py`)
+  machine-checks names, arities and defaults against the built extension; the types are
+  review-enforced, so keep them as precise as the bindings' own coercions (e.g. the `p`
+  mapping-or-array union).
 - Every feature or fix adds a changelog fragment, `changelog.d/<PR number>.<type>.md`, with
   `<type>` one of `breaking`, `deprecated`, `feature`, `bugfix`, `optimization` (see
   `changelog.d/README.md`). It holds the entry text only: no leading `- `, no PR link. Never edit
