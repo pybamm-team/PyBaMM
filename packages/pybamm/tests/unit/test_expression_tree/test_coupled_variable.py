@@ -72,6 +72,19 @@ class TestCoupledVariable:
         # Takes the base class's arguments, as tree rebuilds pass them
         assert a.create_copy(new_children=None, perform_simplifications=False) == a
 
+    def test_auxiliary_domains(self):
+        a = pybamm.CoupledVariable(
+            "a",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        assert a.domains["secondary"] == ["current collector"]
+        b = pybamm.CoupledVariable("a", domains=dict(a.domains))
+        assert a == b
+        assert a.create_copy().domains == a.domains
+        variable = pybamm.Variable("a", domains=dict(a.domains))
+        assert a.evaluate_for_shape().shape == variable.evaluate_for_shape().shape
+
     def test_setter(self):
         model = pybamm.BaseModel()
         a = pybamm.CoupledVariable("a")
