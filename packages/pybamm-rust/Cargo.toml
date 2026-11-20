@@ -8,6 +8,10 @@ members = [
 [workspace.package]
 rust-version = "1.89"
 
+# Versions both crates use; each crate pins the rest itself.
+[workspace.dependencies]
+bincode = "1"
+
 [workspace.lints.rust]
 unsafe_code = "warn"
 missing_debug_implementations = "warn"

@@ -83,8 +83,10 @@ doc comments are the reference; this README only orients you.
 - **Lints are strict.** The workspace turns on clippy's pedantic and nursery groups and
   denies correctness. Fix warnings at the source; reach for a scoped `allow` only for a
   confirmed false positive, with a comment saying why.
-- **MSRV and dependency versions** live in the workspace `Cargo.toml`. The Rust floor is
-  declared there rather than implied by the edition, so check it before assuming
-  a newer language feature is available.
+- **MSRV** lives in the workspace `Cargo.toml`. The Rust floor is declared there rather
+  than implied by the edition, so check it before assuming a newer language feature is
+  available.
+- **Dependency versions** live in each crate's `Cargo.toml`, except those both crates
+  use, which the workspace's `[workspace.dependencies]` pins once.
 - **Feature flags**: `serialize` enables snapshot support that some tests and benches require.
   A `required-features` error means the target needs it.
