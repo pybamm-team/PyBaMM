@@ -321,11 +321,23 @@ impl ReadExtents {
     /// Tangent leaves read the seeds `dy` and `dp`, not `y`, `y_dot` or the inputs, so they are
     /// not counted.
     pub fn scan(arena: &Arena, root: NodeId) -> Self {
-        // Children precede parents, so one descending sweep marks everything `root` reaches.
-        let mut reached = vec![false; root.index() + 1];
-        reached[root.index()] = true;
+        Self::scan_all(arena, [root])
+    }
+
+    /// Scan the nodes any of `roots` reaches, as [`scan`](Self::scan) does for one.
+    pub fn scan_all(arena: &Arena, roots: impl IntoIterator<Item = NodeId>) -> Self {
+        let mut reached = vec![false; arena.len()];
+        let mut top = None;
+        for root in roots {
+            reached[root.index()] = true;
+            top = top.max(Some(root.index()));
+        }
         let mut extents = Self::default();
-        for (at, node) in arena.nodes()[..=root.index()].iter().enumerate().rev() {
+        let Some(top) = top else {
+            return extents;
+        };
+        // Children precede parents, so one descending sweep marks everything the roots reach.
+        for (at, node) in arena.nodes()[..=top].iter().enumerate().rev() {
             if !reached[at] {
                 continue;
             }
@@ -572,6 +584,23 @@ mod tests {
 
         let lone = arena.alloc(Node::Scalar(1.0));
         assert_eq!(ReadExtents::scan(&arena, lone), ReadExtents::default());
+    }
+
+    #[test]
+    fn read_extents_of_several_roots_cover_what_any_reaches() {
+        let mut arena = Arena::new();
+        let early = arena.alloc(Node::StateVector { start: 0, end: 7 });
+        let late = arena.alloc(Node::StateVectorDot { start: 0, end: 2 });
+        let _unreached = arena.alloc(Node::StateVector { start: 0, end: 9 });
+        assert_eq!(
+            ReadExtents::scan_all(&arena, [late, early]),
+            ReadExtents {
+                y: 7,
+                y_dot: Some(2),
+                inputs: 0
+            }
+        );
+        assert_eq!(ReadExtents::scan_all(&arena, []), ReadExtents::default());
     }
 
     #[test]
