@@ -389,6 +389,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
         self.R_sei = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
+        self.epsilon_sei = pybamm.Parameter(f"{pref}SEI relative permittivity")
         self.D_sol = pybamm.Parameter(f"{pref}SEI solvent diffusivity [m2.s-1]")
         self.c_sol = pybamm.Parameter(f"{pref}Bulk solvent concentration [mol.m-3]")
         self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")

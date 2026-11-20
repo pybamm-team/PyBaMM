@@ -39,6 +39,7 @@
 - `pybamm.UserSuppliedUnstructuredMesh` loads hexahedral mesh files with planar faces, such as structured gmsh meshes of thin pouch-cell layers, with quad boundary tags. Warped or collapsed hexahedra, mixed volume cell types and wedges, pyramids or polyhedra raise `GeometryError`. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 - `pybamm-core` compiles a model into a `CompiledModel`: a DAE with a symbolic Jacobian, per-output sparsity, coloured and lane-batched Jacobian sweeps, fused event and output tapes, and a versioned C ABI (`ffi.rs`) that a drift test pins against pybammsolvers' header. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
 - `pybamm-core`'s reverse-mode AD values the primitives through the same definitions as the interpreters, and a test holds its partials bitwise to them. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
+- Added the `"SEI film capacitance"` option: a capacitance, set by `"SEI relative permittivity"`, in parallel with the SEI film resistance. With `"surface form": "differential"`, this gives a separate SEI arc in impedance spectra. ([#5927](https://github.com/pybamm-team/PyBaMM/pull/5927))
 
 ## Bug fixes
 

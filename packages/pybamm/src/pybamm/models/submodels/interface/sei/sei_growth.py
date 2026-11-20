@@ -118,8 +118,13 @@ class SEIGrowth(BaseModel):
 
         L_sei = variables[f"{Domain} {self.reaction_name}thickness [m]"]
 
-        R_sei = phase_param.R_sei
-        eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
+        if self.options["SEI film capacitance"] == "true" and self.reaction == "SEI":
+            eta_film = variables[
+                f"{Domain} electrode SEI film overpotential variable [V]"
+            ]
+        else:
+            eta_film = -j * L_sei * phase_param.R_sei
+        eta_SEI = delta_phi - phase_param.U_sei + eta_film
         # Thermal prefactor for reaction, interstitial and EC models
         F_RT = self.param.F / (self.param.R * T)
 
