@@ -37,7 +37,7 @@ def check_fragment(path: Path) -> list[str]:
     if not NAME.match(path.name):
         types = ", ".join(TYPES)
         return [f"{path.name}: name it <PR number>.<type>.md, <type> one of {types}"]
-    text = path.read_text().strip()
+    text = path.read_text(encoding="utf-8").strip()
     if not text:
         return [f"{path.name}: the fragment is empty"]
     problems = []
@@ -115,7 +115,11 @@ def main(argv: list[str] | None = None) -> int:
 
     problems = []
     for path in sorted((REPO_ROOT / FRAGMENT_DIR).iterdir()):
-        if path.name not in NOT_FRAGMENTS:
+        if (
+            path.is_file()
+            and not path.name.startswith(".")
+            and path.name not in NOT_FRAGMENTS
+        ):
             problems.extend(check_fragment(path))
     if args.pr is not None:
         problems.extend(check_pr_numbers(args.pr, args.base))
