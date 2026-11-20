@@ -1,5 +1,5 @@
-# Reusable workflow: one target's solver wheels, then its nox sessions. Callers run
-# it as a matrix over targets, so a shortage in one runner pool delays only its entry.
+# Reusable workflow: one target's solver wheels, nox sessions and Rust tests. Callers
+# run it as a matrix over targets, so a shortage in one runner pool delays only its entry.
 name: Test a target (reusable)
 
 on:
@@ -48,3 +48,33 @@ jobs:
       pythons: ${{ inputs.pythons }}
       sessions: ${{ inputs.sessions }}
       max_parallel: ${{ inputs.max_parallel }}
+
+  # The Rust crate's bitwise tests hold per target, so each target runs them too.
+  rust:
+    if: inputs.pythons != '[]'
+    name: Rust tests
+    # The same map as _nox.yml's runs-on, so these tests never wait for the wheels.
+    runs-on: >-
+      ${{ (inputs.target == 'linux-x64' && (vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
+      || (inputs.target == 'linux-arm64' && (vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))
+      || (inputs.target == 'windows-x64' && (vars.RUNNER_WINDOWS_X64 || 'windows-2025'))
+      || (inputs.target == 'macos-arm64' && (vars.RUNNER_MACOS_ARM64 || 'macos-latest'))
+      || (inputs.target == 'macos-x64' && (vars.RUNNER_MACOS_X64 || 'macos-15-intel')) }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/check-target-runner
+        with:
+          target: ${{ inputs.target }}
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Run the Rust test suite
+        run: >
+          cargo test --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --workspace --all-features

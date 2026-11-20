@@ -170,6 +170,8 @@ jobs:
 
   rust_tests:
     needs: changes
+    # The ABI drift test reads pybammsolvers' C++ consumer, so a solver-only change runs it too.
+    # The scarce targets run these tests in _target.yml, advisory.
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     runs-on: ubuntu-latest
     permissions:
