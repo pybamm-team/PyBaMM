@@ -1,6 +1,8 @@
 // PyO3 bindings require specific argument types that clippy flags incorrectly
 #![allow(clippy::needless_pass_by_value)]
 
+use std::borrow::Cow;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 #[cfg(feature = "serialize")]
 use std::path::PathBuf;
@@ -125,6 +127,25 @@ impl ExprGraph {
 
     pub(crate) const fn params(&self) -> &ParamRegistry {
         &self.params
+    }
+
+    /// The arena as it stood when it held `n_nodes` nodes, which is a prefix of it, since
+    /// nodes are only ever appended.
+    pub(crate) fn arena_at(&self, n_nodes: usize) -> PyResult<Cow<'_, Arena>> {
+        match n_nodes.cmp(&self.arena.len()) {
+            Ordering::Equal => Ok(Cow::Borrowed(&self.arena)),
+            Ordering::Less => {
+                let mut prefix = Arena::new();
+                for id in node_ids(&self.arena).take(n_nodes) {
+                    let _ = prefix.alloc(self.arena[id].clone());
+                }
+                Ok(Cow::Owned(prefix))
+            },
+            Ordering::Greater => Err(PyValueError::new_err(format!(
+                "n_nodes={n_nodes} exceeds the graph's {} nodes",
+                self.arena.len()
+            ))),
+        }
     }
 
     /// The registry as it stood at `vp_len` registration indices (all of them for `None`),

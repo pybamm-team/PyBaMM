@@ -340,6 +340,7 @@ class CompiledFunction:
         vp_len: int,
         output_names: list[str] | None = None,
         output_lens: list[int] | None = None,
+        input_width: int | None = None,
     ) -> CompiledFunction: ...
     def __reduce__(
         self,
@@ -353,6 +354,7 @@ class CompiledFunction:
             int,
             list[str] | None,
             list[int] | None,
+            int | None,
         ],
     ]: ...
 
@@ -407,12 +409,16 @@ class CompiledModel:
         upsampling_root: int | None,
         algebraic_root: int | None,
         algebraic_variable_indices: Sequence[int],
-        mass_data: Sequence[float],
-        mass_indptr: Sequence[int],
-        mass_indices: Sequence[int],
+        mass: tuple[Sequence[float], Sequence[int], Sequence[int]],
         n_inputs: int,
+        n_nodes: int,
         sens_param_indices: Sequence[int],
-    ) -> CompiledModel: ...
+    ) -> CompiledModel:
+        """Rebuild from the first ``n_nodes`` nodes of ``graph``, the graph as compiled.
+
+        ``mass`` is the mass matrix's CSR ``(data, indptr, indices)``.
+        """
+
     def __reduce__(
         self,
     ) -> tuple[
@@ -425,9 +431,8 @@ class CompiledModel:
             int | None,
             int | None,
             list[int],
-            list[float],
-            list[int],
-            list[int],
+            tuple[list[float], list[int], list[int]],
+            int,
             int,
             list[int],
         ],

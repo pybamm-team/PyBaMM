@@ -18,11 +18,12 @@ use pyo3::types::{PyMapping, PySlice, PyTuple};
 
 use pybamm_core::{
     Arena, BatchEvalError, CompiledExpr, Dag, DagRef, DiffTarget, JacobianData, NodeId,
-    ReadExtents, TangentInputs, dce, infer_sizes, simplify_pipeline, tangent_wrt_params,
-    tangent_wrt_states,
+    PackedWidth, ReadExtents, TangentInputs, dce, infer_sizes, resolve_input_width,
+    simplify_pipeline, tangent_wrt_params, tangent_wrt_states,
 };
 
 use crate::arrays;
+use crate::errors::core_err_to_py;
 use crate::expr::ExprGraph;
 use crate::function_metadata::FunctionMetadata;
 use crate::jacobian::CompiledJacobian;
@@ -46,6 +47,7 @@ type RebuildArgs = (
     usize,
     Option<Vec<String>>,
     Option<Vec<usize>>,
+    Option<usize>,
 );
 
 /// Which rows of a multi-output tape belong to which declared name.
@@ -149,6 +151,7 @@ impl CompiledFunction {
         drop(g);
         let expr = py.detach(|| CompiledExpr::new(simplify_pipeline(dag).as_ref()));
         let metadata = FunctionMetadata {
+            input_width: params.packed_width().get(),
             params,
             n_states,
             uses_y_dot: reads.y_dot.is_some(),
@@ -196,29 +199,29 @@ impl CompiledFunction {
         Ok(this)
     }
 
-    /// A view sharing an already compiled `expr`, whose extent must fit in `n_states`.
+    /// A view sharing an already compiled `expr`, described by `metadata`, whose state extent
+    /// must fit in `metadata.n_states`.
     pub(crate) fn from_shared(
         py: Python<'_>,
         expr: Arc<CompiledExpr>,
         graph: Py<ExprGraph>,
         root: NodeId,
-        n_states: usize,
-        name: Option<String>,
+        metadata: FunctionMetadata,
     ) -> PyResult<Self> {
-        let g = graph.try_borrow(py).map_err(|_| {
-            PyValueError::new_err("from_shared: graph borrow conflict while preparing bundle view")
-        })?;
-        let extents = ReadExtents::scan(g.arena(), root);
+        let reads = graph
+            .try_borrow(py)
+            .map(|g| ReadExtents::scan(g.arena(), root))
+            .map_err(|_| {
+                PyValueError::new_err(
+                    "from_shared: graph borrow conflict while preparing bundle view",
+                )
+            })?;
         // Bundle views carry the full system width, which must cover what the root reads.
-        let n_states = resolve_n_states(extents.n_states(), Some(n_states), name.as_deref())?;
-        let metadata = FunctionMetadata {
-            params: g.params().clone(),
-            n_states,
-            uses_y_dot: extents.y_dot.is_some(),
-            output_len: expr.output_len(),
-            name,
-        };
-        drop(g);
+        resolve_n_states(
+            reads.n_states(),
+            Some(metadata.n_states),
+            metadata.name.as_deref(),
+        )?;
         Ok(Self {
             expr,
             metadata,
@@ -773,12 +776,22 @@ impl CompiledFunction {
 
     /// Rebuild from the retained `(graph, root)` (pickle protocol).
     ///
-    /// `n_states` is re-pinned exactly so a user-widened system round-trips, and the inputs
-    /// are cut back to the `vp_len` registration indices the function was compiled with.
+    /// `n_states` is re-pinned exactly so a user-widened system round-trips, the inputs are
+    /// cut back to the `vp_len` registration indices the function was compiled with, and
+    /// `input_width` keeps a compiled model's view as wide as its model.
     #[staticmethod]
     #[pyo3(
         name = "_rebuild",
-        signature = (graph, root, name, n_states, vp_len, output_names = None, output_lens = None)
+        signature = (
+            graph,
+            root,
+            name,
+            n_states,
+            vp_len,
+            output_names = None,
+            output_lens = None,
+            input_width = None,
+        )
     )]
     #[allow(clippy::too_many_arguments)]
     fn rebuild(
@@ -790,6 +803,7 @@ impl CompiledFunction {
         vp_len: usize,
         output_names: Option<Vec<String>>,
         output_lens: Option<Vec<usize>>,
+        input_width: Option<usize>,
     ) -> PyResult<Self> {
         let root = {
             let g = graph
@@ -800,6 +814,11 @@ impl CompiledFunction {
             root
         };
         let mut this = Self::build(py, graph, root, name, n_states, Some(vp_len))?;
+        let packed_width = this.metadata.params.packed_width();
+        this.metadata.input_width =
+            resolve_input_width(input_width.map(PackedWidth::new), packed_width)
+                .map_err(core_err_to_py)?
+                .get();
         this.layout = match (output_names, output_lens) {
             (Some(names), Some(lens)) => {
                 Some(OutputLayout::new(names, lens, this.metadata.output_len)?)
@@ -834,6 +853,7 @@ impl CompiledFunction {
                 this.vp_len(),
                 output_names,
                 output_lens,
+                Some(this.metadata.input_width),
             ),
         ))
     }

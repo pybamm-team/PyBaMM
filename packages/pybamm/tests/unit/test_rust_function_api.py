@@ -778,7 +778,7 @@ class TestInstructionCounts:
 
 
 class TestCompiledModelBundle:
-    def _setup(self):
+    def _setup(self, n_inputs=1, sens_param_indices=()):
         from pybamm.rust import CompiledModel
 
         g = ExprGraph()
@@ -797,11 +797,60 @@ class TestCompiledModelBundle:
             mass,
             indptr,
             indices,
-            n_inputs=1,
+            n_inputs=n_inputs,
+            sens_param_indices=list(sens_param_indices),
             output_exprs=[out],
             event_exprs=[event],
         )
         return g, model
+
+    def _check_views(self, model, p):
+        y = np.array([1.0, 2.0])
+        np.testing.assert_array_equal(model.rhs(0.0, y, p), [6.0, -1.0])
+        np.testing.assert_array_equal(model.outputs[0](0.0, y, p), [2.0])
+        np.testing.assert_array_equal(model.events[0](0.0, y, p), [-9.0])
+        np.testing.assert_allclose(
+            model.jacobian(0.0, y, p).toarray(), [[0.0, 3.0], [-1.0, 0.0]]
+        )
+
+    def test_views_keep_the_inputs_the_model_was_compiled_with(self):
+        # A later lowering, such as Solution.observe, can register inputs on the graph.
+        g, model = self._setup()
+        g.input_parameter("late")
+        self._check_views(model, np.array([3.0]))
+        assert model.rhs.input_names == ("a",)
+
+    def test_a_late_input_survives_a_pickle_round_trip(self):
+        g, model = self._setup(sens_param_indices=[0])
+        g.input_parameter("late")
+        restored = pickle.loads(pickle.dumps(model))
+        assert restored.n_inputs == 1
+        assert restored.n_sens_params == 1
+        assert restored.__reduce__()[1][1:] == model.__reduce__()[1][1:]
+        self._check_views(restored, np.array([3.0]))
+
+    def test_rebuild_refuses_a_node_count_that_misses_a_root_or_the_graph(self):
+        g, model = self._setup()
+        rebuild, args = model.__reduce__()
+        before, after = args[:9], args[10:]
+        with pytest.raises(ValueError, match=r"root \d+ is not among the 1 nodes"):
+            rebuild(*before, 1, *after)
+        too_many = g.n_nodes + 1
+        with pytest.raises(
+            ValueError, match=rf"n_nodes={too_many} exceeds the graph's {g.n_nodes}"
+        ):
+            rebuild(*before, too_many, *after)
+
+    def test_views_of_a_widened_model_take_its_width(self):
+        _, model = self._setup(n_inputs=3)
+        wide = np.array([3.0, 0.0, 0.0])
+        self._check_views(model, wide)
+        restored = pickle.loads(pickle.dumps(model.rhs))
+        np.testing.assert_array_equal(
+            restored(0.0, np.array([1.0, 2.0]), wide), [6.0, -1.0]
+        )
+        with pytest.raises(ValueError, match=r"rhs: expected 3 input values"):
+            model.rhs(0.0, np.array([1.0, 2.0]), np.array([3.0]))
 
     def test_rhs_view(self):
         _, model = self._setup()

@@ -11,7 +11,7 @@ use pyo3::types::PyDict;
 
 use pybamm_core::model as core_model;
 use pybamm_core::{
-    CsrData, DagRef, NodeId, ObservableKind, PackedWidth, ParamIdx, Shape, resolve_input_width,
+    CompiledExpr, CsrData, DagRef, NodeId, ObservableKind, PackedWidth, ParamIdx, Shape,
 };
 
 use crate::compiled_function::CompiledFunction;
@@ -31,12 +31,14 @@ type RebuildArgs = (
     Option<u32>,
     Option<u32>,
     Vec<usize>,
-    Vec<f64>,
-    Vec<usize>,
-    Vec<usize>,
+    MassCsr<usize>,
+    usize,
     usize,
     Vec<usize>,
 );
+
+/// A mass matrix's CSR `(data, indptr, indices)`.
+type MassCsr<I> = (Vec<f64>, Vec<I>, Vec<I>);
 
 /// CSR index entries as `usize`, refusing the negatives an `int64` array admits.
 fn csr_indices(values: &[i64], name: &str) -> PyResult<Vec<usize>> {
@@ -83,6 +85,9 @@ pub struct CompiledModel {
     scratch_pool: ScratchPool<core_model::Workspace>,
     /// Retained derivation source for the bundle views.
     graph: Py<ExprGraph>,
+    /// How many nodes the graph held when compiled; nodes are only appended, so the graph as
+    /// compiled, without any input registered since, is its first `n_nodes`.
+    n_nodes: usize,
     rhs_root: NodeId,
     output_roots: Vec<NodeId>,
     event_roots: Vec<NodeId>,
@@ -164,39 +169,37 @@ impl CompiledModel {
         let exprs = self.compiled.observable_exprs(kind);
         (exprs.zip(roots).enumerate())
             .map(|(i, (expr, &root))| {
-                Py::new(
-                    py,
-                    CompiledFunction::from_shared(
-                        py,
-                        Arc::clone(expr),
-                        self.graph.clone_ref(py),
-                        root,
-                        self.compiled.n_states(),
-                        Some(format!("{label}[{i}]")),
-                    )?,
-                )
+                self.shared_view(py, Arc::clone(expr), root, format!("{label}[{i}]"))
             })
             .collect()
     }
 
-    /// Build a [`FunctionMetadata`] for a bundle view (full system width, no `y_dot`).
-    fn view_metadata(
+    /// A `CompiledFunction` view of `expr`, compiled from `root`, named `name`.
+    fn shared_view(
         &self,
         py: Python<'_>,
-        output_len: usize,
-        name: Option<String>,
-    ) -> PyResult<FunctionMetadata> {
-        let g = self.graph.try_borrow(py).map_err(|_| {
-            PyValueError::new_err("CompiledModel: graph borrow conflict building view metadata")
-        })?;
-        Ok(FunctionMetadata {
-            params: g.params().clone(),
+        expr: Arc<CompiledExpr>,
+        root: NodeId,
+        name: String,
+    ) -> PyResult<Py<CompiledFunction>> {
+        let metadata = self.view_metadata(expr.output_len(), name);
+        Py::new(
+            py,
+            CompiledFunction::from_shared(py, expr, self.graph.clone_ref(py), root, metadata)?,
+        )
+    }
+
+    /// Build a [`FunctionMetadata`] for a bundle view: the model's states and inputs, no `y_dot`.
+    fn view_metadata(&self, output_len: usize, name: String) -> FunctionMetadata {
+        FunctionMetadata {
+            params: self.compiled.params().clone(),
+            input_width: self.compiled.input_width().get(),
             n_states: self.compiled.n_states(),
             // A compiled model refuses any root that reads y_dot.
             uses_y_dot: false,
             output_len,
-            name,
-        })
+            name: Some(name),
+        }
     }
 
     /// Build from already-resolved roots, the raw CSR mass matrix and the options.
@@ -213,6 +216,7 @@ impl CompiledModel {
         mass_indptr: &[i64],
         mass_indices: &[i64],
         n_inputs: Option<usize>,
+        n_nodes: Option<usize>,
         sens_param_indices: Vec<usize>,
     ) -> PyResult<Self> {
         let sens_param_indices = sens_param_indices
@@ -241,10 +245,22 @@ impl CompiledModel {
         let g = graph.try_borrow(py).map_err(|_| {
             PyValueError::new_err("CompiledModel.build_from_parts: graph borrow conflict")
         })?;
-        // `CompiledModel::new` and `set_observables` validate every root they lower.
-        let input_width =
-            resolve_input_width(n_inputs.map(PackedWidth::new), g.params().packed_width())
-                .map_err(core_err_to_py)?;
+        let n_nodes = n_nodes.unwrap_or_else(|| g.arena().len());
+        let arena = g.arena_at(n_nodes)?;
+        let mut roots = std::iter::once(rhs_root)
+            .chain(output_roots.iter().copied())
+            .chain(event_roots.iter().copied())
+            .chain(upsampling_root)
+            .chain(algebraic.as_ref().map(|&(root, _)| root));
+        if let Some(root) = roots.find(|root| root.index() >= n_nodes) {
+            return Err(PyValueError::new_err(format!(
+                "CompiledModel: root {} is not among the {n_nodes} nodes it was compiled from",
+                root.raw()
+            )));
+        }
+        // `CompiledModel::new` refuses a width below the inputs `arena` registers, and it and
+        // `set_observables` validate every root they lower.
+        let input_width = n_inputs.map_or_else(|| g.params().packed_width(), PackedWidth::new);
 
         let options = core_model::CompiledModelOptions {
             sensitivities: &sens_param_indices,
@@ -256,7 +272,7 @@ impl CompiledModel {
             }),
         };
         let mut compiled = core_model::CompiledModel::new(
-            DagRef::new(g.arena(), rhs_root),
+            DagRef::new(&arena, rhs_root),
             mass,
             n,
             input_width,
@@ -270,15 +286,17 @@ impl CompiledModel {
         ];
         for (kind, roots) in families {
             compiled
-                .set_observables(kind, g.arena(), roots)
+                .set_observables(kind, &arena, roots)
                 .map_err(core_err_to_py)?;
         }
+        drop(arena);
         drop(g);
 
         Ok(Self {
             compiled: Arc::new(compiled),
             scratch_pool: ScratchPool::default(),
             graph,
+            n_nodes,
             rhs_root,
             output_roots,
             event_roots,
@@ -363,11 +381,15 @@ impl CompiledModel {
             mass_indptr,
             mass_indices,
             n_inputs,
+            None,
             sens_param_indices,
         )
     }
 
     /// Rebuild from the retained graph, roots and mass CSR (pickle protocol).
+    ///
+    /// It compiles from the first `n_nodes` nodes of `graph`, the graph it was compiled from,
+    /// so inputs registered since do not change its inputs.
     #[staticmethod]
     #[pyo3(name = "_rebuild")]
     #[allow(clippy::too_many_arguments)]
@@ -380,10 +402,9 @@ impl CompiledModel {
         upsampling_root: Option<u32>,
         algebraic_root: Option<u32>,
         algebraic_variable_indices: Vec<usize>,
-        mass_data: Vec<f64>,
-        mass_indptr: Vec<i64>,
-        mass_indices: Vec<i64>,
+        mass: MassCsr<i64>,
         n_inputs: usize,
+        n_nodes: usize,
         sens_param_indices: Vec<usize>,
     ) -> PyResult<Self> {
         let (rhs_root, output_roots, event_roots, upsampling_root, algebraic_root) = {
@@ -402,6 +423,7 @@ impl CompiledModel {
             )
         };
         let algebraic = algebraic_block(algebraic_root, algebraic_variable_indices)?;
+        let (mass_data, mass_indptr, mass_indices) = mass;
 
         Self::build_from_parts(
             py,
@@ -415,6 +437,7 @@ impl CompiledModel {
             &mass_indptr,
             &mass_indices,
             Some(n_inputs),
+            Some(n_nodes),
             sens_param_indices,
         )
     }
@@ -443,10 +466,13 @@ impl CompiledModel {
                 this.upsampling_root.map(NodeId::raw),
                 algebraic_root,
                 algebraic_variable_indices,
-                mass.data().to_vec(),
-                mass.indptr().to_vec(),
-                mass.indices().to_vec(),
+                (
+                    mass.data().to_vec(),
+                    mass.indptr().to_vec(),
+                    mass.indices().to_vec(),
+                ),
                 this.compiled.input_width().get(),
+                this.n_nodes,
                 this.compiled
                     .sens_param_indices()
                     .iter()
@@ -462,16 +488,11 @@ impl CompiledModel {
     fn rhs(&self, py: Python<'_>) -> PyResult<Py<CompiledFunction>> {
         self.rhs_view
             .get_or_try_init(py, || {
-                Py::new(
+                self.shared_view(
                     py,
-                    CompiledFunction::from_shared(
-                        py,
-                        self.compiled.primal_expr_arc(),
-                        self.graph.clone_ref(py),
-                        self.rhs_root,
-                        self.compiled.n_states(),
-                        Some("rhs".to_string()),
-                    )?,
+                    self.compiled.primal_expr_arc(),
+                    self.rhs_root,
+                    "rhs".to_string(),
                 )
             })
             .map(|f| f.clone_ref(py))
@@ -482,8 +503,7 @@ impl CompiledModel {
     fn jacobian(&self, py: Python<'_>) -> PyResult<Py<CompiledJacobian>> {
         self.jac_view
             .get_or_try_init(py, || {
-                let metadata =
-                    self.view_metadata(py, self.compiled.output_len(), Some("rhs".to_string()))?;
+                let metadata = self.view_metadata(self.compiled.output_len(), "rhs".to_string());
                 Py::new(
                     py,
                     CompiledJacobian::build(self.compiled.jacobian_data(), metadata)?,
@@ -529,17 +549,13 @@ impl CompiledModel {
             else {
                 return PyResult::Ok(None);
             };
-            Ok(Some(Py::new(
+            self.shared_view(
                 py,
-                CompiledFunction::from_shared(
-                    py,
-                    Arc::clone(block.residual_expr()),
-                    self.graph.clone_ref(py),
-                    root,
-                    self.compiled.n_states(),
-                    Some("algebraic_residual".to_string()),
-                )?,
-            )?))
+                Arc::clone(block.residual_expr()),
+                root,
+                "algebraic_residual".to_string(),
+            )
+            .map(Some)
         })?;
         Ok(cached.as_ref().map(|f| f.clone_ref(py)))
     }
@@ -552,8 +568,7 @@ impl CompiledModel {
                 return PyResult::Ok(None);
             };
             let data = Arc::clone(block.jacobian());
-            let metadata =
-                self.view_metadata(py, data.n_rows(), Some("algebraic_residual".to_string()))?;
+            let metadata = self.view_metadata(data.n_rows(), "algebraic_residual".to_string());
             Ok(Some(Py::new(py, CompiledJacobian::build(data, metadata)?)?))
         })?;
         Ok(cached.as_ref().map(|j| j.clone_ref(py)))

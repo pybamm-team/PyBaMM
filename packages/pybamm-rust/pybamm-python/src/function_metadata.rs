@@ -15,6 +15,8 @@ use pybamm_core::ParamRegistry;
 pub struct FunctionMetadata {
     /// The graph's input registry when compiled: names, registration indices and packed slots.
     pub(crate) params: ParamRegistry,
+    /// Length of the packed `p`: the registry's packed width, or a compiled model's wider one.
+    pub(crate) input_width: usize,
     pub(crate) n_states: usize,
     pub(crate) uses_y_dot: bool,
     pub(crate) output_len: usize,
@@ -24,10 +26,6 @@ pub struct FunctionMetadata {
 impl FunctionMetadata {
     pub(crate) fn display_name(&self) -> &str {
         self.name.as_deref().unwrap_or("<anonymous>")
-    }
-
-    const fn total_width(&self) -> usize {
-        self.params.packed_width().get()
     }
 
     /// Length of a parameter-direction vector: one entry per registration index, unregistered
@@ -109,7 +107,7 @@ impl FunctionMetadata {
         let py = inputs.py();
         // A dict is read without `__missing__`, so a defaultdict cannot invent a missing input.
         let dict = inputs.cast::<PyDict>().ok();
-        let mut packed = vec![0.0; self.total_width()];
+        let mut packed = vec![0.0; self.input_width];
         for (_, name, slot) in self.params.registered() {
             let value = match dict {
                 Some(dict) => dict.get_item(name)?,
@@ -190,12 +188,11 @@ impl FunctionMetadata {
     }
 
     pub(crate) fn check_p(&self, len: usize) -> PyResult<()> {
-        let total_width = self.total_width();
-        if len != total_width {
+        if len != self.input_width {
             return Err(PyValueError::new_err(format!(
                 "{}: expected {} input values ({} parameters), got {}",
                 self.display_name(),
-                total_width,
+                self.input_width,
                 self.params.n_registered(),
                 len
             )));
