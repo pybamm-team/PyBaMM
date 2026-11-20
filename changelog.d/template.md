@@ -1,3 +1,8 @@
+{% if versiondata.version == "Unreleased" %}
+# Unreleased
+{% else %}
+# [v{{ versiondata.version }}](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v{{ versiondata.version }}) - {{ versiondata.date }}
+{% endif %}
 
 {% for section, _ in sections.items() %}
 {% for category, val in definitions.items() if category in sections[section] %}

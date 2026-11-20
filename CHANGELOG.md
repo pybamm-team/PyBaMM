@@ -1,4 +1,4 @@
-<!-- Unreleased changes live in changelog.d/ until towncrier builds them in at release; see CONTRIBUTING.md. -->
+<!-- Unreleased entries live in changelog.d/ -->
 
 <!-- towncrier release notes start -->
 
