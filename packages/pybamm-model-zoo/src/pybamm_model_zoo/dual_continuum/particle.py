@@ -92,60 +92,56 @@ class DCParticle(pybamm.particle.BaseParticle):
         super().__init__(param, domain, options, phase)
         self.dc_options = dc_options
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         c_max = self.phase_param.c_max
+        electrode_domains = self._domains()
+
+        j = self._coupled_interfacial_current_density()
+        a = self.coupled_variable(
+            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]",
+            domains=electrode_domains,
+        )
+        eps_s = self.coupled_variable(
+            f"{Domain} electrode {phase_name}active material volume fraction",
+            domains=electrode_domains,
+        )
+        T = self._broadcast_to_particle(self._coupled_temperature())
+        current = self.coupled_variable("Total current density [A.m-2]")
 
         c_vol = pybamm.Variable(
             f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]",
-            domain=f"{domain} electrode",
-            auxiliary_domains={"secondary": "current collector"},
+            domains=electrode_domains,
             bounds=(0, c_max),
             scale=c_max,
         )
         c_vol.print_name = f"c_vol_{domain[0]}"
-        variables = {
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]": c_vol
-        }
+        c_init = pybamm.r_average(self.phase_param.c_init)
+        self.rhs = {c_vol: -a * j / (eps_s * self.param.F)}
+        self.initial_conditions = {c_vol: c_init}
+        self._build_closure_states(c_vol, j)
 
         if self.dc_options.implicit_surface_concentration:
             c_surf = pybamm.Variable(
                 f"{Domain} {phase_name}particle surface concentration [mol.m-3]",
-                domain=f"{domain} electrode",
-                auxiliary_domains={"secondary": "current collector"},
+                domains=electrode_domains,
                 bounds=(0, c_max),
                 scale=c_max,
             )
             c_surf.print_name = f"c_surf_{domain[0]}"
-            variables.update(self._get_concentration_variables(c_vol, c_surf))
+            correction = self._surface_correction(c_vol, j)
+            self.algebraic = {c_surf: (c_surf - c_vol - correction) / c_max}
+            # Initial guess for the algebraic solver
+            self.initial_conditions[c_surf] = c_init
+        elif self.dc_options["model type"] == "DC0":
+            c_surf = c_vol
+        else:
+            j_av = self._electrode_averaged_current_density()
+            c_surf = c_vol + self._surface_correction(c_vol, j_av)
 
-        return variables
-
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        c_vol = variables[
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
-        if not self.dc_options.implicit_surface_concentration:
-            if self.dc_options["model type"] == "DC0":
-                c_surf = c_vol
-            else:
-                j_av = self._electrode_averaged_current_density(variables)
-                c_surf = c_vol + self._surface_correction(variables, j_av)
-            variables.update(self._get_concentration_variables(c_vol, c_surf))
-
+        variables = self._get_concentration_variables(c_vol, c_surf)
         c_s = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
-        c_surf = variables[
-            f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-        ]
-        T = pybamm.PrimaryBroadcast(
-            variables[f"{Domain} electrode temperature [K]"],
-            [f"{domain} {phase_name}particle"],
-        )
-        current = variables["Total current density [A.m-2]"]
         D_eff = self._get_effective_diffusivity(c_s, T, current)
         N_s = pybamm.FullBroadcastToEdges(
             0,
@@ -155,7 +151,6 @@ class DCParticle(pybamm.particle.BaseParticle):
                 "tertiary": "current collector",
             },
         )
-
         variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_standard_flux_variables(N_s))
         variables[f"{Domain} electrode {phase_name}DC correction term [mol.m-3]"] = (
@@ -164,65 +159,11 @@ class DCParticle(pybamm.particle.BaseParticle):
         if self.dc_options["model type"] in ("DC1", "DC1t"):
             variables[
                 f"{Domain} electrode {phase_name}closure variable [mol.m-1.A-1]"
-            ] = self._closure_variable(variables)
-        return variables
+            ] = self._closure_variable(c_vol)
+        self.variables.update(variables)
 
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        c_vol = variables[
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
-        j = variables[
-            f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
-        ]
-        a = variables[
-            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
-        ]
-        eps_s = variables[
-            f"{Domain} electrode {phase_name}active material volume fraction"
-        ]
-        self.rhs = {c_vol: -a * j / (eps_s * self.param.F)}
-
-    def set_algebraic(self, variables):
-        if not self.dc_options.implicit_surface_concentration:
-            return
-
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        c_vol = variables[
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
-        c_surf = variables[
-            f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-        ]
-        j = variables[
-            f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
-        ]
-
-        correction = self._surface_correction(variables, j)
-        self.algebraic = {
-            c_surf: (c_surf - c_vol - correction) / self.phase_param.c_max
-        }
-
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        c_init = pybamm.r_average(self.phase_param.c_init)
-        c_vol = variables[
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
-        self.initial_conditions = {c_vol: c_init}
-
-        if self.dc_options.implicit_surface_concentration:
-            # Initial guess for the algebraic solver
-            c_surf = variables[
-                f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-            ]
-            self.initial_conditions[c_surf] = c_init
+    def _build_closure_states(self, c_vol, j):
+        """Add the states of a closure with memory; DC0, DC1 and Yang have none."""
 
     def _get_concentration_variables(self, c_vol, c_surf):
         """Standard concentration variables, uniform in r."""
@@ -233,33 +174,40 @@ class DCParticle(pybamm.particle.BaseParticle):
             c_s, c_s_rav=c_vol, c_s_surf=c_surf
         )
 
-    def _surface_correction(self, variables, j):
+    def _surface_correction(self, c_vol, j):
         """c_surf - c_vol for the reaction rate ``j`` [mol.m-3]."""
         if self.dc_options["model type"] == "Yang":
-            return self._yang_coefficient(variables) * j
-        return self._closure_variable(variables) * j
+            return self._yang_coefficient(c_vol) * j
+        return self._closure_variable(c_vol) * j
 
-    def _electrode_averaged_current_density(self, variables):
+    def _electrode_averaged_current_density(self):
         """Average interfacial current density imposed by the applied current."""
         domain = self.domain
-        a_av = variables[
+        a_av = self.coupled_variable(
             f"X-averaged {domain} electrode {self.phase_name}"
-            "surface area to volume ratio [m-1]"
-        ]
-        i_cell = variables["Current collector current density [A.m-2]"]
+            "surface area to volume ratio [m-1]",
+            domain="current collector",
+        )
+        i_cell = self.coupled_variable(
+            "Current collector current density [A.m-2]", domain="current collector"
+        )
         L = self.domain_param.L
         # Discharge (i_cell > 0) delithiates the negative, lithiates the positive
         sign = 1 if domain == "negative" else -1
         j_av = sign * i_cell / (a_av * L)
         return pybamm.PrimaryBroadcast(j_av, f"{domain} electrode")
 
-    def _diffusivity(self, variables):
-        domain, Domain = self.domain_Domain
-        c_vol = variables[
-            f"R-averaged {domain} {self.phase_name}particle concentration [mol.m-3]"
-        ]
-        T = variables[f"{Domain} electrode temperature [K]"]
-        return self.phase_param.D(c_vol, T)
+    def _diffusivity(self, c_vol):
+        """Particle diffusivity [m2.s-1] at the volume-averaged concentration."""
+        return self.phase_param.D(c_vol, self._coupled_temperature())
+
+    def _effective_radius(self):
+        """Effective particle radius [m] set by the active material submodel."""
+        return self.coupled_variable(
+            f"{self.domain.capitalize()} electrode {self.phase_name}"
+            "effective particle radius [m]",
+            domains=self._domains(),
+        )
 
     def _parameter(self, name):
         """DC parameter of this electrode and phase (see ``parameter_name``)."""
@@ -267,24 +215,20 @@ class DCParticle(pybamm.particle.BaseParticle):
         phase = self.phase if self.phase_param.phase_prefactor else None
         return pybamm.Parameter(parameter_name(self.domain, name, phase))
 
-    def _closure_variable(self, variables):
+    def _closure_variable(self, c_vol):
         """DC1 closure variable <s>_A [mol.m-1.A-1]."""
-        Domain = self.domain.capitalize()
         F = self.param.F
         if self.dc_options["closure variable"] == "isolated sphere":
             # Analytical solution of the closure problem for an isolated sphere
-            R_eff = variables[
-                f"{Domain} electrode {self.phase_name}effective particle radius [m]"
-            ]
-            return -R_eff / (5 * self._diffusivity(variables) * F)
+            return -self._effective_radius() / (5 * self._diffusivity(c_vol) * F)
         if self.dc_options["closure variable"] == "dimensionless":
             s_star = self._parameter("s0 surface average dimensionless")
-            return s_star * self.domain_param.L / (self._diffusivity(variables) * F)
+            return s_star * self.domain_param.L / (self._diffusivity(c_vol) * F)
         return self._parameter("s0 surface average")
 
-    def _yang_coefficient(self, variables):
+    def _yang_coefficient(self, c_vol):
         """Yang and Tartakovsky's (2025) gamma [mol.m-1.A-1] (Paten et al., Eqs. 48-50)."""
-        D = self._diffusivity(variables)
+        D = self._diffusivity(c_vol)
         l_k = self.phase_param.R
         a_d = self._parameter("Yang fitting parameter")
 
@@ -329,60 +273,38 @@ class TransientDCParticle(DCParticle):
         Domain = self.domain.capitalize()
         return f"{Domain} electrode {self.phase_name}transient closure mode {m} [A.m-2]"
 
-    def get_fundamental_variables(self):
-        variables = super().get_fundamental_variables()
-        for m in range(1, self.n_modes + 1):
+    def _build_closure_states(self, c_vol, j):
+        """Add the modes y_m, driven by the reaction rate."""
+        if self.dc_options["calculate surface concentration a priori"] == "true":
+            j = self._electrode_averaged_current_density()
+        self._mode_variables = []
+        for m, (_, theta) in enumerate(self._modes(c_vol), start=1):
             mode = pybamm.Variable(
                 self._mode_name(m),
                 domain=f"{self.domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
             mode.print_name = f"y_{self.domain[0]}{m}"
-            variables[self._mode_name(m)] = mode
-        return variables
-
-    def set_rhs(self, variables):
-        super().set_rhs(variables)
-        j = self._mode_driver(variables)
-        for (_, theta), m in zip(
-            self._modes(variables), range(1, self.n_modes + 1), strict=True
-        ):
-            mode = variables[self._mode_name(m)]
+            self._mode_variables.append(mode)
+            self.variables[self._mode_name(m)] = mode
             self.rhs[mode] = (j - mode) / theta
+            self.initial_conditions[mode] = pybamm.Scalar(0)
 
-    def set_initial_conditions(self, variables):
-        super().set_initial_conditions(variables)
-        for m in range(1, self.n_modes + 1):
-            self.initial_conditions[variables[self._mode_name(m)]] = pybamm.Scalar(0)
-
-    def _surface_correction(self, variables, j):
+    def _surface_correction(self, c_vol, j):
         """s0 sum_m w_m y_m, with normalised weights [mol.m-3]."""
-        modes = self._modes(variables)
+        modes = self._modes(c_vol)
         total = sum(weight for weight, _ in modes)
         correction = sum(
-            weight * variables[self._mode_name(m)]
-            for (weight, _), m in zip(modes, range(1, self.n_modes + 1), strict=True)
+            weight * mode
+            for (weight, _), mode in zip(modes, self._mode_variables, strict=True)
         )
-        return self._closure_variable(variables) * correction / total
+        return self._closure_variable(c_vol) * correction / total
 
-    def _mode_driver(self, variables):
-        """Reaction rate that drives the modes [A.m-2]."""
-        if self.dc_options["calculate surface concentration a priori"] == "true":
-            return self._electrode_averaged_current_density(variables)
-        Domain = self.domain.capitalize()
-        return variables[
-            f"{Domain} electrode {self.phase_name}interfacial current density [A.m-2]"
-        ]
-
-    def _modes(self, variables):
+    def _modes(self, c_vol):
         """Weight and time constant [s] of each mode."""
-        Domain = self.domain.capitalize()
         closure = self.dc_options["closure variable"]
         if closure == "isolated sphere":
-            radius = variables[
-                f"{Domain} electrode {self.phase_name}effective particle radius [m]"
-            ]
-            scale = radius**2 / self._diffusivity(variables)
+            scale = self._effective_radius() ** 2 / self._diffusivity(c_vol)
             weights, thetas = isolated_sphere_modes(self.n_modes)
             return [
                 (pybamm.Scalar(w), theta * scale)
@@ -390,9 +312,7 @@ class TransientDCParticle(DCParticle):
             ]
         dimensionless = closure == "dimensionless"
         scale = (
-            self.domain_param.L**2 / self._diffusivity(variables)
-            if dimensionless
-            else 1
+            self.domain_param.L**2 / self._diffusivity(c_vol) if dimensionless else 1
         )
         return [
             (
