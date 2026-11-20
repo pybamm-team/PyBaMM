@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import pybamm
-from pybamm.type_definitions import DomainType
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class CoupledVariable(pybamm.Symbol):
@@ -7,10 +9,10 @@ class CoupledVariable(pybamm.Symbol):
     A node in the expression tree representing a variable whose equation is set by
     a different model or submodel.
 
-    CoupledVariables are resolved lazily during discretisation by looking up the
-    variable name in model.variables. This means you don't need to manually link
-    coupled variables - just ensure the variable with the matching name exists in
-    the combined model's variables dictionary.
+    A CoupledVariable is a placeholder that is replaced by the entry of the same
+    name in ``model.variables``. Submodels that define :meth:`build` use them to
+    refer to variables owned by other submodels; these are resolved when the model
+    is built. Otherwise they are resolved lazily during discretisation.
 
     Parameters
     ----------
@@ -18,7 +20,12 @@ class CoupledVariable(pybamm.Symbol):
         Name of the variable to couple to. Must match a key in model.variables.
     domain : iterable of str, optional
         List of domains that this coupled variable is valid over.
-
+    auxiliary_domains : dict, optional
+        Dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}).
+    domains : dict, optional
+        Dictionary of all domains, as an alternative to ``domain`` and
+        ``auxiliary_domains``.
     """
 
     __slots__ = ()
@@ -27,8 +34,12 @@ class CoupledVariable(pybamm.Symbol):
         self,
         name: str,
         domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
     ) -> None:
-        super().__init__(name, domain=domain)
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
 
     def _evaluate_for_shape(self):
         """
@@ -43,4 +54,4 @@ class CoupledVariable(pybamm.Symbol):
         perform_simplifications: bool = True,
     ):
         """Creates a new copy of the coupled variable."""
-        return CoupledVariable(self.name, self._domains["primary"])
+        return CoupledVariable(self.name, domains=self._domains)

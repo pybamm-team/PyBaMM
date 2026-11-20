@@ -140,6 +140,57 @@ class BaseSubModel(pybamm.BaseModel):
             "Please use it on the full model."
         )
 
+    @property
+    def defines_build(self):
+        """Whether the submodel defines its equations through :meth:`build`."""
+        return type(self).build is not BaseSubModel.build
+
+    def build(self):
+        """
+        Set the submodel's variables, equations and events.
+
+        Variables owned by other submodels are referred to with
+        :meth:`coupled_variable`, so submodels can be built in any order. Results
+        are stored in ``self.variables``, ``self.rhs``, ``self.algebraic``,
+        ``self.boundary_conditions``, ``self.initial_conditions`` and
+        ``self.events``.
+        """
+        raise NotImplementedError
+
+    def coupled_variable(
+        self, name, domain=None, auxiliary_domains=None, domains=None
+    ):
+        """
+        Return a placeholder for a variable owned by another submodel.
+
+        The placeholder is replaced by the variable of the same name when the
+        model is built, which checks that the domains match.
+
+        Parameters
+        ----------
+        name : str
+            Name of the variable in the model's variables.
+        domain : str or list of str, optional
+            Primary domain of the variable.
+        auxiliary_domains : dict, optional
+            Auxiliary domains of the variable.
+        domains : dict, optional
+            All domains of the variable, as an alternative to ``domain`` and
+            ``auxiliary_domains``.
+
+        Returns
+        -------
+        :class:`pybamm.CoupledVariable`
+        """
+        variable = pybamm.CoupledVariable(
+            name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
+        )
+        self.coupled_variables[name] = variable
+        return variable
+
     def get_fundamental_variables(self):
         """
         A public method that creates and returns the variables in a submodel which can

@@ -1286,33 +1286,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["dimensionality"] == 2:
             self.variables.update({"y [m]": var.y, "z [m]": var.z})
 
-    def build_model_equations(self):
-        # Set model equations
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.verbose(
-                f"Setting rhs for {submodel_name} submodel ({self.name})"
-            )
-
-            submodel.set_rhs(self.variables)
-            pybamm.logger.verbose(
-                f"Setting algebraic for {submodel_name} submodel ({self.name})"
-            )
-
-            submodel.set_algebraic(self.variables)
-            pybamm.logger.verbose(
-                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
-            )
-
-            submodel.set_boundary_conditions(self.variables)
-            pybamm.logger.verbose(
-                f"Setting initial conditions for {submodel_name} submodel ({self.name})"
-            )
-            submodel.set_initial_conditions(self.variables)
-            submodel.add_events_from(self.variables)
-            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
-            self.update(submodel)
-            self.check_no_repeated_keys()
-
     def _build_model(self):
         if self._built:
             raise pybamm.ModelError(
@@ -1322,22 +1295,15 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         pybamm.logger.info(f"Start building {self.name}")
 
-        if self._built_fundamental is False:
-            self.build_fundamental()
-
-        # Register the voltage state Variable before coupled variables,
-        # so submodels that need V in get_coupled_variables can find it.
         if self.options["voltage as a state"] == "true":
             self._register_voltage_variable()
 
-        self.build_coupled_variables()
+        self.build_submodels()
 
-        # Now that the expression is available, add the algebraic constraint
-        # before equations are built.
         if self.options["voltage as a state"] == "true":
             self._constrain_voltage_to_expression()
 
-        self.build_model_equations()
+        self.resolve_coupled_variables()
 
     def build_model(self):
         # Build model variables and equations

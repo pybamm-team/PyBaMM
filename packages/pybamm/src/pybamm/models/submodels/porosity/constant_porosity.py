@@ -15,7 +15,7 @@ class Constant(BaseModel):
         The parameters to use for this submodel
     """
 
-    def get_fundamental_variables(self):
+    def build(self):
         eps_dict = {}
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:
@@ -24,9 +24,4 @@ class Constant(BaseModel):
 
         variables = self._get_standard_porosity_variables(eps_dict)
         variables.update(self._get_standard_porosity_change_variables(depsdt_dict))
-
-        return variables
-
-    def add_events_from(self, variables):
-        # No events since porosity is constant
-        pass
+        self.variables.update(variables)
