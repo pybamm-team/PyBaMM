@@ -13,8 +13,9 @@ no side-by-side clones or environment variables to configure.
 
 **How the pieces connect:**
 
-- `pybamm.rust` provides the Python API that compiles expressions into
-  evaluable functions and sparse Jacobians.
+- `pybamm-python` implements `pybamm.rust`, which provides the Python API over
+  the Rust code in `pybamm-core`, which compiles expressions into evaluable
+  functions and sparse Jacobians.
 
 ## Prerequisites
 
