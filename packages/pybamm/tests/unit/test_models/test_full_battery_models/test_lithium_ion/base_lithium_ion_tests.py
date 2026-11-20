@@ -666,6 +666,29 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    @pytest.mark.parametrize(
+        "ocp", ["one-state hysteresis", "one-state differential capacity hysteresis"]
+    )
+    def test_well_posed_psd_hysteresis_per_size_state(self, ocp):
+        # Under a particle-size distribution each size carries its own
+        # hysteresis state, while the electrode-level names are size averages
+        options = {"open-circuit potential": ocp, "particle size": "distribution"}
+        model = self.model(options)
+        model.check_well_posedness()
+        (h,) = [
+            v
+            for v in model.rhs
+            if "negative electrode hysteresis state" in v.name.lower()
+        ]
+        assert h.name.endswith("hysteresis state distribution")
+        assert h.domain == ["negative particle size"]
+        assert model.initial_conditions[h].domain == ["negative particle size"]
+        assert model.variables["Negative electrode hysteresis state"].domain == [
+            "negative electrode"
+        ]
+        h_xav = model.variables["X-averaged negative electrode hysteresis state"]
+        assert h_xav.domain == ["current collector"]
+
     def test_well_posed_psd_single_ocp_thermal(self):
         # Regression test: for "single" OCP + particle size distribution, the
         # "equilibrium open-circuit potential [V]" variable used to be

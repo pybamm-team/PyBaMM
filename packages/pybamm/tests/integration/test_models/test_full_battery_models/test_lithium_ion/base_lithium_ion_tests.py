@@ -378,6 +378,61 @@ class BaseIntegrationTestLithiumIon:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
+    def test_psd_hysteresis_relaxes_at_rest(self):
+        # With a per-size hysteresis state, lithium exchanged between particle
+        # sizes at rest moves particles onto different branches, so the
+        # size-averaged state (and the voltage) relaxes after a pulse. A single
+        # particle size has no such mechanism.
+        def U(sto):
+            return (
+                3.42
+                - 0.02 * (sto - 0.5)
+                + 0.2 * np.exp(-60 * sto)
+                - 0.2 * np.exp(-60 * (1 - sto))
+            )
+
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C for 10 minutes", "Rest for 20 minutes"]
+        )
+        rise = {}
+        for psd in ["single", "distribution"]:
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            if psd == "distribution":
+                parameter_values = pybamm.get_size_distribution_parameters(
+                    parameter_values, sd_p=0.5
+                )
+            parameter_values.update(
+                {
+                    "Positive electrode lithiation OCP [V]": lambda sto: U(sto) - 0.015,
+                    "Positive electrode delithiation OCP [V]": lambda sto: (
+                        U(sto) + 0.015
+                    ),
+                    "Positive particle lithiation hysteresis decay rate": 50,
+                    "Positive particle delithiation hysteresis decay rate": 50,
+                    "Initial hysteresis state in positive electrode": 1.0,
+                    "Initial concentration in positive electrode [mol.m-3]": 31552,
+                },
+                check_already_exists=False,
+            )
+            model = self.model(
+                {
+                    "open-circuit potential": ("single", "one-state hysteresis"),
+                    "particle size": psd,
+                }
+            )
+            sim = pybamm.Simulation(
+                model, parameter_values=parameter_values, experiment=experiment
+            )
+            rest = sim.solve().cycles[1]
+            t = rest.t
+            h = rest["X-averaged positive electrode hysteresis state"](t[[0, -1]])
+            # voltage from 1 min into the rest, past the ohmic/electrolyte jump
+            voltage = rest["Voltage [V]"]
+            rise[psd] = (h[-1] - h[0], voltage(t[-1]) - voltage(t[0] + 60))
+
+        assert rise["distribution"][0] > rise["single"][0] + 0.05
+        assert rise["distribution"][1] > rise["single"][1]
+
     def test_composite_graphite_silicon(self):
         options = {
             "particle phases": ("2", "1"),
