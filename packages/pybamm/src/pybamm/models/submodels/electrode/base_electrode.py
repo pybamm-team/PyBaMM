@@ -137,43 +137,46 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_whole_cell_variables(self, variables):
+    def _get_standard_whole_cell_variables(self, i_s_p, phi_s_p):
         """
-        A private function to obtain the whole-cell versions of the
-        current variables.
+        A private function to obtain the whole-cell current variables and, if
+        ``set_positive_potential`` is True, the current collector potentials.
 
         Parameters
         ----------
-        variables : dict
-            The variables in the whole model.
+        i_s_p : :class:`pybamm.Symbol`
+            The current in the positive electrode.
+        phi_s_p : :class:`pybamm.Symbol`
+            The potential in the positive electrode.
 
         Returns
         -------
         variables : dict
-            The variables in the whole model with the whole-cell
-            current variables added.
+            The whole-cell current and current collector potential variables.
         """
-
-        if "negative electrode" not in self.options.whole_cell_domains:
-            i_s_n = None
+        if "negative electrode" in self.options.whole_cell_domains:
+            i_s_n = self.coupled_variable(
+                "Negative electrode current density [A.m-2]",
+                domains={
+                    "primary": "negative electrode",
+                    "secondary": "current collector",
+                },
+            )
         else:
-            i_s_n = variables["Negative electrode current density [A.m-2]"]
+            i_s_n = None
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
-        i_s_p = variables["Positive electrode current density [A.m-2]"]
-
         i_s = pybamm.concatenation(i_s_n, i_s_s, i_s_p)
 
-        variables.update({"Electrode current density [A.m-2]": i_s})
+        variables = {"Electrode current density [A.m-2]": i_s}
 
         if self.set_positive_potential:
-            # Get phi_s_cn from the current collector submodel and phi_s_p from the
-            # electrode submodel
-            phi_s_cn = variables["Negative current collector potential [V]"]
-            phi_s_p = variables["Positive electrode potential [V]"]
+            phi_s_cn = self._coupled_current_collector_variable(
+                "Negative current collector potential [V]"
+            )
             phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             if self.options["contact resistance"] == "true":
-                I = variables["Current [A]"]
-                T_vol_av = variables["Volume-averaged cell temperature [K]"]
+                I = self.coupled_variable("Current [A]")
+                T_vol_av = self.coupled_variable("Volume-averaged cell temperature [K]")
                 delta_phi_contact = I * self.param.R_contact(T_vol_av)
             else:
                 delta_phi_contact = pybamm.Scalar(0)
@@ -184,3 +187,17 @@ class BaseElectrode(pybamm.BaseSubModel):
             )
 
         return variables
+
+    def _coupled_electrode_variable(self, name):
+        """Placeholder for another submodel's variable in this electrode."""
+        return self.coupled_variable(
+            name,
+            domains={
+                "primary": f"{self.domain} electrode",
+                "secondary": "current collector",
+            },
+        )
+
+    def _coupled_current_collector_variable(self, name):
+        """Placeholder for another submodel's variable in the current collector."""
+        return self.coupled_variable(name, domain="current collector")
