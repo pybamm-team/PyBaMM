@@ -71,10 +71,7 @@ class ReactionDriven(BaseModel):
                 L_sei_0 = pybamm.Parameter(f"{pref}Initial SEI thickness [m]")
 
             L_tot = (
-                (L_sei_k - L_sei_0)
-                + L_pl_k
-                + L_dead_k
-                + L_sei_cr_k * (roughness_k - 1)
+                (L_sei_k - L_sei_0) + L_pl_k + L_dead_k + L_sei_cr_k * (roughness_k - 1)
             )
             # Thin-film approximation: curvature effects are neglected (for a sphere
             # they add a_n * (L_tot ** 2 / R_n + L_tot ** 3 / (3 * R_n ** 2))).

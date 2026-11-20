@@ -147,7 +147,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         variables = {"Electrolyte current density [A.m-2]": i_e}
 
         if isinstance(i_e, pybamm.Concatenation):
-            i_e_dict = dict(zip(self.options.whole_cell_domains, i_e.orphans))
+            i_e_dict = dict(
+                zip(self.options.whole_cell_domains, i_e.orphans, strict=True)
+            )
             for domain in ["negative electrode", "positive electrode"]:
                 if domain in i_e_dict:
                     Domain = domain.split()[0].capitalize()

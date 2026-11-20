@@ -114,9 +114,8 @@ class SEIGrowth(BaseModel):
                 "electrode surface potential difference [V]"
             )
 
-        # Current that contributes to the -IR drop. The main reaction's current
-        # density is only defined without phases; otherwise, or with inverse
-        # kinetics (where j = j_tot is uniform anyway), use the total current density
+        # current driving the IR drop: the total current unless there is one phase
+        # and forward kinetics
         if self.reaction_loc == "interface":
             j = self.coupled_variable(
                 "Lithium metal total interfacial current density [A.m-2]",

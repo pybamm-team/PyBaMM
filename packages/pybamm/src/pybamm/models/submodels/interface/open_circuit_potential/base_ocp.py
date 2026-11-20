@@ -141,7 +141,9 @@ class BaseOpenCircuitPotential(BaseInterface):
         if self.options.electrode_types[domain] == "planar":
             return symbol
         if symbol.domain == []:
-            return pybamm.FullBroadcast(symbol, f"{domain} electrode", "current collector")
+            return pybamm.FullBroadcast(
+                symbol, f"{domain} electrode", "current collector"
+            )
         if symbol.domain == ["current collector"]:
             return pybamm.PrimaryBroadcast(symbol, f"{domain} electrode")
         return symbol

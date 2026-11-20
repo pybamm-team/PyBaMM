@@ -53,14 +53,12 @@ class BasePotentialPair(BaseModel):
             i_boundary_cc: pybamm.Scalar(0),
         }
 
-        # Only one electrode pair is modelled, so it carries the cell current divided
-        # by the number of electrodes connected in parallel
+        # one modelled electrode pair carries its share of the cell current
         applied_current_density = self.coupled_variable("Total current density [A.m-2]")
         electrode_pair_current = (
             applied_current_density * self.param.L_y * self.param.L_z
         )
-        # Boundary conditions need to be on the variables that go into the Laplacian,
-        # even though phi_s_cp isn't a pybamm.Variable object
+        # set on phi_s_cp because it goes into the Laplacian
         self._set_boundary_conditions(phi_s_cn, phi_s_cp, electrode_pair_current)
 
     def _set_boundary_conditions(self, phi_s_cn, phi_s_cp, electrode_pair_current):
@@ -86,8 +84,7 @@ class PotentialPair1plus1D(BasePotentialPair):
         super().__init__(param)
 
     def _set_boundary_conditions(self, phi_s_cn, phi_s_cp, electrode_pair_current):
-        # The 1+1D model is averaged over y, so the effective tab area is the cell
-        # width multiplied by the current collector thickness
+        # averaged over y, so the tab area is cell width times thickness
         positive_tab_area = self.param.L_y * self.param.p.L_cc
         pos_tab_bc = -electrode_pair_current / (
             self.param.p.sigma_cc * positive_tab_area
@@ -112,8 +109,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         super().__init__(param)
 
     def _set_boundary_conditions(self, phi_s_cn, phi_s_cp, electrode_pair_current):
-        # Divide by the *numerical* tab area, so that integrating the current density
-        # around the boundary gives the applied current exactly
+        # the numerical tab area makes the boundary integral exactly the current
         positive_tab_area = pybamm.BoundaryIntegral(
             pybamm.PrimaryBroadcast(self.param.p.L_cc, "current collector"),
             region="positive tab",
@@ -123,8 +119,7 @@ class PotentialPair2plus1D(BasePotentialPair):
             self.param.p.sigma_cc * positive_tab_area
         )
 
-        # Tabs are projected onto the 2D domain, whose boundary is insulated except at
-        # the tabs, so zero flux is set explicitly on the other electrode's tab.
+        # insulated except at the tabs, so the other tab gets zero flux
         self.boundary_conditions = {
             phi_s_cn: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),

@@ -3,11 +3,10 @@ import pybamm
 
 class BaseSubModel(pybamm.BaseModel):
     """
-    The base class for all submodels. All submodels inherit from this class and must
-    only provide public methods which overwrite those in this base class. Any methods
-    added to a submodel that do not overwrite those in this bass class are made
-    private with the prefix '_', providing a consistent public interface for all
-    submodels.
+    The base class for all submodels. A submodel overrides :meth:`build` to set its
+    variables, equations and events, using :meth:`coupled_variable` for variables
+    owned by other submodels. Any other methods added to a submodel are private
+    (prefixed with '_'), providing a consistent public interface for all submodels.
 
     Parameters
     ----------
@@ -230,6 +229,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def get_fundamental_variables(self):
         """
+        Deprecated: override :meth:`build` instead.
+
         A public method that creates and returns the variables in a submodel which can
         be created independent of other submodels. For example, the electrolyte
         concentration variables can be created independent of whether any other
@@ -247,6 +248,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def get_coupled_variables(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A public method that creates and returns the variables in a submodel which
         require variables in other submodels to be set first. For example, the
         exchange current density requires the concentration in the electrolyte to
@@ -269,6 +272,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_rhs(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the right hand side of the differential equations which contain
         a time derivative. Note: this method modifies the state of self.rhs. Unless
         overwritten by a submodel, the default behaviour of 'pass' is used as
@@ -282,6 +287,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_algebraic(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the differential equations which do not contain a time
         derivative. Note: this method modifies the state of self.algebraic. Unless
         overwritten by a submodel, the default behaviour of 'pass' is used as
@@ -295,6 +302,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_boundary_conditions(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the boundary conditions for the submodel. Note: this method
         modifies the state of self.boundary_conditions. Unless overwritten by a
         submodel, the default behaviour of 'pass' is used as implemented in
@@ -308,6 +317,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_initial_conditions(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the initial conditions for the submodel. Note: this method
         modifies the state of self.initial_conditions. Unless overwritten by a
         submodel, the default behaviour of 'pass' is used as implemented in
@@ -322,6 +333,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def add_events_from(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set events related to the state of submodel variable. Note: this
         method modifies the state of self.events. Unless overwritten by a submodel, the
         default behaviour of 'pass' is used as implemented in

@@ -1483,7 +1483,9 @@ class BaseModel:
                 return resolved[name]
             if name in in_progress:
                 cycle = " -> ".join([*in_progress[in_progress.index(name) :], name])
-                raise pybamm.ModelError(f"Circular dependency between variables: {cycle}")
+                raise pybamm.ModelError(
+                    f"Circular dependency between variables: {cycle}"
+                )
             if name not in unresolved:
                 owner = owners.get(name)
                 prefix = f" for submodel '{owner}'" if owner else ""
