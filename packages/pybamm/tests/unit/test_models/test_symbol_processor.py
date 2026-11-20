@@ -144,3 +144,22 @@ class TestSymbolProcessor:
 
         with pytest.raises(ValueError, match=r"Cannot process a symbol"):
             processor("test", symbol)
+
+
+class TestSymbolProcessorResolve:
+    def test_resolve_replaces_coupled_variables_by_name(self):
+        a = pybamm.Variable("a")
+        variables = {"a": a, "twice a": 2 * pybamm.CoupledVariable("a")}
+
+        # Nested references resolve all the way down to the model's own symbols
+        resolved = pybamm.SymbolProcessor.resolve(
+            pybamm.CoupledVariable("twice a") + pybamm.CoupledVariable("a"), variables
+        )
+
+        assert resolved == 2 * a + a
+        # A symbol with nothing to resolve is returned as-is, not copied
+        assert pybamm.SymbolProcessor.resolve(a, variables) is a
+
+    def test_resolve_raises_for_an_unknown_name(self):
+        with pytest.raises(ValueError, match="CoupledVariable 'b' not found"):
+            pybamm.SymbolProcessor.resolve(pybamm.CoupledVariable("b"), {})

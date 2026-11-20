@@ -33,6 +33,11 @@ Custom steps can be defined using either explicit or implicit control:
 Step terminations
 -----------------
 
+Any inequality over model variables can terminate a step:
+
+.. autoclass:: pybamm.step.SymbolicTermination
+    :members:
+
 Standard step termination events are implemented by the following classes, which are
 called when the termination is specified by a specific string. These classes can be
 either be called directly or via the string format specified in the class docstring
