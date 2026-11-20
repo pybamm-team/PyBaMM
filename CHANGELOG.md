@@ -18,7 +18,7 @@
 
 ## Deprecated
 
-- Building a submodel through `get_fundamental_variables`, `get_coupled_variables` and the `set_*` methods is deprecated; override `build` instead. ([#6080](https://github.com/pybamm-team/PyBaMM/pull/6080))
+- Building a submodel through `get_fundamental_variables`, `get_coupled_variables` and the `set_*` methods is deprecated; override `build` instead. ([#6082](https://github.com/pybamm-team/PyBaMM/pull/6082))
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
 - The `evaluation_array` argument of `StateVector` and `StateVectorDot` is deprecated and ignored; drop the argument. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
@@ -26,7 +26,7 @@
 
 ## Features
 
-- Submodels are built with a single `build` method that gets other submodels' variables from `coupled_variable`, so build order no longer matters. ([#6080](https://github.com/pybamm-team/PyBaMM/pull/6080))
+- Submodels are built with a single `build` method that gets other submodels' variables from `coupled_variable`, so build order no longer matters. ([#6082](https://github.com/pybamm-team/PyBaMM/pull/6082))
 - Added `Solution.save_vtu`, which exports variables on unstructured finite-volume meshes to ParaView as one `.vtu` per output time plus a `.pvd` time index. Requires `vtk`. ([#5853](https://github.com/pybamm-team/PyBaMM/pull/5853))
 - Added flux boundary conditions for 1D finite volume method. This is an alternative way to apply Neumann boundary conditions without specifying them as an explicit expression for the gradient. ([#5524](https://github.com/pybamm-team/PyBaMM/pull/5524))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
