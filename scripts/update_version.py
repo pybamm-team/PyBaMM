@@ -5,6 +5,7 @@ Automatically update version numbers in various files for releases
 import argparse
 import os
 import re
+import subprocess
 from datetime import date
 from pathlib import Path
 
@@ -15,6 +16,7 @@ import pybamm
 # Package-level files (e.g. CITATION.cff) live with the pybamm package and are
 # located via pybamm.root_dir() (which returns packages/pybamm in the monorepo).
 REPO_ROOT = Path(__file__).resolve().parent.parent
+TOWNCRIER = "towncrier==26.9.0"
 
 
 def update_version(release_version):
@@ -31,19 +33,24 @@ def update_version(release_version):
         file.seek(0)
         file.write(replace_version)
 
-    # CHANGELOG.md (repo-root file). The release tag is `pybamm-v<version>`
-    # (monorepo tag namespace), so the changelog link targets that ref.
-    changelog_line1 = "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n"
-    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v{release_version}) - {release_date}\n\n"
-
-    with open(os.path.join(REPO_ROOT, "CHANGELOG.md"), "r+") as file:
-        output_list = file.readlines()
-        output_list[0] = changelog_line1
-        output_list.insert(2, changelog_line2)
-        file.truncate(0)
-        file.seek(0)
-        file.writelines(output_list)
-
+    # CHANGELOG.md (repo-root file): towncrier builds the changelog.d/ fragments
+    # into a dated block, titled as configured in pyproject.toml, and deletes them.
+    subprocess.run(
+        [
+            "uvx",
+            "--from",
+            TOWNCRIER,
+            "towncrier",
+            "build",
+            "--version",
+            release_version,
+            "--date",
+            release_date.isoformat(),
+            "--yes",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
