@@ -188,7 +188,7 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         return variables
 
-    def _coupled_electrode_variable(self, name):
+    def _coupled_electrode_variable(self, name, on_edges=False):
         """Placeholder for another submodel's variable in this electrode."""
         return self.coupled_variable(
             name,
@@ -196,6 +196,7 @@ class BaseElectrode(pybamm.BaseSubModel):
                 "primary": f"{self.domain} electrode",
                 "secondary": "current collector",
             },
+            on_edges=on_edges,
         )
 
     def _coupled_current_collector_variable(self, name):

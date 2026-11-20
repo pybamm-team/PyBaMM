@@ -30,10 +30,7 @@ class SurfaceForm(BaseModel):
         i_boundary_cc = self._coupled_current_collector_variable(
             "Current collector current density [A.m-2]"
         )
-        i_e = coupled(f"{Domain} electrolyte current density [A.m-2]")
-        # A placeholder cannot know that the electrolyte current is evaluated on
-        # edges, which decides whether its indefinite integral is
-        i_e._saved_evaluates_on_edges = {"primary": True}
+        i_e = coupled(f"{Domain} electrolyte current density [A.m-2]", on_edges=True)
         conductivity = self._get_effective_conductivity()
         i_s = i_boundary_cc - i_e
 

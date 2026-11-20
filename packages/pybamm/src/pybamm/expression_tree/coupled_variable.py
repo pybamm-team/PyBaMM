@@ -26,9 +26,12 @@ class CoupledVariable(pybamm.Symbol):
     domains : dict, optional
         Dictionary of all domains, as an alternative to ``domain`` and
         ``auxiliary_domains``.
+    on_edges : bool, optional
+        Whether the variable it names is evaluated on cell edges in its primary
+        dimension, as a flux is. Default is False.
     """
 
-    __slots__ = ()
+    __slots__ = ("_on_edges",)
 
     def __init__(
         self,
@@ -36,10 +39,15 @@ class CoupledVariable(pybamm.Symbol):
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
+        on_edges: bool = False,
     ) -> None:
+        self._on_edges = on_edges
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
+
+    def _evaluates_on_edges(self, dimension):
+        return self._on_edges and dimension == "primary"
 
     def _evaluate_for_shape(self):
         """
@@ -54,4 +62,6 @@ class CoupledVariable(pybamm.Symbol):
         perform_simplifications: bool = True,
     ):
         """Creates a new copy of the coupled variable."""
-        return CoupledVariable(self.name, domains=self._domains)
+        return CoupledVariable(
+            self.name, domains=self._domains, on_edges=self._on_edges
+        )
