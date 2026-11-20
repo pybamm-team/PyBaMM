@@ -201,6 +201,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The fragment check diffs the PR merge commit against its first parent.
+          fetch-depth: 2
 
       # comment-slop compares against the PR base, which the
       # shallow checkout lacks, and it fails rather than scanning nothing.
@@ -236,6 +238,15 @@ jobs:
         env:
           SKIP: cargo-clippy
         run: uvx pre-commit run -a
+
+      # A wrong predicted PR number is caught here rather than after review.
+      - name: Check changelog fragments are named after this PR
+        if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: >
+          python scripts/check_changelog_fragments.py
+          --pr "$PR_NUMBER" --base HEAD^1
 
       - uses: taiki-e/install-action@3a3daafd3b7f23b8f65d9f5ba2db203fb59b79e2 # v2.90.2
         with:
