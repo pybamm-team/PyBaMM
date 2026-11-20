@@ -19,6 +19,7 @@ import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
+from pybamm.util import _is_flux_boundary_condition
 
 _SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
@@ -416,6 +417,20 @@ class BaseModel:
                     f"name '{name}'. Names must match."
                 )
         self._variables = pybamm.FuzzyDict(variables)
+
+    @property
+    def summary_variables(self):
+        """Names of the variables to summarise per cycle when solving an experiment."""
+        return self._summary_variables
+
+    @summary_variables.setter
+    def summary_variables(self, value):
+        for var in value:
+            if var not in self.variables:
+                raise KeyError(
+                    f"No cycling variable defined for summary variable '{var}'"
+                )
+        self._summary_variables = value
 
     def get_processed_variables_dict(self) -> dict[str, pybamm.Symbol]:
         """
@@ -2721,9 +2736,12 @@ class BoundaryConditionsDict(dict):
                     eqn, typ = bc
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
-                if bc[1] not in ["Dirichlet", "Neumann"]:
+                if bc[1] not in [
+                    "Dirichlet",
+                    "Neumann",
+                ] and not _is_flux_boundary_condition(bc[1]):
                     raise pybamm.ModelError(
-                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
+                        f"boundary condition types must be Dirichlet, Neumann or ('Flux', pybamm.Symbol), not '{bc[1]}'"
                     )
 
         return boundary_conditions

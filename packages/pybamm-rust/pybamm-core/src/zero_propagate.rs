@@ -106,8 +106,14 @@ fn analyze_shapes(arena: &Arena, order: &[NodeId]) -> Vec<ShapeInfo> {
 /// Exact up to the sign of zero wherever every intermediate of `dag` is finite; see the module
 /// docs for what happens elsewhere.
 pub fn zero_propagate(dag: DagRef<'_>) -> Dag {
+    zero_propagate_tracking(dag, &mut [])
+}
+
+/// [`zero_propagate`], keeping each of `tracked` as a further root and moving it to its node in
+/// the result.
+pub fn zero_propagate_tracking(dag: DagRef<'_>, tracked: &mut [NodeId]) -> Dag {
     let (arena, root) = (dag.arena(), dag.root());
-    let order = arena.topological_order(root);
+    let order = arena.topological_order_with(root, tracked);
     let shapes = analyze_shapes(arena, &order);
     // `zero + other` folds to `other` only when no broadcast is lost.
     let absorbed = |zero: NodeId, other: NodeId| {
@@ -130,11 +136,12 @@ pub fn zero_propagate(dag: DagRef<'_>) -> Dag {
         old_to_new.insert(old_id, new_id);
     }
 
+    old_to_new.remap(tracked);
     Dag::new(new_arena, old_to_new.rebuilt(root))
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::eval::{CompiledExpr, TangentInputs};
     use crate::node::{ArrayData, CsrData, Shape};
@@ -152,7 +159,8 @@ mod tests {
         analyze_shapes(arena, &arena.topological_order(root))[root.index()]
     }
 
-    fn eval(dag: DagRef<'_>, y: &[f64]) -> Vec<f64> {
+    /// `dag` evaluated at `y`.
+    pub fn eval(dag: DagRef<'_>, y: &[f64]) -> Vec<f64> {
         let compiled = CompiledExpr::new(dag);
         let mut scratch = vec![0.0; compiled.scratch_len()];
         compiled.eval(&mut scratch, 0.0, y, &[], &[]).to_vec()

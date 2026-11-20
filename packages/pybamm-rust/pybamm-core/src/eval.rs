@@ -3,14 +3,15 @@
 // The op helpers must inline as one chain into the interpreter loop.
 #![allow(clippy::inline_always)]
 
-use crate::accumulate::{Accumulate, Product, dispatch};
+use crate::accumulate::dispatch;
 use crate::arena::DagRef;
 use crate::branch_regions::active_branch;
 use crate::ir::ids::{InterpSourceIdx, NdInterpolantIdx};
 use crate::ir::{
     BinaryOp, BroadcastKind, ConstPool, Instruction, Slot, SplitEvalInfo, TypedIr, UnaryOp,
 };
-use crate::node::{CsrData, InterpolantData, NdInterpolantData};
+use crate::node::{InterpolantData, NdInterpolantData};
+use crate::products::{CsrProduct, DenseProduct};
 use crate::tangent_batch;
 
 /// `match $op`, expanding `$body` in each arm with `$f` bound to that arm's function.
@@ -356,8 +357,9 @@ pub(crate) fn masked_mul(mask: f64, value: f64) -> f64 {
 /// `x`, `x*x` and `1/x`.
 ///
 /// Those forms round once from exact operands, so are correctly rounded where a platform
-/// `pow` need not be, and equal what `simplify` lowers the same constant exponents to. The
-/// model residual compiles unsimplified, so its squares reach this as `pow(x, 2)`.
+/// `pow` need not be, and equal what `simplify` lowers the same constant exponents to. A
+/// `CompiledModel` compiles every tape from a simplified graph, so in one only an exponent known
+/// at run time, such as an input parameter, reaches this as `pow(x, 2)`.
 #[inline(always)]
 pub(crate) fn pow(x: f64, y: f64) -> f64 {
     match y {
@@ -460,76 +462,6 @@ pub(crate) fn split_two_read_write(
         }
     };
     (read(a), read(b), dst_s)
-}
-
-/// `out = A @ x` for a CSR `A`, each row summed from `0.0` in stored order.
-pub(crate) struct CsrProduct<'a> {
-    pub(crate) csr: &'a CsrData,
-    pub(crate) x: &'a [f64],
-    pub(crate) out: &'a mut [f64],
-}
-
-impl Product for CsrProduct<'_> {
-    type Output = ();
-
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        for (o, (cols, vals)) in self.out.iter_mut().zip(csr_rows(self.csr)) {
-            let mut sum = 0.0;
-            for (&col, &val) in cols.iter().zip(vals) {
-                sum = A::mul_acc(sum, val, self.x[col]);
-            }
-            *o = sum;
-        }
-    }
-}
-
-/// `buf[dst..] = M @ buf[vec..]` for the row-major `rows x cols` matrix at `buf[mat..]`.
-struct DenseProduct<'a> {
-    buf: &'a mut [f64],
-    mat: usize,
-    vec: usize,
-    dst: usize,
-    rows: usize,
-    cols: usize,
-}
-
-impl Product for DenseProduct<'_> {
-    type Output = ();
-
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        let Self {
-            buf,
-            mat,
-            vec,
-            dst,
-            rows,
-            cols,
-        } = self;
-        for row in 0..rows {
-            let mat_row = &buf[mat + row * cols..][..cols];
-            let mut sum = 0.0;
-            for (&m, &v) in mat_row.iter().zip(&buf[vec..vec + cols]) {
-                sum = A::mul_acc(sum, m, v);
-            }
-            buf[dst + row] = sum;
-        }
-    }
-}
-
-/// Each row of `csr` as its stored `(columns, values)`, in row order.
-///
-/// The one row walk behind every sparse product; `CsrData::try_new` guarantees the splits fit.
-#[inline(always)]
-pub(crate) fn csr_rows(csr: &CsrData) -> impl Iterator<Item = (&[usize], &[f64])> {
-    let (mut cols, mut vals) = (&csr.indices[..], &csr.data[..]);
-    csr.indptr.windows(2).map(move |w| {
-        let (row_cols, rest_cols) = cols.split_at(w[1] - w[0]);
-        let (row_vals, rest_vals) = vals.split_at(w[1] - w[0]);
-        (cols, vals) = (rest_cols, rest_vals);
-        (row_cols, row_vals)
-    })
 }
 
 /// Apply a binary operation with broadcasting.
@@ -960,6 +892,12 @@ impl CompiledExpr {
         Self::from_ir(TypedIr::from_dag(dag))
     }
 
+    /// Compile with a no-reuse (SSA) slot layout, so after [`eval`](Self::eval) the
+    /// scratch holds every intermediate for reverse-mode AD.
+    pub(crate) fn new_pinned(dag: DagRef<'_>) -> Self {
+        Self::from_ir(TypedIr::from_dag_pinned(dag))
+    }
+
     /// Wrap a pre-built `TypedIr`.
     pub const fn from_ir(ir: TypedIr) -> Self {
         Self { ir }
@@ -1193,8 +1131,9 @@ impl PrimalCache<'_> {
 
     /// Evaluate the tangent section for `lanes` seed vectors at once on the cached primal region.
     ///
-    /// `seeds` is `(n_states, lanes)` lane-minor and the result `(out_len, lanes)` lane-minor,
-    /// each lane bitwise equal to an [`eval_tangent`](Self::eval_tangent) call.
+    /// `seeds` is `(n_seeds, lanes)` lane-minor, seed `i` being state `i` on a `dy` tape and
+    /// parameter index `i` on a `dp` tape. The result is `(out_len, lanes)` lane-minor, each lane
+    /// bitwise equal to an [`eval_tangent`](Self::eval_tangent) call.
     ///
     /// # Panics
     /// If `lanes` is not 8 or 4, the tape is not
