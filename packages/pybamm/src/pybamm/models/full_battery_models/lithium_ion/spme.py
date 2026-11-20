@@ -1,6 +1,8 @@
 #
 # Single Particle Model with Electrolyte (SPMe)
 #
+import functools
+
 import pybamm
 
 from .spm import SPM
@@ -69,7 +71,8 @@ class SPMe(SPM):
                     )
                 )
         if self.options["surface form"] == "false":
-            surf_model = surf_form.Explicit
+            # The inverse kinetics define the x-averaged surface potential difference
+            surf_model = functools.partial(surf_form.Explicit, inverse_kinetics=True)
         elif self.options["surface form"] == "differential":
             surf_model = surf_form.CompositeDifferential
         elif self.options["surface form"] == "algebraic":

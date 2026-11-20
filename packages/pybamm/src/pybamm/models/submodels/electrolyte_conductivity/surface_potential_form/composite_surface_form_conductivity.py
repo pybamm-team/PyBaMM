@@ -26,59 +26,34 @@ class BaseModel(Composite):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def get_fundamental_variables(self):
-        if self.domain == "separator":
-            return {}
-
-        variables = super().get_fundamental_variables()
-
+    def build(self):
+        domain, Domain = self.domain_Domain
         delta_phi_av = pybamm.Variable(
-            f"X-averaged {self.domain} electrode surface potential difference [V]",
+            f"X-averaged {domain} electrode surface potential difference [V]",
             domain="current collector",
             reference=self.domain_param.prim.U_init,
         )
-
-        variables.update(
+        self.variables.update(
             self._get_standard_average_surface_potential_difference_variables(
                 delta_phi_av
             )
         )
-        return variables
+        self.initial_conditions[delta_phi_av] = self.domain_param.prim.U_init
 
-    def get_coupled_variables(self, variables):
-        Domain = self.domain.capitalize()
-        # Only update coupled variables once
-        if self.domain == "negative":
-            variables.update(super().get_coupled_variables(variables))
-
-        phi_s = variables[f"{Domain} electrode potential [V]"]
-        phi_e = variables[f"{Domain} electrolyte potential [V]"]
-        delta_phi = phi_s - phi_e
-        variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi)
+        # The negative electrode submodel also sets the electrolyte potential
+        if domain == "negative":
+            self._build_composite(delta_phi_av)
+            phi_e = self.variables["Negative electrolyte potential [V]"]
+        else:
+            phi_e = self._coupled_domain_variable(
+                f"{Domain} electrolyte potential [V]", f"{domain} electrode"
+            )
+        phi_s = self._coupled_domain_variable(
+            f"{Domain} electrode potential [V]", f"{domain} electrode"
         )
-        return variables
-
-    def set_initial_conditions(self, variables):
-        super().set_initial_conditions(variables)
-
-        domain = self.domain
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
-        delta_phi_init = self.domain_param.prim.U_init
-
-        self.initial_conditions[delta_phi] = delta_phi_init
-
-    def set_boundary_conditions(self, variables):
-        if self.domain == "negative":
-            phi_e = variables["Electrolyte potential [V]"]
-            self.boundary_conditions = {
-                phi_e: {
-                    "left": (pybamm.Scalar(0), "Neumann"),
-                    "right": (pybamm.Scalar(0), "Neumann"),
-                }
-            }
+        self.variables.update(
+            self._get_standard_surface_potential_difference_variables(phi_s - phi_e)
+        )
 
 
 class CompositeDifferential(BaseModel):
@@ -100,31 +75,12 @@ class CompositeDifferential(BaseModel):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_rhs(self, variables):
-        domain = self.domain
-
-        a = variables[
-            f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
-        ]
-
-        sum_a_j = variables[
-            f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
-
-        sum_a_j_av = variables[
-            f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
-
-        T = variables[f"X-averaged {domain} electrode temperature [K]"]
-
-        C_dl = self.domain_param.C_dl(T)
-
-        self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j)
+    def build(self):
+        super().build()
+        delta_phi_av, current_imbalance = self._get_x_averaged_current_imbalance()
+        self.rhs[delta_phi_av] = self._get_x_averaged_double_layer_rhs(
+            current_imbalance
+        )
 
 
 class CompositeAlgebraic(BaseModel):
@@ -146,22 +102,7 @@ class CompositeAlgebraic(BaseModel):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_algebraic(self, variables):
-        super().set_algebraic(variables)
-
-        domain = self.domain
-
-        sum_a_j = variables[
-            f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
-
-        sum_a_j_av = variables[
-            f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
-
-        self.algebraic[delta_phi] = (sum_a_j_av - sum_a_j) / self.param.a_j_scale
+    def build(self):
+        super().build()
+        delta_phi_av, current_imbalance = self._get_x_averaged_current_imbalance()
+        self.algebraic[delta_phi_av] = current_imbalance / self.param.a_j_scale

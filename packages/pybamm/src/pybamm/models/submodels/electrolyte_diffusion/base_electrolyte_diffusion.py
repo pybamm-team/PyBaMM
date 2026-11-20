@@ -83,6 +83,66 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_concentration_from_porosity_times_concentration(self, eps_c_e_dict):
+        """
+        Divide the porosity times concentration by the porosity to get the
+        concentration variables.
+
+        Parameters
+        ----------
+        eps_c_e_dict : dict of :class:`pybamm.Symbol`
+            Porosity times electrolyte concentration in the various domains
+
+        Returns
+        -------
+        variables : dict
+            The concentration variables, by domain and over the whole cell.
+        """
+        eps_dict, eps = self._get_porosities()
+        c_e_dict = {
+            domain: eps_c_e_k / eps_dict[domain]
+            for domain, eps_c_e_k in eps_c_e_dict.items()
+        }
+
+        variables = {
+            "Electrolyte concentration concatenation [mol.m-3]": pybamm.concatenation(
+                *c_e_dict.values()
+            )
+        }
+        variables.update(self._get_standard_domain_concentration_variables(c_e_dict))
+
+        eps_c_e = pybamm.concatenation(*eps_c_e_dict.values())
+        variables.update(
+            self._get_standard_whole_cell_concentration_variables(eps_c_e / eps)
+        )
+        return variables
+
+    def _get_porosities(self):
+        """
+        Return the porosity in each domain and over the whole cell.
+
+        Returns
+        -------
+        eps_dict : dict of :class:`pybamm.Symbol`
+            Porosity in each domain of the cell
+        eps : :class:`pybamm.Symbol`
+            Porosity over the whole cell
+        """
+        eps_dict = {
+            domain: self.coupled_variable(
+                f"{domain.capitalize()} porosity",
+                domain=domain,
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            for domain in self.options.whole_cell_domains
+        }
+        eps = self.coupled_variable(
+            "Porosity",
+            domain=self.options.whole_cell_domains,
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        return eps_dict, eps
+
     def _get_standard_porosity_times_concentration_variables(self, eps_c_e_dict):
         eps_c_e = pybamm.concatenation(*eps_c_e_dict.values())
         variables = {"Porosity times concentration [mol.m-3]": eps_c_e}
