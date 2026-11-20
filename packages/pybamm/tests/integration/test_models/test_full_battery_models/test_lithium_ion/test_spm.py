@@ -40,3 +40,52 @@ class TestSPM(BaseIntegrationTestLithiumIon):
             np.testing.assert_allclose(
                 solutions[0][name](t), solutions[1][name](t), rtol=1e-3
             )
+
+    def test_composite_psd_hysteresis_states(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "particle size": "distribution",
+            "open-circuit potential": (
+                ("one-state hysteresis", "one-state hysteresis"),
+                "single",
+            ),
+        }
+        model = self.model(options)
+        parameter_values = pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("Chen2020_composite"), composite="negative"
+        )
+        primary_ocp = parameter_values["Primary: Negative electrode OCP [V]"]
+        secondary_ocp = parameter_values["Secondary: Negative electrode OCP [V]"]
+        parameter_values.update(
+            {
+                "Primary: Negative electrode lithiation OCP [V]": primary_ocp,
+                "Primary: Negative electrode delithiation OCP [V]": primary_ocp,
+                "Secondary: Negative electrode lithiation OCP [V]": secondary_ocp,
+                "Secondary: Negative electrode delithiation OCP [V]": secondary_ocp,
+                "Primary: Negative particle lithiation hysteresis decay rate": 1,
+                "Primary: Negative particle delithiation hysteresis decay rate": 1,
+                "Secondary: Negative particle lithiation hysteresis decay rate": 1,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 1,
+                "Primary: Initial hysteresis state in negative electrode": 0,
+                "Secondary: Initial hysteresis state in negative electrode": 0,
+            },
+            check_already_exists=False,
+        )
+
+        solution = pybamm.Simulation(model, parameter_values=parameter_values).solve(
+            [0, 1]
+        )
+
+        for phase in ["primary", "secondary"]:
+            (state,) = [
+                variable
+                for variable in model.rhs
+                if variable.name
+                == f"X-averaged negative electrode {phase} hysteresis state distribution"
+            ]
+            assert state.domain == [f"negative {phase} particle size"]
+            state_at_end = solution[
+                f"X-averaged negative electrode {phase} hysteresis state distribution"
+            ](1)
+            assert state_at_end.size > 1
+            assert np.all(np.isfinite(state_at_end))

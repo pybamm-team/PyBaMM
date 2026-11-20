@@ -424,11 +424,11 @@ class BaseIntegrationTestLithiumIon:
                 model, parameter_values=parameter_values, experiment=experiment
             )
             rest = sim.solve().cycles[1]
-            h = rest["X-averaged positive electrode hysteresis state"].entries
+            t = rest.t
+            h = rest["X-averaged positive electrode hysteresis state"](t[[0, -1]])
             # voltage from 1 min into the rest, past the ohmic/electrolyte jump
-            t = rest["Time [s]"].entries
-            V = rest["Voltage [V]"].entries
-            rise[psd] = (h[-1] - h[0], V[-1] - np.interp(t[0] + 60, t, V))
+            voltage = rest["Voltage [V]"]
+            rise[psd] = (h[-1] - h[0], voltage(t[-1]) - voltage(t[0] + 60))
 
         assert rise["distribution"][0] > rise["single"][0] + 0.05
         assert rise["distribution"][1] > rise["single"][1]
