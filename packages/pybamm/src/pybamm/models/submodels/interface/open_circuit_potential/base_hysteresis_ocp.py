@@ -24,15 +24,12 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
     phase : str, optional
         Phase of the particle (default is "primary")
     x_average : bool
-        Whether the particle concentration is averaged over the x-direction. Default is False.
+        Whether the particle concentration, and hence the hysteresis state, is
+        averaged over the x-direction. Default is False.
+    x_average_particles : bool, optional
+        Whether the particle concentrations the open-circuit potential depends on
+        are uniform in x. Default is ``x_average``.
     """
-
-    def __init__(
-        self, param, domain, reaction, options, phase="primary", x_average=False
-    ):
-        super().__init__(
-            param, domain, reaction, options=options, phase=phase, x_average=x_average
-        )
 
     def _get_hysteresis_state_variables(self):
         domain, Domain = self.domain_Domain
@@ -71,16 +68,24 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
             )
         return variables
 
-    def _get_coupled_variables(self, variables):
+    def _get_hysteresis_ocp_variables(self, hysteresis_variables):
+        """
+        Open-circuit potential variables for the given hysteresis state variables.
+
+        Parameters
+        ----------
+        hysteresis_variables : dict
+            The hysteresis state variables, as returned by
+            :meth:`_get_hysteresis_state_variables`.
+        """
         domain, Domain = self.domain_Domain
         domain_options = getattr(self.options, domain)
         phase_name = self.phase_name
+        variables = {}
 
         if self.reaction == "lithium-ion main":
             # Get equilibrium, delithiation and lithiation OCPs
-            sto_surf, sto_bulk, T, T_bulk = self._get_stoichiometry_and_temperature(
-                variables
-            )
+            sto_surf, sto_bulk, T, T_bulk = self._get_stoichiometry_and_temperature()
             U_eq = self.phase_param.U(sto_surf, T)
             U_lith = self.phase_param.U(sto_surf, T, "lithiation")
             U_lith_bulk = self.phase_param.U(sto_bulk, T_bulk, "lithiation")
@@ -124,18 +129,11 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
             )
 
             # Get correct hysteresis state variable
+            state_name = f"electrode {phase_name}hysteresis state"
             if domain_options["particle size"] == "distribution":
-                h = variables[
-                    f"{Domain} electrode {phase_name}hysteresis state distribution"
-                ]
-                h_x_av = variables[
-                    f"X-averaged {domain} electrode {phase_name}hysteresis state distribution"
-                ]
-            else:
-                h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-                h_x_av = variables[
-                    f"X-averaged {domain} electrode {phase_name}hysteresis state"
-                ]
+                state_name += " distribution"
+            h = hysteresis_variables[f"{Domain} {state_name}"]
+            h_x_av = hysteresis_variables[f"X-averaged {domain} {state_name}"]
 
             # check MPM
             if (
@@ -154,15 +152,33 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         return variables
 
-    def set_initial_conditions(self, variables):
+    def _get_hysteresis_state(self, variables):
+        """The hysteresis state variable, x-averaged if the state is."""
         domain, Domain = self.domain_Domain
+        name = f"electrode {self.phase_name}hysteresis state"
+        if self.x_average is True:
+            return variables[f"X-averaged {domain} {name}"]
+        return variables[f"{Domain} {name}"]
+
+    def _get_hysteresis_rate_inputs(self):
+        """
+        Volumetric interfacial current density, surface stoichiometry and
+        temperature driving the hysteresis state, x-averaged if the state is.
+        """
         phase_name = self.phase_name
+        x_average = self.x_average
+        i_vol = self._coupled_electrode_variable(
+            f"electrode {phase_name}volumetric interfacial current density [A.m-3]",
+            x_average,
+        )
+        sto_surf = self._coupled_electrode_variable(
+            f"{phase_name}particle surface stoichiometry", x_average
+        )
+        T = self._coupled_electrode_variable("electrode temperature [K]", x_average)
+        return i_vol, sto_surf, T
 
+    def _set_hysteresis_initial_conditions(self, h):
         h_init = self.phase_param.h_init
-        if self.x_average is False:
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        else:
-            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
+        if self.x_average is True:
             h_init = pybamm.x_average(h_init)
-
         self.initial_conditions[h] = h_init

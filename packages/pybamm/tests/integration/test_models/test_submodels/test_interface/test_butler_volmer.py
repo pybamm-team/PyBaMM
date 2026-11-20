@@ -9,6 +9,25 @@ import pybamm
 from tests import get_discretisation_for_testing
 
 
+def substitute_coupled_variables(symbol, values):
+    """Replace the coupled variables in ``symbol`` by the values in ``values``."""
+
+    def replace(node, new_leaves):
+        if isinstance(node, pybamm.CoupledVariable):
+            value = values[node.name]
+            return value if isinstance(value, pybamm.Symbol) else pybamm.Scalar(value)
+        return pybamm.rebuild(node, new_leaves)
+
+    return pybamm.tree_map(replace, symbol)
+
+
+def build_interfacial_current(model):
+    """Build ``model`` and return its interfacial current density."""
+    model.build()
+    Domain = model.domain.capitalize()
+    return model.variables[f"{Domain} electrode interfacial current density [A.m-2]"]
+
+
 class TestButlerVolmer:
     def setup_method(self):
         self.delta_phi_s_n = pybamm.Variable(
@@ -95,9 +114,9 @@ class TestButlerVolmer:
             },
             "primary",
         )
-        j_n = model_n.get_coupled_variables(self.variables)[
-            "Negative electrode interfacial current density [A.m-2]"
-        ]
+        j_n = substitute_coupled_variables(
+            build_interfacial_current(model_n), self.variables
+        )
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "positive",
@@ -109,9 +128,9 @@ class TestButlerVolmer:
             },
             "primary",
         )
-        j_p = model_p.get_coupled_variables(self.variables)[
-            "Positive electrode interfacial current density [A.m-2]"
-        ]
+        j_p = substitute_coupled_variables(
+            build_interfacial_current(model_p), self.variables
+        )
 
         # negative electrode Butler-Volmer is Multiplication
         assert isinstance(j_n, pybamm.Multiplication)
@@ -134,9 +153,9 @@ class TestButlerVolmer:
             },
             "primary",
         )
-        j_n = model_n.get_coupled_variables(self.variables)[
-            "Negative electrode interfacial current density [A.m-2]"
-        ]
+        j_n = substitute_coupled_variables(
+            build_interfacial_current(model_n), self.variables
+        )
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "positive",
@@ -148,9 +167,9 @@ class TestButlerVolmer:
             },
             "primary",
         )
-        j_p = model_p.get_coupled_variables(self.variables)[
-            "Positive electrode interfacial current density [A.m-2]"
-        ]
+        j_p = substitute_coupled_variables(
+            build_interfacial_current(model_p), self.variables
+        )
 
         # Process parameters
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
@@ -176,9 +195,9 @@ class TestButlerVolmer:
             },
             "primary",
         )
-        j_n = model_n.get_coupled_variables(self.variables)[
-            "Negative electrode interfacial current density [A.m-2]"
-        ]
+        j_n = substitute_coupled_variables(
+            build_interfacial_current(model_n), self.variables
+        )
         model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "positive",
@@ -190,9 +209,9 @@ class TestButlerVolmer:
             },
             "primary",
         )
-        j_p = model_p.get_coupled_variables(self.variables)[
-            "Positive electrode interfacial current density [A.m-2]"
-        ]
+        j_p = substitute_coupled_variables(
+            build_interfacial_current(model_p), self.variables
+        )
         j = pybamm.concatenation(j_n, pybamm.PrimaryBroadcast(0, ["separator"]), j_p)
 
         # Process parameters and discretise
@@ -251,6 +270,8 @@ class TestButlerVolmer:
             "primary",
         )
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
+        j_n_coupled = build_interfacial_current(model_n)
+        j_p_coupled = build_interfacial_current(model_p)
 
         def j_n(c_e):
             variables = {
@@ -258,9 +279,7 @@ class TestButlerVolmer:
                 "Negative electrode surface potential difference [V]": 1,
                 "Negative electrolyte concentration [mol.m-3]": c_e,
             }
-            return model_n.get_coupled_variables(variables)[
-                "Negative electrode interfacial current density [A.m-2]"
-            ].orphans[0]
+            return substitute_coupled_variables(j_n_coupled, variables)
 
         def j_p(c_e):
             variables = {
@@ -268,9 +287,7 @@ class TestButlerVolmer:
                 "Positive electrode surface potential difference [V]": 1,
                 "Positive electrolyte concentration [mol.m-3]": c_e,
             }
-            return model_p.get_coupled_variables(variables)[
-                "Positive electrode interfacial current density [A.m-2]"
-            ].orphans[0]
+            return substitute_coupled_variables(j_p_coupled, variables)
 
         c_e = pybamm.InputParameter("c_e")
         h = pybamm.Scalar(0.00001)
@@ -323,6 +340,8 @@ class TestButlerVolmer:
             "primary",
         )
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
+        j_n_coupled = build_interfacial_current(model_n)
+        j_p_coupled = build_interfacial_current(model_p)
 
         def j_n(delta_phi):
             variables = {
@@ -330,9 +349,7 @@ class TestButlerVolmer:
                 "Negative electrode surface potential difference [V]": delta_phi,
                 "Negative electrolyte concentration [mol.m-3]": 1,
             }
-            return model_n.get_coupled_variables(variables)[
-                "Negative electrode interfacial current density [A.m-2]"
-            ].orphans[0]
+            return substitute_coupled_variables(j_n_coupled, variables)
 
         def j_p(delta_phi):
             variables = {
@@ -340,9 +357,7 @@ class TestButlerVolmer:
                 "Positive electrode surface potential difference [V]": delta_phi,
                 "Positive electrolyte concentration [mol.m-3]": 1,
             }
-            return model_p.get_coupled_variables(variables)[
-                "Positive electrode interfacial current density [A.m-2]"
-            ].orphans[0]
+            return substitute_coupled_variables(j_p_coupled, variables)
 
         delta_phi = pybamm.InputParameter("delta_phi")
         h = pybamm.Scalar(0.00001)

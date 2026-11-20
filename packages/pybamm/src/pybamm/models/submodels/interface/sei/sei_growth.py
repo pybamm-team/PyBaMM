@@ -28,10 +28,23 @@ class SEIGrowth(BaseModel):
         Phase of the particle (default is "primary")
     cracks : bool, optional
         Whether this is a submodel for standard SEI or SEI on cracks
+    inverse_kinetics : bool, optional
+        Whether the main reaction uses inverse kinetics. Its current density then
+        depends on the SEI current, so the x-averaged total interfacial current
+        density is used for the SEI film resistance instead. Default is False.
     """
 
-    def __init__(self, param, domain, options, phase="primary", cracks=False):
+    def __init__(
+        self,
+        param,
+        domain,
+        options,
+        phase="primary",
+        cracks=False,
+        inverse_kinetics=False,
+    ):
         super().__init__(param, domain, options=options, phase=phase, cracks=cracks)
+        self.inverse_kinetics = inverse_kinetics
         if self.options.electrode_types[domain] == "planar":
             self.reaction_loc = "interface"
         elif self.options["x-average side reactions"] == "true":
@@ -48,7 +61,7 @@ class SEIGrowth(BaseModel):
         else:
             pybamm.citations.register("Marquis2020")
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
         L_sei_0 = self.phase_param.L_sei_0
         V_bar_sei = self.phase_param.V_bar_sei
@@ -62,6 +75,7 @@ class SEIGrowth(BaseModel):
             )
             c_sei_xav.print_name = "c_sei_xav"
             c_sei = pybamm.PrimaryBroadcast(c_sei_xav, f"{domain} electrode")
+            c_sei_state = c_sei_xav
         elif self.reaction_loc == "full electrode":
             # c_sei is a bulk quantity [mol.m-3]
             scale = L_sei_0 * self.phase_param.a_typ / V_bar_sei
@@ -71,6 +85,7 @@ class SEIGrowth(BaseModel):
                 auxiliary_domains={"secondary": "current collector"},
                 scale=scale,
             )
+            c_sei_state = c_sei
         elif self.reaction_loc == "interface":
             # c_sei is an interfacial quantity [mol.m-2]
             scale = L_sei_0 / V_bar_sei
@@ -79,44 +94,52 @@ class SEIGrowth(BaseModel):
                 domain="current collector",
                 scale=scale,
             )
+            c_sei_state = c_sei
         c_sei.print_name = "c_sei"
 
         variables = self._get_standard_concentration_variables(c_sei)
 
-        return variables
-
-    def get_coupled_variables(self, variables):
         phase_param = self.phase_param
-        domain, Domain = self.domain_Domain
         SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
-        T = variables[f"{Domain} electrode temperature [K]"]
+        T = self._coupled_electrode_variable("electrode temperature [K]")
         # delta_phi = phi_s - phi_e
         if self.reaction_loc == "interface":
-            delta_phi = variables[
-                "Lithium metal interface surface potential difference [V]"
-            ]
+            delta_phi = self.coupled_variable(
+                "Lithium metal interface surface potential difference [V]",
+                domain="current collector",
+            )
             T = pybamm.boundary_value(T, "right")
         else:
-            delta_phi = variables[
-                f"{Domain} electrode surface potential difference [V]"
-            ]
+            delta_phi = self._coupled_electrode_variable(
+                "electrode surface potential difference [V]"
+            )
 
-        # Look for current that contributes to the -IR drop
-        # If we can't find the interfacial current density from the main reaction, j,
-        # it's ok to fall back on the total interfacial current density, j_tot
-        # This should only happen when the interface submodel is "InverseButlerVolmer"
-        # or "InverseLinear" in which case j = j_tot (uniform) anyway
-        if f"{Domain} electrode interfacial current density [A.m-2]" in variables:
-            j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
-        elif self.reaction_loc == "interface":
-            j = variables["Lithium metal total interfacial current density [A.m-2]"]
+        # Current that contributes to the -IR drop. The main reaction's current
+        # density is only defined without phases; otherwise, or with inverse
+        # kinetics (where j = j_tot is uniform anyway), use the total current density
+        if self.reaction_loc == "interface":
+            j = self.coupled_variable(
+                "Lithium metal total interfacial current density [A.m-2]",
+                domain="current collector",
+            )
+        elif self.inverse_kinetics:
+            j, _ = self._get_average_total_interfacial_current_density()
+        elif self.phase_name != "":
+            j = self._coupled_electrode_variable(
+                "electrode total interfacial current density [A.m-2]", x_average=True
+            )
         else:
-            j = variables[
-                f"X-averaged {domain} electrode total "
-                "interfacial current density [A.m-2]"
-            ]
+            j = self._coupled_electrode_variable(
+                "electrode interfacial current density [A.m-2]"
+            )
 
-        L_sei = variables[f"{Domain} {self.reaction_name}thickness [m]"]
+        L_sei_name = f"{self.reaction_name}thickness [m]"
+        if self.reaction_loc == "interface":
+            L_sei = self.coupled_variable(
+                f"{Domain} {L_sei_name}", domain="current collector"
+            )
+        else:
+            L_sei = self._coupled_electrode_variable(L_sei_name)
 
         R_sei = phase_param.R_sei
         eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
@@ -220,46 +243,26 @@ class SEIGrowth(BaseModel):
         j_sei = arrhenius * j_sei
 
         variables.update(self._get_standard_reaction_variables(j_sei))
+        variables.update(self._get_standard_volumetric_sei_variables(variables))
+        self.variables.update(variables)
 
-        # Add other standard coupled variables
-        variables.update(super().get_coupled_variables(variables))
-
-        return variables
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-
+        # SEI concentration equation, x-averaged if the SEI concentration is
+        x_average = self.reaction_loc == "x-average"
         if self.reaction_loc == "interface":
-            # c_sei is an interfacial quantity [mol.m-2]
-            c_sei = variables[f"{Domain} {self.reaction_name}concentration [mol.m-2]"]
             j_sei = variables[
                 f"{Domain} electrode {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
             a = 1
-        elif self.reaction_loc == "x-average":
-            # c_sei is a bulk quanitity [mol.m-3]
-            c_sei = variables[
-                f"X-averaged {domain} {self.reaction_name}concentration [mol.m-3]"
-            ]
-            j_sei = variables[
-                f"X-averaged {domain} electrode {self.reaction_name}"
-                "interfacial current density [A.m-2]"
-            ]
-            a = variables[
-                f"X-averaged {domain} electrode {self.phase_name}"
-                "surface area to volume ratio [m-1]"
-            ]
         else:
-            c_sei = variables[f"{Domain} {self.reaction_name}concentration [mol.m-3]"]
             j_sei = variables[
-                f"{Domain} electrode {self.reaction_name}"
-                "interfacial current density [A.m-2]"
+                f"{'X-averaged ' + domain if x_average else Domain} electrode "
+                f"{self.reaction_name}interfacial current density [A.m-2]"
             ]
-            a = variables[
-                f"{Domain} electrode {self.phase_name}"
-                "surface area to volume ratio [m-1]"
-            ]
+            a = self._coupled_electrode_variable(
+                f"electrode {self.phase_name}surface area to volume ratio [m-1]",
+                x_average,
+            )
 
         # For SEI on cracks, need to use crack area instead of surface area
         # To do this, use the roughness parameter, which works as follows:
@@ -267,10 +270,9 @@ class SEIGrowth(BaseModel):
         # Rearrange to get a_cr = (roughness - 1) * a
         # This is done here by replacing a with a_cr using a *= roughness - 1
         if self.reaction == "SEI on cracks":
-            if self.reaction_loc == "x-average":
-                roughness = variables[f"X-averaged {domain} electrode roughness ratio"]
-            else:
-                roughness = variables[f"{Domain} electrode roughness ratio"]
+            roughness = self._coupled_electrode_variable(
+                "electrode roughness ratio", x_average
+            )
             a *= roughness - 1  # Replace surface area with crack area
 
         # a * j_sei / F is the rate of consumption of Li moles by SEI reaction
@@ -278,30 +280,14 @@ class SEIGrowth(BaseModel):
         # a * j_sei / (F * z_sei) = rate of consumption of SEI moles by SEI reaction
         dcdt_sei = a * j_sei / (self.param.F * self.phase_param.z_sei)
         # Therefore, -a * j_sei / (F * z_sei) = rate of creation of SEI moles
-        self.rhs = {c_sei: -dcdt_sei}
+        self.rhs = {c_sei_state: -dcdt_sei}
 
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        L_sei_0 = self.phase_param.L_sei_0
-        V_bar_sei = self.phase_param.V_bar_sei
         if self.reaction_loc == "interface":
             # c_sei is an interfacial quantity [mol.m-2]
-            c_sei = variables[f"{Domain} {self.reaction_name}concentration [mol.m-2]"]
             c_sei_0 = L_sei_0 / V_bar_sei
-        elif self.reaction_loc == "x-average":
-            # c_sei is a bulk quantity [mol.m-3]
-            c_sei = variables[
-                f"X-averaged {domain} {self.reaction_name}concentration [mol.m-3]"
-            ]
-            c_sei_0 = L_sei_0 * self.phase_param.a_typ / V_bar_sei
-            c_sei_cr0 = self.phase_param.L_sei_cr0 * self.phase_param.a_typ / V_bar_sei
+        elif self.reaction == "SEI on cracks":
+            c_sei_0 = self.phase_param.L_sei_cr0 * self.phase_param.a_typ / V_bar_sei
         else:
             # c_sei is a bulk quantity [mol.m-3]
-            c_sei = variables[f"{Domain} {self.reaction_name}concentration [mol.m-3]"]
             c_sei_0 = L_sei_0 * self.phase_param.a_typ / V_bar_sei
-            c_sei_cr0 = self.phase_param.L_sei_cr0 * self.phase_param.a_typ / V_bar_sei
-
-        if self.reaction == "SEI on cracks":
-            self.initial_conditions = {c_sei: c_sei_cr0}
-        else:
-            self.initial_conditions = {c_sei: c_sei_0}
+        self.initial_conditions = {c_sei_state: c_sei_0}

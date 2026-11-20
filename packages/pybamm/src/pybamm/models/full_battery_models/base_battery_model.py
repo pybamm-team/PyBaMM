@@ -1064,6 +1064,16 @@ class BaseBatteryModel(pybamm.BaseModel):
         The name of the model. The default is "Unnamed battery model".
     """
 
+    # Whether the electrolyte concentration and the surface potential difference
+    # are uniform in x; models that x-average them pass this to the reactions
+    x_average_electrolyte = False
+    x_average_surface_potential = False
+
+    @property
+    def x_average_particles(self):
+        """Whether the particle concentrations are uniform in x."""
+        return getattr(self, "x_average", False)
+
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
@@ -1524,7 +1534,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.param,
             self.options,
             x_average,
-            x_average_particles=getattr(self, "x_average_particles", x_average),
+            x_average_particles=self.x_average_particles,
             full_electrolyte_conductivity=any(
                 isinstance(submodel, full_conductivity)
                 for submodel in self.submodels.values()

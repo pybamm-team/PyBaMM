@@ -29,7 +29,7 @@ class NoSEI(BaseModel):
         else:
             self.reaction_loc = "full electrode"
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain = self.domain.lower()
         if self.reaction_loc == "interface":
             zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
@@ -53,4 +53,5 @@ class NoSEI(BaseModel):
         else:
             variables.update(self._get_standard_reaction_variables(zero))
         variables.update(self._get_standard_interfacial_current_variables(zero))
-        return variables
+        variables.update(self._get_standard_volumetric_sei_variables(variables))
+        self.variables.update(variables)

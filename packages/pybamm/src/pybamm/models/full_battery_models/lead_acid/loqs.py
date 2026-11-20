@@ -16,6 +16,9 @@ class LOQS(BaseModel):
 
     """
 
+    x_average_electrolyte = True
+    x_average_surface_potential = True
+
     def __init__(self, options=None, name="LOQS model", build=True):
         super().__init__(options, name)
 
@@ -106,15 +109,27 @@ class LOQS(BaseModel):
             )
 
     def set_intercalation_kinetics_submodel(self):
+        x_averages = {
+            "x_average": self.x_average_electrolyte,
+            "x_average_surface_potential": self.x_average_surface_potential,
+        }
         if self.options["surface form"] == "false":
             self.submodels["leading-order negative interface"] = (
                 pybamm.kinetics.InverseButlerVolmer(
-                    self.param, "negative", "lead-acid main", self.options
+                    self.param,
+                    "negative",
+                    "lead-acid main",
+                    self.options,
+                    x_average=self.x_average_electrolyte,
                 )
             )
             self.submodels["leading-order positive interface"] = (
                 pybamm.kinetics.InverseButlerVolmer(
-                    self.param, "positive", "lead-acid main", self.options
+                    self.param,
+                    "positive",
+                    "lead-acid main",
+                    self.options,
+                    x_average=self.x_average_electrolyte,
                 )
             )
             self.submodels["negative interface current"] = (
@@ -130,13 +145,23 @@ class LOQS(BaseModel):
         else:
             self.submodels["leading-order negative interface"] = (
                 pybamm.kinetics.SymmetricButlerVolmer(
-                    self.param, "negative", "lead-acid main", self.options, "primary"
+                    self.param,
+                    "negative",
+                    "lead-acid main",
+                    self.options,
+                    "primary",
+                    **x_averages,
                 )
             )
 
             self.submodels["leading-order positive interface"] = (
                 pybamm.kinetics.SymmetricButlerVolmer(
-                    self.param, "positive", "lead-acid main", self.options, "primary"
+                    self.param,
+                    "positive",
+                    "lead-acid main",
+                    self.options,
+                    "primary",
+                    **x_averages,
                 )
             )
         # always use forward Butler-Volmer for the reaction submodel to be passed to the
@@ -144,12 +169,22 @@ class LOQS(BaseModel):
         self.reaction_submodels = {
             "negative": [
                 pybamm.kinetics.SymmetricButlerVolmer(
-                    self.param, "negative", "lead-acid main", self.options, "primary"
+                    self.param,
+                    "negative",
+                    "lead-acid main",
+                    self.options,
+                    "primary",
+                    **x_averages,
                 )
             ],
             "positive": [
                 pybamm.kinetics.SymmetricButlerVolmer(
-                    self.param, "positive", "lead-acid main", self.options, "primary"
+                    self.param,
+                    "positive",
+                    "lead-acid main",
+                    self.options,
+                    "primary",
+                    **x_averages,
                 )
             ],
         }
@@ -192,7 +227,13 @@ class LOQS(BaseModel):
             )
             self.submodels["leading-order positive oxygen interface"] = (
                 pybamm.kinetics.ForwardTafel(
-                    self.param, "positive", "lead-acid oxygen", self.options, "primary"
+                    self.param,
+                    "positive",
+                    "lead-acid oxygen",
+                    self.options,
+                    "primary",
+                    x_average=self.x_average_electrolyte,
+                    x_average_surface_potential=self.x_average_surface_potential,
                 )
             )
             self.submodels["leading-order negative oxygen interface"] = (

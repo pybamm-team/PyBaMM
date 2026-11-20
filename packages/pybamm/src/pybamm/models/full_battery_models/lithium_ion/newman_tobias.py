@@ -20,7 +20,8 @@ class NewmanTobias(DFN):
 
     """
 
-    # Particles are x-averaged although the rest of the model is not
+    # Particles and electrolyte are x-averaged although the rest of the model is not
+    x_average_electrolyte = True
     x_average_particles = True
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):

@@ -28,8 +28,8 @@ class Marcus(BaseKinetics):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options, phase)
+    def __init__(self, param, domain, reaction, options, phase="primary", **kwargs):
+        super().__init__(param, domain, reaction, options, phase, **kwargs)
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
@@ -64,8 +64,8 @@ class MarcusHushChidsey(BaseKinetics):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options, phase)
+    def __init__(self, param, domain, reaction, options, phase="primary", **kwargs):
+        super().__init__(param, domain, reaction, options, phase, **kwargs)
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
