@@ -140,10 +140,44 @@ class BaseSubModel(pybamm.BaseModel):
             "Please use it on the full model."
         )
 
+    _legacy_methods = (
+        "get_fundamental_variables",
+        "get_coupled_variables",
+        "set_rhs",
+        "set_algebraic",
+        "set_boundary_conditions",
+        "set_initial_conditions",
+        "add_events_from",
+    )
+
     @property
     def defines_build(self):
-        """Whether the submodel defines its equations through :meth:`build`."""
-        return type(self).build is not BaseSubModel.build
+        """
+        Whether the submodel defines its equations through :meth:`build`.
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If a class overrides the deprecated methods of a parent that defines
+            :meth:`build`, since those overrides would be ignored.
+        """
+        legacy_class = None
+        for cls in type(self).__mro__:
+            if cls is BaseSubModel:
+                return False
+            if "build" in vars(cls):
+                if legacy_class is None:
+                    return True
+                raise pybamm.ModelError(
+                    f"{legacy_class.__name__} overrides deprecated submodel methods "
+                    f"but inherits `build` from {cls.__name__}, so the overrides "
+                    "would be ignored. Define `build` instead."
+                )
+            if legacy_class is None and any(
+                name in vars(cls) for name in self._legacy_methods
+            ):
+                legacy_class = cls
+        return False
 
     def build(self):
         """
