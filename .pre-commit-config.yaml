@@ -75,6 +75,13 @@ repos:
         files: ^(packages/pybamm-model-zoo/(src/pybamm_model_zoo/.*|scripts/generate\.py|status\.json|badges/.*)|docs/source/model_zoo/.*)$
         pass_filenames: false
 
+      - id: check-changelog-fragments
+        name: Check changelog fragment names and contents
+        entry: python scripts/check_changelog_fragments.py
+        language: python
+        files: ^(changelog\.d/.*|scripts/check_changelog_fragments\.py)$
+        pass_filenames: false
+
       - id: check-ci-gate
         name: Check every CI job is merge-gated or explicitly advisory
         entry: python .github/scripts/check_ci_gate.py
