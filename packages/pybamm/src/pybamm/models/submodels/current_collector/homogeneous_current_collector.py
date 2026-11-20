@@ -19,18 +19,13 @@ class Uniform(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
+    def build(self):
         phi_s_cn = pybamm.PrimaryBroadcast(0, "current collector")
-        variables = self._get_standard_negative_potential_variables(phi_s_cn)
-        return variables
-
-    def get_coupled_variables(self, variables):
         # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
         i_boundary_cc = pybamm.PrimaryBroadcast(
-            variables["Total current density [A.m-2]"], "current collector"
+            self.coupled_variable("Total current density [A.m-2]"), "current collector"
         )
 
-        variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
-
-        return variables
+        self.variables.update(self._get_standard_negative_potential_variables(phi_s_cn))
+        self.variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
