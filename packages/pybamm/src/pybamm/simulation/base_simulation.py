@@ -41,6 +41,7 @@ class BaseSimulation:
         Parameters and their corresponding numerical values.
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
+        (a prebuilt :class:`pybamm.UnstructuredSubMesh` is used as is)
     var_pts: dict (optional)
         A dictionary of the number of points used by each spatial variable
     spatial_methods: dict (optional)

@@ -696,3 +696,100 @@ class TestMeshGenerator:
     def test_init_name(self):
         mesh_generator = pybamm.MeshGenerator(pybamm.SubMesh0D)
         assert mesh_generator.__repr__() == "Generator for SubMesh0D"
+
+
+class TestPrebuiltSubMesh:
+    @staticmethod
+    def _box_inputs():
+        """Geometry and points for a 2D box on the negative electrode."""
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        z = pybamm.SpatialVariable("z_2d", domain=["negative electrode"])
+        geometry = {
+            "negative electrode": {
+                x: {"min": 0.0, "max": 1.0},
+                z: {"min": 0.0, "max": 2.0},
+            }
+        }
+        return geometry, {x: 3, z: 4}
+
+    def _generated_mesh(self):
+        geometry, var_pts = self._box_inputs()
+        submesh_types = {"negative electrode": pybamm.UnstructuredMeshGenerator()}
+        return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+    def test_prebuilt_submesh_is_used_as_is(self):
+        submesh = self._generated_mesh()["negative electrode"]
+        r = pybamm.SpatialVariable("r_n", domain=["negative particle"])
+        geometry = {"negative particle": {r: {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry,
+            {
+                "negative particle": pybamm.Uniform1DSubMesh,
+                "negative electrode": submesh,
+            },
+            {r: 5},
+        )
+
+        assert mesh["negative electrode"] is submesh
+        assert mesh["negative particle"].npts == 5
+        assert geometry["negative electrode"] == {}
+        assert mesh.base_domains == ["negative particle", "negative electrode"]
+
+    def test_prebuilt_submesh_with_empty_geometry_entry(self):
+        submesh = self._generated_mesh()["negative electrode"]
+        mesh = pybamm.Mesh(
+            {"negative electrode": {}}, {"negative electrode": submesh}, {}
+        )
+        assert mesh["negative electrode"] is submesh
+
+    def test_prebuilt_submesh_matches_generated_solution(self):
+        def solve(geometry, submesh_types, var_pts):
+            model = pybamm.BaseModel()
+            u = pybamm.Variable("u", domain="negative electrode")
+            model.rhs = {u: pybamm.div(pybamm.grad(u))}
+            model.initial_conditions = {u: pybamm.Scalar(1)}
+            model.boundary_conditions = {
+                u: {
+                    "left": (pybamm.Scalar(0), "Dirichlet"),
+                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                }
+            }
+            model.variables = {"u": u}
+            simulation = pybamm.Simulation(
+                model,
+                geometry=geometry,
+                submesh_types=submesh_types,
+                var_pts=var_pts,
+                spatial_methods={
+                    "negative electrode": pybamm.FiniteVolumeUnstructured()
+                },
+            )
+            return simulation.solve([0, 0.1])["u"](t=0.1)
+
+        geometry, var_pts = self._box_inputs()
+        expected = solve(
+            geometry,
+            {"negative electrode": pybamm.UnstructuredMeshGenerator()},
+            var_pts,
+        )
+        submesh = self._generated_mesh()["negative electrode"]
+        prebuilt = solve({}, {"negative electrode": submesh}, {})
+        np.testing.assert_allclose(prebuilt, expected, rtol=1e-12, atol=1e-12)
+
+    def test_prebuilt_submesh_rejects_geometry(self):
+        submesh = self._generated_mesh()["negative electrode"]
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        with pytest.raises(pybamm.GeometryError, match=r"cannot also have a geometry"):
+            pybamm.Mesh(
+                {"negative electrode": {x: {"min": 0, "max": 1}}},
+                {"negative electrode": submesh},
+                {x: 3},
+            )
+
+    def test_prebuilt_structured_submesh_raises(self):
+        r = pybamm.SpatialVariable("r_n", domain=["negative particle"])
+        submesh = pybamm.Uniform1DSubMesh({r: {"min": 0, "max": 1}}, {"r_n": 5})
+        with pytest.raises(
+            pybamm.GeometryError, match=r"only a pybamm.UnstructuredSubMesh"
+        ):
+            pybamm.Mesh({}, {"negative particle": submesh}, {})
