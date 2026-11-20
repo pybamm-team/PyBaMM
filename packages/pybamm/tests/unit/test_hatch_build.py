@@ -64,6 +64,12 @@ class TestWheelTag:
         with pytest.raises(RuntimeError, match=r"Cannot parse a wheel tag"):
             module.wheel_tag("not-a-wheel.whl")
 
+    def test_rejects_a_compressed_tag_set(self):
+        module = load_hook_module()
+        name = "pybamm-1.0-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+        with pytest.raises(RuntimeError, match=r"Expected one tag"):
+            module.wheel_tag(name)
+
 
 class TestExtractExtension:
     def test_copies_the_single_extension(self, tmp_path):

@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+from packaging.utils import InvalidWheelFilename, parse_wheel_filename
 
 # One wheel per platform for CPython 3.11 and later, at a small per-FFI-call cost.
 FEATURES = "pyo3/abi3-py311"
@@ -26,11 +27,17 @@ with `pip install --only-binary pybamm pybamm`.
 
 
 def wheel_tag(wheel_name: str) -> str:
-    """Return the ``<python>-<abi>-<platform>`` tag from a wheel filename."""
-    parts = wheel_name.removesuffix(".whl").split("-")
-    if len(parts) < 5:
-        raise RuntimeError(f"Cannot parse a wheel tag from {wheel_name!r}")
-    return "-".join(parts[-3:])
+    """Return the single ``<python>-<abi>-<platform>`` tag of a wheel filename."""
+    try:
+        _, _, _, tags = parse_wheel_filename(wheel_name)
+    except InvalidWheelFilename as error:
+        raise RuntimeError(f"Cannot parse a wheel tag from {wheel_name!r}") from error
+    # hatchling pastes the tag into the filename, and a tag set would need re-compressing.
+    if len(tags) != 1:
+        raise RuntimeError(
+            f"Expected one tag in {wheel_name!r}, found {sorted(map(str, tags))}"
+        )
+    return str(next(iter(tags)))
 
 
 def extract_extension(wheel: Path, destination: Path) -> Path:
