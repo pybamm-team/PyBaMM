@@ -1,14 +1,20 @@
 // PyO3 bindings require specific argument types that clippy flags incorrectly
 #![allow(clippy::needless_pass_by_value)]
 
+use std::collections::HashMap;
+#[cfg(feature = "serialize")]
+use std::path::PathBuf;
+
 use numpy::{PyArray1, PyReadonlyArray1};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use pybamm_core::{
     Arena, ArrayData, CompiledExpr, CubicInterpolantData, DagRef, InterpolantData,
-    NdInterpolantData, Node, NodeId, ParamRegistry, ReadExtents, Shape,
+    NdInterpolantData, Node, NodeId, ParamIdx, ParamRegistry, ReadExtents, Shape, validate,
 };
 
+use crate::arrays;
 use crate::errors::{core_err_to_py, graph_err_to_py};
 
 /// Wrapper type for the rust-core [`Arena`] struct
@@ -18,6 +24,8 @@ pub struct ExprGraph {
     arena: Arena,
     /// Names, registration indices and packed slots of the inputs in `arena`.
     params: ParamRegistry,
+    /// The node each registered input was first built as, which a repeat lookup returns.
+    input_nodes: HashMap<ParamIdx, NodeId>,
 }
 
 /// Wrapper type for the rust-core [`NodeId`] struct
@@ -41,7 +49,7 @@ impl Expr {
         if self.graph.is(graph) {
             Ok(self.node_id)
         } else {
-            Err(pyo3::exceptions::PyValueError::new_err(
+            Err(PyValueError::new_err(
                 "Expr belongs to a different ExprGraph than the graph being built into",
             ))
         }
@@ -53,16 +61,12 @@ impl ExprGraph {
         &self.arena
     }
 
-    pub(crate) const fn arena_mut(&mut self) -> &mut Arena {
-        &mut self.arena
-    }
-
     /// `raw` as a node of this graph, or a `ValueError` if it is out of range.
     pub(crate) fn checked_root(&self, raw: u32) -> PyResult<NodeId> {
         let root = NodeId::from(raw);
         let n_nodes = self.arena.len();
         if root.index() >= n_nodes {
-            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            return Err(PyValueError::new_err(format!(
                 "_rebuild: root {raw} is out of range for a graph of {n_nodes} nodes"
             )));
         }
@@ -71,16 +75,14 @@ impl ExprGraph {
 
     /// Shared access to `slf`, as a `ValueError` instead of a panic while it is borrowed mutably.
     fn borrow_graph<'py>(slf: &'py Py<Self>, py: Python<'py>) -> PyResult<PyRef<'py, Self>> {
-        slf.try_borrow(py).map_err(|_| {
-            pyo3::exceptions::PyValueError::new_err("ExprGraph: graph borrow conflict")
-        })
+        slf.try_borrow(py)
+            .map_err(|_| PyValueError::new_err("ExprGraph: graph borrow conflict"))
     }
 
     /// Exclusive access to `slf`, as a `ValueError` instead of a panic while it is borrowed.
     fn borrow_graph_mut<'py>(slf: &'py Py<Self>, py: Python<'py>) -> PyResult<PyRefMut<'py, Self>> {
-        slf.try_borrow_mut(py).map_err(|_| {
-            pyo3::exceptions::PyValueError::new_err("ExprGraph: graph borrow conflict")
-        })
+        slf.try_borrow_mut(py)
+            .map_err(|_| PyValueError::new_err("ExprGraph: graph borrow conflict"))
     }
 
     /// Allocate `node` in `slf` and hand back its `Expr`.
@@ -121,38 +123,96 @@ impl ExprGraph {
         exprs.iter().map(|e| e.get().node_id_in(slf)).collect()
     }
 
-    pub(crate) const fn params(&self) -> &ParamRegistry {
-        &self.params
+    /// The registry as it stood at `vp_len` registration indices (all of them for `None`),
+    /// refusing a cut that drops an input the expression `reads`.
+    pub(crate) fn registry_at(
+        &self,
+        vp_len: Option<usize>,
+        reads: &ReadExtents,
+    ) -> PyResult<ParamRegistry> {
+        let Some(vp_len) = vp_len else {
+            return Ok(self.params.clone());
+        };
+        let registry = self.params.truncated(vp_len).ok_or_else(|| {
+            PyValueError::new_err(format!(
+                "_rebuild: vp_len={vp_len} exceeds the graph's {} input indices",
+                self.params.index_extent()
+            ))
+        })?;
+        // Registration appends, so a dropped input's values sit past the kept ones.
+        if reads.inputs > registry.packed_width().get() {
+            let last_read = reads.inputs - 1;
+            let name = self
+                .params
+                .registered()
+                .find(|(_, _, slot)| {
+                    (slot.offset.index()..slot.offset.index() + slot.width.index())
+                        .contains(&last_read)
+                })
+                .map_or("<unregistered>", |(_, name, _)| name);
+            return Err(PyValueError::new_err(format!(
+                "_rebuild: the expression reads input '{name}', which vp_len={vp_len} excludes"
+            )));
+        }
+        Ok(registry)
+    }
+
+    /// A `Concat` of `children`: one the graph already holds, else a new node.
+    pub(crate) fn concat_of(&mut self, children: &[NodeId]) -> NodeId {
+        let existing = node_ids(&self.arena)
+            .rev()
+            .find(|&id| matches!(&self.arena[id], Node::Concat(other) if other == children));
+        existing.unwrap_or_else(|| self.arena.alloc(Node::Concat(children.to_vec())))
+    }
+
+    /// Validate that the graphs rooted at `roots` can be lowered safely, in one walk.
+    pub(crate) fn check_supported(&self, roots: impl IntoIterator<Item = NodeId>) -> PyResult<()> {
+        validate(&self.arena, roots).map_err(graph_err_to_py)
+    }
+
+    /// `root` compiled as built, unsimplified, once it is supported and its reads fit buffers
+    /// of lengths `y`, `y_dot` and `inputs`.
+    fn compile_as_built(
+        &self,
+        root: NodeId,
+        method: &str,
+        y: usize,
+        y_dot: usize,
+        inputs: usize,
+    ) -> PyResult<CompiledExpr> {
+        self.check_supported([root])?;
+        let dag = DagRef::new(&self.arena, root);
+        check_read_extents(dag, method, y, y_dot, inputs)?;
+        Ok(CompiledExpr::new(dag))
     }
 }
 
-/// Reject a buffer shorter than `root` reads, which would otherwise panic.
+/// Every node id of `arena`, in allocation order.
+fn node_ids(arena: &Arena) -> impl DoubleEndedIterator<Item = NodeId> {
+    (0..arena.len()).filter_map(|at| u32::try_from(at).ok().map(NodeId::from))
+}
+
+/// Reject a buffer shorter than `dag` reads, which would otherwise panic.
 fn check_read_extents(
-    arena: &Arena,
-    root: NodeId,
+    dag: DagRef<'_>,
     method: &str,
     y: usize,
     y_dot: usize,
     inputs: usize,
 ) -> PyResult<()> {
-    let extents = ReadExtents::scan(arena, root);
+    let extents = ReadExtents::scan(dag.arena(), dag.root());
     for (name, got, needed) in [
         ("y", y, extents.y),
         ("y_dot", y_dot, extents.y_dot.unwrap_or(0)),
         ("inputs", inputs, extents.inputs),
     ] {
         if got < needed {
-            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            return Err(PyValueError::new_err(format!(
                 "{method}: the expression reads {needed} value(s) of {name}, got {got}"
             )));
         }
     }
     Ok(())
-}
-
-/// Validate that the graphs rooted at `roots` can be lowered safely, in one walk.
-pub fn check_supported(arena: &Arena, roots: impl IntoIterator<Item = NodeId>) -> PyResult<()> {
-    pybamm_core::validate(arena, roots).map_err(graph_err_to_py)
 }
 
 #[pymethods]
@@ -162,6 +222,7 @@ impl ExprGraph {
         Self {
             arena: Arena::new(),
             params: ParamRegistry::new(),
+            input_nodes: HashMap::new(),
         }
     }
 
@@ -190,7 +251,7 @@ impl ExprGraph {
 
     /// Registration index (not packed offset) of `name`, or `None` if unregistered.
     fn input_index(&self, name: &str) -> Option<usize> {
-        self.params.index_of(name).map(pybamm_core::ParamIdx::index)
+        self.params.index_of(name).map(ParamIdx::index)
     }
 
     /// Number of nodes in the expression arena.
@@ -199,18 +260,22 @@ impl ExprGraph {
         self.arena.len()
     }
 
-    /// Register (or re-look-up) a named input parameter of `width` packed values.
+    /// Register a named input parameter of `width` packed values, or look up its node.
     #[pyo3(signature = (name, width = 1))]
     fn input_parameter(slf: Py<Self>, py: Python<'_>, name: &str, width: usize) -> PyResult<Expr> {
-        let mut graph = Self::borrow_graph_mut(&slf, py)?;
-        let (index, slot) = graph.params.register(name, width).map_err(core_err_to_py)?;
-        let id = graph.arena.alloc(Node::InputParameter {
-            name: name.to_string(),
-            index: index.index(),
-            offset: slot.offset.index(),
-            width: slot.width.index(),
-        });
-        drop(graph);
+        let id = {
+            let mut graph = Self::borrow_graph_mut(&slf, py)?;
+            let graph = &mut *graph;
+            let (index, slot) = graph.params.register(name, width).map_err(core_err_to_py)?;
+            *graph.input_nodes.entry(index).or_insert_with(|| {
+                graph.arena.alloc(Node::InputParameter {
+                    name: name.to_string(),
+                    index: index.index(),
+                    offset: slot.offset.index(),
+                    width: slot.width.index(),
+                })
+            })
+        };
         Ok(Expr {
             node_id: id,
             graph: slf,
@@ -218,9 +283,9 @@ impl ExprGraph {
     }
 
     fn array(slf: Py<Self>, py: Python<'_>, data: PyReadonlyArray1<'_, f64>) -> PyResult<Expr> {
-        let vec = data.as_slice()?.to_vec();
-        let len = vec.len();
-        let array = ArrayData::try_new(vec, Shape::vector(len)).map_err(core_err_to_py)?;
+        let values = arrays::values(&data).into_owned();
+        let len = values.len();
+        let array = ArrayData::try_new(values, Shape::vector(len)).map_err(core_err_to_py)?;
         Self::alloc(slf, py, Node::Array(Box::new(array)))
     }
 
@@ -232,8 +297,9 @@ impl ExprGraph {
         rows: usize,
         cols: usize,
     ) -> PyResult<Expr> {
-        let vec = data.as_slice()?.to_vec();
-        let array = ArrayData::try_new(vec, Shape::matrix(rows, cols)).map_err(core_err_to_py)?;
+        let values = arrays::values(&data).into_owned();
+        let array =
+            ArrayData::try_new(values, Shape::matrix(rows, cols)).map_err(core_err_to_py)?;
         Self::alloc(slf, py, Node::Array(Box::new(array)))
     }
 
@@ -378,9 +444,7 @@ impl ExprGraph {
         children: Vec<Bound<'_, Expr>>,
     ) -> PyResult<Expr> {
         let order_u32 = u32::try_from(order).map_err(|_| {
-            pyo3::exceptions::PyValueError::new_err(format!(
-                "interpolant_nd: order {order} is too large"
-            ))
+            PyValueError::new_err(format!("interpolant_nd: order {order} is too large"))
         })?;
         let data =
             NdInterpolantData::try_new(breakpoints, coeffs, order_u32).map_err(core_err_to_py)?;
@@ -439,6 +503,9 @@ impl ExprGraph {
     }
 
     /// Conditional expression; branch i (1-based) is active when i - 0.5 < selector < i + 0.5.
+    ///
+    /// With no branch active (a selector out of range, exactly i + 0.5, or NaN), the result is
+    /// zero.
     fn conditional(
         slf: Py<Self>,
         py: Python<'_>,
@@ -460,13 +527,13 @@ impl ExprGraph {
         rows: usize,
         cols: usize,
     ) -> PyResult<Expr> {
-        let data = data.as_slice()?.to_vec();
+        let data = arrays::values(&data).into_owned();
         let csr = pybamm_core::CsrData::try_new(indptr, indices, data, Shape::matrix(rows, cols))
             .map_err(core_err_to_py)?;
         Self::alloc(slf, py, Node::SparseMatrix(Box::new(csr)))
     }
 
-    /// Evaluate a one-element `expr` at one point.
+    /// Evaluate a one-element `expr` at one point, as built: no simplification runs first.
     fn eval_to_float(
         slf: Py<Self>,
         py: Python<'_>,
@@ -478,18 +545,10 @@ impl ExprGraph {
     ) -> PyResult<f64> {
         let node_id = expr.node_id_in(&slf)?;
         let g = Self::borrow_graph(&slf, py)?;
-        check_supported(&g.arena, [node_id])?;
-        check_read_extents(
-            &g.arena,
-            node_id,
-            "eval_to_float",
-            y.len(),
-            y_dot.len(),
-            inputs.len(),
-        )?;
-        let compiled = CompiledExpr::new(DagRef::new(&g.arena, node_id));
+        let compiled =
+            g.compile_as_built(node_id, "eval_to_float", y.len(), y_dot.len(), inputs.len())?;
         if compiled.output_len() != 1 {
-            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            return Err(PyValueError::new_err(format!(
                 "eval_to_float: expression evaluates to {} values, not one; use eval_to_array",
                 compiled.output_len()
             )));
@@ -498,7 +557,7 @@ impl ExprGraph {
         Ok(compiled.eval(&mut scratch, t, &y, &y_dot, &inputs)[0])
     }
 
-    /// Evaluate `expr` at one point into a new array.
+    /// Evaluate `expr` at one point into a new array, as built: no simplification runs first.
     fn eval_to_array<'py>(
         slf: Py<Self>,
         py: Python<'py>,
@@ -510,20 +569,11 @@ impl ExprGraph {
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
         let node_id = expr.node_id_in(&slf)?;
         let g = Self::borrow_graph(&slf, py)?;
-        check_supported(&g.arena, [node_id])?;
-        let y_slice = y.as_slice()?;
-        let y_dot_slice = y_dot.as_slice()?;
-        check_read_extents(
-            &g.arena,
-            node_id,
-            "eval_to_array",
-            y_slice.len(),
-            y_dot_slice.len(),
-            inputs.len(),
-        )?;
-        let compiled = CompiledExpr::new(DagRef::new(&g.arena, node_id));
+        let (y, y_dot) = (arrays::values(&y), arrays::values(&y_dot));
+        let compiled =
+            g.compile_as_built(node_id, "eval_to_array", y.len(), y_dot.len(), inputs.len())?;
         let mut scratch = vec![0.0; compiled.scratch_len()];
-        let result = compiled.eval(&mut scratch, t, y_slice, y_dot_slice, &inputs);
+        let result = compiled.eval(&mut scratch, t, &y, &y_dot, &inputs);
         Ok(PyArray1::from_slice(py, result))
     }
 
@@ -539,8 +589,8 @@ impl ExprGraph {
         n_states: Option<usize>,
     ) -> PyResult<crate::compiled_function::CompiledFunction> {
         let node_id = expr.node_id_in(&slf)?;
-        check_supported(Self::borrow_graph(&slf, py)?.arena(), [node_id])?;
-        crate::compiled_function::CompiledFunction::build(py, slf, node_id, name, n_states)
+        Self::borrow_graph(&slf, py)?.check_supported([node_id])?;
+        crate::compiled_function::CompiledFunction::build(py, slf, node_id, name, n_states, None)
     }
 
     /// Compile a named set of outputs into one shared tape as a `CompiledFunction`.
@@ -561,39 +611,46 @@ impl ExprGraph {
             })
             .collect::<PyResult<_>>()?;
         if ids.is_empty() {
-            return Err(pyo3::exceptions::PyValueError::new_err(
+            return Err(PyValueError::new_err(
                 "compile_outputs requires at least one output",
             ));
         }
-        check_supported(Self::borrow_graph(&slf, py)?.arena(), ids.iter().copied())?;
+        Self::borrow_graph(&slf, py)?.check_supported(ids.iter().copied())?;
         crate::compiled_function::CompiledFunction::build_outputs(
             py, slf, names, ids, name, n_states,
         )
     }
 
-    /// Write a serialized `DagSnapshot` of `expr` to `path`.
+    /// Write the graph `expr` reaches to `path` as a serialized `DagSnapshot`.
+    ///
+    /// `n_states` overrides the scanned state extent, e.g. to the full system width; the
+    /// packed input width is the graph's.
     #[cfg(feature = "serialize")]
+    #[pyo3(signature = (expr, path, model_name, n_states = None))]
     fn dump_dag(
         slf: Py<Self>,
         py: Python<'_>,
         expr: &Expr,
-        path: &str,
+        path: PathBuf,
         model_name: &str,
-        n_states: usize,
-        n_params: usize,
+        n_states: Option<usize>,
     ) -> PyResult<()> {
         let node_id = expr.node_id_in(&slf)?;
+        let g = Self::borrow_graph(&slf, py)?;
+        g.check_supported([node_id])?;
+        let dag = DagRef::new(&g.arena, node_id);
+        let extent = ReadExtents::scan(dag.arena(), dag.root()).n_states();
+        let n_states =
+            pybamm_core::resolve_state_count(n_states, extent).map_err(core_err_to_py)?;
         let snapshot = pybamm_core::DagSnapshot {
-            dag: pybamm_core::Dag::new(Self::borrow_graph(&slf, py)?.arena.clone(), node_id),
+            dag: pybamm_core::dce(dag),
             n_states,
-            packed_input_width: pybamm_core::PackedWidth::new(n_params),
+            packed_input_width: g.params.packed_width(),
             mass_matrix: None,
             model_name: model_name.to_string(),
         };
-        let bytes = snapshot.to_bytes();
-        std::fs::write(path, bytes)
-            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
-        Ok(())
+        drop(g);
+        Ok(std::fs::write(path, snapshot.to_bytes())?)
     }
 
     /// Serialize the graph to bytes (pickle protocol).
@@ -602,9 +659,8 @@ impl ExprGraph {
     /// cannot disagree.
     #[cfg(feature = "serialize")]
     fn __getstate__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, pyo3::types::PyBytes>> {
-        let bytes = bincode::serialize(&self.arena).map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("ExprGraph serialize failed: {e}"))
-        })?;
+        let bytes = bincode::serialize(&self.arena)
+            .map_err(|e| PyValueError::new_err(format!("ExprGraph serialize failed: {e}")))?;
         Ok(pyo3::types::PyBytes::new(py, &bytes))
     }
 
@@ -613,24 +669,24 @@ impl ExprGraph {
     fn __setstate__(&mut self, state: &[u8]) -> PyResult<()> {
         // Live `Expr`s and compiled artifacts hold ids into this arena; a swap would repoint them.
         if !self.arena.is_empty() {
-            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            return Err(PyValueError::new_err(format!(
                 "ExprGraph.__setstate__ restores into an empty graph only; this one has {} nodes",
                 self.arena.len()
             )));
         }
-        let arena: Arena = bincode::deserialize(state).map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("ExprGraph deserialize failed: {e}"))
-        })?;
+        let arena: Arena = bincode::deserialize(state)
+            .map_err(|e| PyValueError::new_err(format!("ExprGraph deserialize failed: {e}")))?;
         self.params = ParamRegistry::from_arena(&arena).map_err(core_err_to_py)?;
+        self.input_nodes.clear();
+        for id in node_ids(&arena) {
+            if let Node::InputParameter { index, .. } = &arena[id] {
+                self.input_nodes
+                    .entry(ParamIdx::from_usize(*index))
+                    .or_insert(id);
+            }
+        }
         self.arena = arena;
         Ok(())
-    }
-
-    /// Empty args tuple for pickle; a `()` return would map to `None`, which pickle rejects.
-    #[cfg(feature = "serialize")]
-    #[allow(clippy::unused_self)]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> Bound<'py, pyo3::types::PyTuple> {
-        pyo3::types::PyTuple::empty(py)
     }
 }
 

@@ -1,7 +1,12 @@
-use numpy::{PyArray1, PyArrayMethods, PyReadonlyArray1};
-use pyo3::exceptions::PyValueError;
+use numpy::ndarray::Dimension;
+use numpy::{
+    PyArray, PyArray1, PyArrayDescrMethods, PyArrayDyn, PyArrayMethods, PyReadonlyArray,
+    PyUntypedArray, PyUntypedArrayMethods,
+};
+use pyo3::exceptions::{PyKeyError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::sync::PyOnceLock;
+use pyo3::types::{PyDict, PyFloat, PyInt, PyMapping};
 
 use pybamm_core::ParamRegistry;
 
@@ -9,15 +14,15 @@ use pybamm_core::ParamRegistry;
 #[derive(Debug, Clone)]
 pub struct FunctionMetadata {
     /// The graph's input registry when compiled: names, registration indices and packed slots.
-    pub params: ParamRegistry,
-    pub n_states: usize,
-    pub uses_y_dot: bool,
-    pub output_len: usize,
-    pub name: Option<String>,
+    pub(crate) params: ParamRegistry,
+    pub(crate) n_states: usize,
+    pub(crate) uses_y_dot: bool,
+    pub(crate) output_len: usize,
+    pub(crate) name: Option<String>,
 }
 
 impl FunctionMetadata {
-    pub fn display_name(&self) -> &str {
+    pub(crate) fn display_name(&self) -> &str {
         self.name.as_deref().unwrap_or("<anonymous>")
     }
 
@@ -25,97 +30,114 @@ impl FunctionMetadata {
         self.params.packed_width().get()
     }
 
-    /// Coerce a real number or length-1 numeric array to `f64`.
-    fn extract_scalar(&self, v: &Bound<'_, PyAny>, name: &str) -> PyResult<f64> {
-        if let Ok(x) = v.extract::<f64>() {
-            return Ok(x);
-        }
-        let bad = || {
-            PyValueError::new_err(format!(
-                "{}: input '{}' must be a real scalar or length-1 numeric array",
-                self.display_name(),
-                name
-            ))
-        };
-        let size: usize = v
-            .getattr("size")
-            .and_then(|s| s.extract::<usize>())
-            .map_err(|_| bad())?;
-        if size != 1 {
-            return Err(PyValueError::new_err(format!(
-                "{}: input '{}' must be a scalar or length-1 array, got size {}",
-                self.display_name(),
-                name,
-                size
-            )));
-        }
-        v.call_method0("item")?.extract::<f64>().map_err(|_| bad())
+    /// Length of a parameter-direction vector: one entry per registration index, unregistered
+    /// gaps included, so not the packed width.
+    pub(crate) const fn vp_len(&self) -> usize {
+        self.params.index_extent()
     }
 
-    /// Coerce an array of any shape with `width` values to a flat `Vec<f64>`.
-    fn extract_vector(&self, v: &Bound<'_, PyAny>, name: &str, width: usize) -> PyResult<Vec<f64>> {
-        let bad_shape = |size: usize| {
+    /// Write input `name`'s values into its packed `slot`, from a real number or any array-like
+    /// of exactly `slot.len()` real values.
+    fn write_input(&self, value: &Bound<'_, PyAny>, name: &str, slot: &mut [f64]) -> PyResult<()> {
+        let refuse = || {
             PyValueError::new_err(format!(
-                "{}: input '{}' must have {} value(s), got {}",
+                "{}: input '{name}' must be a real number or an array of real numbers, got {}",
                 self.display_name(),
-                name,
-                width,
-                size
+                describe(value)
             ))
         };
-        let bad_type = || {
-            PyValueError::new_err(format!(
-                "{}: input '{}' must be a numeric array of length {}",
-                self.display_name(),
-                name,
-                width
-            ))
+        let got = if value.is_instance_of::<PyFloat>() || value.is_instance_of::<PyInt>() {
+            if let [only] = slot {
+                *only = value.extract::<f64>()?;
+            }
+            1
+        } else {
+            // Anything else goes through NumPy unconverted: a float conversion would drop a
+            // complex value's imaginary part, and NumPy deprecates it for a one-element array.
+            let array = match value.cast::<PyUntypedArray>() {
+                Ok(array) => array.clone(),
+                Err(_) => as_array(value).map_err(|_| refuse())?,
+            };
+            if !matches!(array.dtype().kind(), b'b' | b'i' | b'u' | b'f') {
+                return Err(refuse());
+            }
+            self.write_array(&array, name, slot)?
         };
-        let raveled = v.call_method0("ravel").map_err(|_| bad_type())?;
-        let arr = self.read(
-            raveled.cast::<PyArray1<f64>>().map_err(|_| bad_type())?,
-            &format!("input '{name}'"),
-        )?;
-        let slice = arr.as_slice()?;
-        if slice.len() != width {
-            return Err(bad_shape(slice.len()));
+        if got != slot.len() {
+            return Err(PyValueError::new_err(if slot.len() == 1 {
+                format!(
+                    "{}: input '{name}' must be a real scalar or length-1 array, got {got} values",
+                    self.display_name()
+                )
+            } else {
+                format!(
+                    "{}: input '{name}' must have {} value(s), got {got}",
+                    self.display_name(),
+                    slot.len()
+                )
+            }));
         }
-        Ok(slice.to_vec())
+        Ok(())
+    }
+
+    /// Copy a real `array` into `slot` in C order when the counts agree; returns its count.
+    fn write_array(
+        &self,
+        array: &Bound<'_, PyUntypedArray>,
+        name: &str,
+        slot: &mut [f64],
+    ) -> PyResult<usize> {
+        let count = array.len();
+        if count == slot.len() {
+            let values = match array.cast::<PyArrayDyn<f64>>() {
+                Ok(values) => values.clone(),
+                Err(_) => array
+                    .call_method1("astype", (numpy::dtype::<f64>(array.py()),))?
+                    .cast_into::<PyArrayDyn<f64>>()?,
+            };
+            let values = self.read(&values, &format!("input '{name}'"))?;
+            for (dst, src) in slot.iter_mut().zip(values.as_array().iter()) {
+                *dst = *src;
+            }
+        }
+        Ok(count)
     }
 
     /// Pack a {name: value} mapping into the stacked layout, rejecting missing
     /// or unknown names and wrong widths.
-    pub fn pack(&self, dict: &Bound<'_, PyDict>) -> PyResult<Vec<f64>> {
+    pub(crate) fn pack(&self, inputs: &Bound<'_, PyMapping>) -> PyResult<Vec<f64>> {
+        let py = inputs.py();
+        // A dict is read without `__missing__`, so a defaultdict cannot invent a missing input.
+        let dict = inputs.cast::<PyDict>().ok();
         let mut packed = vec![0.0; self.total_width()];
         for (_, name, slot) in self.params.registered() {
+            let value = match dict {
+                Some(dict) => dict.get_item(name)?,
+                None => match inputs.get_item(name) {
+                    Ok(value) => Some(value),
+                    Err(err) if err.is_instance_of::<PyKeyError>(py) => None,
+                    Err(err) => return Err(err),
+                },
+            };
+            let value = value.ok_or_else(|| {
+                PyValueError::new_err(format!(
+                    "{}: missing input '{name}'; expected inputs {:?}",
+                    self.display_name(),
+                    self.params.names()
+                ))
+            })?;
             let (offset, width) = (slot.offset.index(), slot.width.index());
-            match dict.get_item(name)? {
-                Some(v) => {
-                    if width == 1 {
-                        packed[offset] = self.extract_scalar(&v, name)?;
-                    } else {
-                        let values = self.extract_vector(&v, name, width)?;
-                        packed[offset..offset + width].copy_from_slice(&values);
-                    }
-                },
-                None => {
-                    return Err(PyValueError::new_err(format!(
-                        "{}: missing input '{}'; expected inputs {:?}",
-                        self.display_name(),
-                        name,
-                        self.params.names()
-                    )));
-                },
-            }
+            self.write_input(&value, name, &mut packed[offset..offset + width])?;
         }
-        if dict.len() != self.params.n_registered() {
-            for key in dict.keys() {
-                let k: String = key.extract()?;
-                if self.params.index_of(&k).is_none() {
+        if inputs.len()? != self.params.n_registered() {
+            for key in inputs.keys()?.iter() {
+                let known = key
+                    .extract::<String>()
+                    .is_ok_and(|key| self.params.index_of(&key).is_some());
+                if !known {
                     return Err(PyValueError::new_err(format!(
-                        "{}: unknown input '{}'; expected inputs {:?}",
+                        "{}: unknown input '{key}'; expected inputs {:?}",
                         self.display_name(),
-                        k,
                         self.params.names()
                     )));
                 }
@@ -124,29 +146,30 @@ impl FunctionMetadata {
         Ok(packed)
     }
 
-    /// `p` as a stacked slice copy, packing a {name: value} mapping when given one.
-    pub fn extract_p(&self, p: &Bound<'_, PyAny>) -> PyResult<Vec<f64>> {
-        if let Ok(dict) = p.cast::<PyDict>() {
-            return self.pack(dict);
+    /// `p` as a packed copy, from a 1-D float64 array or a {name: value} mapping to pack.
+    pub(crate) fn extract_p(&self, p: &Bound<'_, PyAny>) -> PyResult<Vec<f64>> {
+        if let Ok(array) = p.cast::<PyArray1<f64>>() {
+            let array = self.read(array, "p")?;
+            let values = array.as_array().to_vec();
+            self.check_p(values.len())?;
+            return Ok(values);
         }
-        let arr = p.cast::<PyArray1<f64>>().map_err(|_| {
-            PyValueError::new_err(format!(
-                "{}: p must be a 1-D float64 array or a {{name: value}} mapping",
-                self.display_name()
-            ))
-        })?;
-        let arr = self.read(arr, "p")?;
-        let slice = arr.as_slice()?;
-        self.check_p(slice.len())?;
-        Ok(slice.to_vec())
+        if let Ok(inputs) = p.cast::<PyMapping>() {
+            return self.pack(inputs);
+        }
+        Err(PyValueError::new_err(format!(
+            "{}: p must be a 1-D float64 array or a {{name: value}} mapping, got {}",
+            self.display_name(),
+            describe(p)
+        )))
     }
 
     /// Borrow `array` for reading, refusing one already borrowed for writing.
-    fn read<'py>(
+    fn read<'py, D: Dimension>(
         &self,
-        array: &Bound<'py, PyArray1<f64>>,
+        array: &Bound<'py, PyArray<f64, D>>,
         what: &str,
-    ) -> PyResult<PyReadonlyArray1<'py, f64>> {
+    ) -> PyResult<PyReadonlyArray<'py, f64, D>> {
         array.try_readonly().map_err(|err| {
             PyValueError::new_err(format!(
                 "{}: {what} shares memory with out ({err})",
@@ -156,7 +179,7 @@ impl FunctionMetadata {
     }
 
     /// Reject a `what` buffer whose length is not `expected`.
-    pub fn check_len(&self, what: &str, got: usize, expected: usize) -> PyResult<()> {
+    pub(crate) fn check_len(&self, what: &str, got: usize, expected: usize) -> PyResult<()> {
         if got != expected {
             return Err(PyValueError::new_err(format!(
                 "{}: expected {what} of length {expected}, got {got}",
@@ -166,7 +189,7 @@ impl FunctionMetadata {
         Ok(())
     }
 
-    pub fn check_p(&self, len: usize) -> PyResult<()> {
+    pub(crate) fn check_p(&self, len: usize) -> PyResult<()> {
         let total_width = self.total_width();
         if len != total_width {
             return Err(PyValueError::new_err(format!(
@@ -180,44 +203,46 @@ impl FunctionMetadata {
         Ok(())
     }
 
-    /// Validate a parameter-direction vector: one entry per registration index, unregistered
-    /// gaps included, not the packed width.
-    pub fn check_vp(&self, len: usize) -> PyResult<()> {
-        let n_params = self.params.index_extent();
-        if len != n_params {
+    /// Reject a parameter-direction vector that is not [`vp_len`](Self::vp_len) long.
+    pub(crate) fn check_vp(&self, len: usize) -> PyResult<()> {
+        let vp_len = self.vp_len();
+        if len != vp_len {
             return Err(PyValueError::new_err(format!(
-                "{}: expected vp of length {} (one direction per parameter index), got {}",
-                self.display_name(),
-                n_params,
-                len
+                "{}: expected vp of length {vp_len} (one direction per input index), got {len}",
+                self.display_name()
             )));
         }
         Ok(())
     }
 
-    /// Validate an `(n_states, n_t)` trajectory shape against `len(ts)`.
-    pub fn check_trajectory(&self, n_rows: usize, n_cols: usize, n_ts: usize) -> PyResult<()> {
+    /// Validate the trajectory `what`, of shape `(n_rows, n_cols)`, against `n_states` and
+    /// `len(ts)`.
+    pub(crate) fn check_trajectory(
+        &self,
+        what: &str,
+        n_rows: usize,
+        n_cols: usize,
+        n_ts: usize,
+    ) -> PyResult<()> {
         if n_rows != self.n_states {
             return Err(PyValueError::new_err(format!(
-                "{}: Y.shape[0] must equal n_states ({}), got {}",
+                "{}: {what}.shape[0] must equal n_states ({}), got {n_rows}",
                 self.display_name(),
-                self.n_states,
-                n_rows
+                self.n_states
             )));
         }
         if n_ts != n_cols {
             return Err(PyValueError::new_err(format!(
-                "{}: len(ts) ({}) must equal Y.shape[1] ({})",
-                self.display_name(),
-                n_ts,
-                n_cols
+                "{}: len(ts) ({n_ts}) must equal {what}.shape[1] ({n_cols})",
+                self.display_name()
             )));
         }
         Ok(())
     }
 
-    /// Reject knot times too few, or out of order, to Hermite-interpolate within.
-    pub fn check_knots(&self, ts: &[f64]) -> PyResult<()> {
+    /// Reject knot times too few, not finite, or not strictly increasing, to
+    /// Hermite-interpolate within.
+    pub(crate) fn check_knots(&self, ts: &[f64]) -> PyResult<()> {
         if ts.len() < 2 {
             return Err(PyValueError::new_err(format!(
                 "{}: need >= 2 knots for Hermite interpolation, got {}",
@@ -225,9 +250,9 @@ impl FunctionMetadata {
                 ts.len()
             )));
         }
-        if !ts.is_sorted() {
+        if !ts.iter().all(|t| t.is_finite()) || !ts.windows(2).all(|pair| pair[0] < pair[1]) {
             return Err(PyValueError::new_err(format!(
-                "{}: knot times must be non-decreasing",
+                "{}: knot times must be finite and strictly increasing",
                 self.display_name()
             )));
         }
@@ -235,7 +260,7 @@ impl FunctionMetadata {
     }
 
     /// Reject `y_dot`-using expressions where `y_dot` is empty, which would panic.
-    pub fn reject_y_dot(&self, op: &str) -> PyResult<()> {
+    pub(crate) fn reject_y_dot(&self, op: &str) -> PyResult<()> {
         if self.uses_y_dot {
             return Err(PyValueError::new_err(format!(
                 "{}: {} is not defined for expressions that use y_dot",
@@ -245,4 +270,25 @@ impl FunctionMetadata {
         }
         Ok(())
     }
+}
+
+/// What `value` is, for error messages: an array's dimensions and dtype, otherwise its type.
+fn describe(value: &Bound<'_, PyAny>) -> String {
+    if let Ok(array) = value.cast::<PyUntypedArray>() {
+        return format!("a {}-D array of dtype {}", array.ndim(), array.dtype());
+    }
+    value
+        .get_type()
+        .name()
+        .map_or_else(|_| "an unnamed type".to_owned(), |name| name.to_string())
+}
+
+/// `numpy.asarray(value)`, with no dtype forced on it.
+fn as_array<'py>(value: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyUntypedArray>> {
+    static ASARRAY: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    let py = value.py();
+    let asarray = ASARRAY.get_or_try_init(py, || {
+        py.import("numpy")?.getattr("asarray").map(Bound::unbind)
+    })?;
+    Ok(asarray.bind(py).call1((value,))?.cast_into()?)
 }

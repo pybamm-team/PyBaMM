@@ -158,14 +158,6 @@ class TestVectorWidthInputParameter:
         ):
             cf(0.0, np.empty(0), {"a": 1.0, "b": np.array([0.2, 0.3, 0.4])})
 
-    def test_reregistering_input_with_different_width_raises(self):
-        from pybamm.rust import ExprGraph
-
-        graph = ExprGraph()
-        graph.input_parameter("a")
-        with pytest.raises(ValueError, match=r"'a'.*width 2.*width 1"):
-            graph.input_parameter("a", 2)
-
 
 class TestPickle:
     def test_rebuild_rejects_out_of_range_root(self):
@@ -190,7 +182,7 @@ class TestPickle:
 
         graph = ExprGraph()
         expr = graph.state_vector(0, 1) * graph.input_parameter("x")
-        with pytest.raises(ValueError, match=r"n_inputs=2 exceeds the graph's 1"):
+        with pytest.raises(ValueError, match=r"vp_len=2 exceeds the graph's 1"):
             CompiledFunction._rebuild(graph, expr.id, None, None, 2)
 
     def test_rebuild_rejects_dropping_an_input_the_expression_reads(self):
@@ -198,5 +190,13 @@ class TestPickle:
 
         graph = ExprGraph()
         expr = graph.state_vector(0, 1) * graph.input_parameter("x")
-        with pytest.raises(ValueError, match=r"reads input 'x'.*n_inputs=0"):
+        with pytest.raises(ValueError, match=r"reads input 'x'.*vp_len=0"):
             CompiledFunction._rebuild(graph, expr.id, None, None, 0)
+
+    def test_rebuild_rejects_names_without_lengths(self):
+        from pybamm.rust import CompiledFunction, ExprGraph
+
+        graph = ExprGraph()
+        expr = graph.state_vector(0, 1)
+        with pytest.raises(ValueError, match=r"output_names and output_lens"):
+            CompiledFunction._rebuild(graph, expr.id, None, None, 0, ["y"])

@@ -3,9 +3,10 @@
 // PyO3 bindings require specific argument types that clippy flags incorrectly
 #![allow(clippy::needless_pass_by_value)]
 
-use std::sync::{Arc, OnceLock};
+use std::ops::Range;
+use std::sync::Arc;
 
-use numpy::ndarray::ShapeBuilder;
+use numpy::ndarray::{Array2, ShapeBuilder};
 use numpy::{
     AllowTypeChange, PyArray1, PyArray2, PyArrayLike1, PyArrayMethods, PyReadonlyArray1,
     PyReadonlyArray2,
@@ -13,17 +14,19 @@ use numpy::{
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
-use pyo3::types::PyDict;
+use pyo3::types::{PyMapping, PySlice, PyTuple};
 
 use pybamm_core::{
-    CompiledExpr, Dag, DagRef, Node, NodeId, ParamRegistry, ReadExtents, TangentInputs, dce,
-    infer_sizes, simplify_pipeline, tangent_wrt_params, tangent_wrt_states,
+    Arena, BatchEvalError, CompiledExpr, Dag, DagRef, DiffTarget, JacobianData, NodeId,
+    ReadExtents, TangentInputs, dce, infer_sizes, simplify_pipeline, tangent_wrt_params,
+    tangent_wrt_states,
 };
 
+use crate::arrays;
 use crate::expr::ExprGraph;
 use crate::function_metadata::FunctionMetadata;
 use crate::jacobian::CompiledJacobian;
-use crate::scratch_pool::{ScratchPool, buffer};
+use crate::scratch_pool::ScratchPool;
 
 /// Target working-set size (~1 MiB) for a lane-batched trajectory tile.
 const TARGET_BYTES: usize = 1 << 20;
@@ -92,7 +95,7 @@ impl OutputLayout {
 
 /// One expression compiled into one tape: `f(t, y, p)`, plus `y_dot` when read.
 ///
-/// `p` is a name-keyed dict or an already-packed array; derivatives are memoised.
+/// `p` is a name-keyed mapping or an already-packed array; derivatives are memoised.
 #[pyclass(frozen, module = "pybamm.rust")]
 pub struct CompiledFunction {
     expr: Arc<CompiledExpr>,
@@ -103,9 +106,9 @@ pub struct CompiledFunction {
     root: NodeId,
     /// Row layout when compiled from named outputs.
     layout: Option<OutputLayout>,
-    /// Tangent tapes, derived on first use: `OnceLock` as this frozen class fills them via `&self`.
-    tangent_y: OnceLock<TangentEntry>,
-    tangent_p: OnceLock<TangentEntry>,
+    /// Derivatives, each built once on first use, however many threads ask for it at once.
+    tangent_y: PyOnceLock<TangentEntry>,
+    tangent_p: PyOnceLock<TangentEntry>,
     jac_y: PyOnceLock<Py<CompiledJacobian>>,
     jac_p: PyOnceLock<Py<CompiledJacobian>>,
 }
@@ -120,12 +123,16 @@ impl std::fmt::Debug for CompiledFunction {
 
 impl CompiledFunction {
     /// Compile `root` of `graph`, checking it reads no more states than `n_states_override`.
+    ///
+    /// The function takes the inputs registered below `vp_len` indices, or every input the
+    /// graph holds for `None`.
     pub(crate) fn build(
         py: Python<'_>,
         graph: Py<ExprGraph>,
         root: NodeId,
         name: Option<String>,
         n_states_override: Option<usize>,
+        vp_len: Option<usize>,
     ) -> PyResult<Self> {
         let g = graph.try_borrow(py).map_err(|_| {
             PyValueError::new_err(format!(
@@ -134,29 +141,29 @@ impl CompiledFunction {
             ))
         })?;
         // Scan before simplifying, which can shrink the reachable state extent.
-        let extents = ReadExtents::scan(g.arena(), root);
-        let n_states = resolve_n_states(extents.n_states(), n_states_override, name.as_deref())?;
-        let params = g.params().clone();
+        let reads = ReadExtents::scan(g.arena(), root);
+        let n_states = resolve_n_states(reads.n_states(), n_states_override, name.as_deref())?;
+        let params = g.registry_at(vp_len, &reads)?;
         // A reachable copy, so simplifying leaves the retained graph untouched.
         let dag = dce(DagRef::new(g.arena(), root));
         drop(g);
-        let expr = Arc::new(py.detach(|| CompiledExpr::new(simplify_pipeline(dag).as_ref())));
+        let expr = py.detach(|| CompiledExpr::new(simplify_pipeline(dag).as_ref()));
         let metadata = FunctionMetadata {
             params,
             n_states,
-            uses_y_dot: extents.y_dot.is_some(),
+            uses_y_dot: reads.y_dot.is_some(),
             output_len: expr.output_len(),
             name,
         };
         Ok(Self {
-            expr,
+            expr: Arc::new(expr),
             metadata,
             pool: ScratchPool::default(),
             graph,
             root,
             layout: None,
-            tangent_y: OnceLock::new(),
-            tangent_p: OnceLock::new(),
+            tangent_y: PyOnceLock::new(),
+            tangent_p: PyOnceLock::new(),
             jac_y: PyOnceLock::new(),
             jac_p: PyOnceLock::new(),
         })
@@ -175,12 +182,16 @@ impl CompiledFunction {
             let mut g = graph
                 .try_borrow_mut(py)
                 .map_err(|_| PyValueError::new_err("compile_outputs: graph borrow conflict"))?;
-            let root = g.arena_mut().alloc(Node::Concat(ids.clone()));
+            // Checked before the concat exists, so a refused call leaves the graph as it was.
+            let reads = ReadExtents::scan_all(g.arena(), ids.iter().copied());
+            resolve_n_states(reads.n_states(), n_states_override, name.as_deref())?;
+            // Kept in the graph, which `_rebuild` and the derivatives compile from.
+            let root = g.concat_of(&ids);
             // The concat tape only reports the total length; one size pass covers every output.
             let sizes = infer_sizes(g.arena(), &g.arena().topological_order(root));
             (root, ids.iter().map(|id| sizes[id.index()]).collect())
         };
-        let mut this = Self::build(py, graph, root, name, n_states_override)?;
+        let mut this = Self::build(py, graph, root, name, n_states_override, None)?;
         this.layout = Some(OutputLayout::new(names, lens, this.metadata.output_len)?);
         Ok(this)
     }
@@ -209,42 +220,42 @@ impl CompiledFunction {
                 },
             }
         }
-        let mut scratch = self.pool.acquire(|| buffer(self.expr.scratch_len()));
+        let mut scratch = self.pool.acquire_buffer(self.expr.scratch_len());
         self.expr
             .eval_into(&mut scratch, t, y, y_dot.unwrap_or(&[]), p, out);
         self.pool.release(scratch);
         Ok(())
     }
 
-    /// Lazily derive and cache the tangent tape + scratch pool for one seed class.
-    fn tangent_entry(&self, py: Python<'_>, wrt_params: bool) -> PyResult<&TangentEntry> {
-        let cell = if wrt_params {
-            &self.tangent_p
-        } else {
-            &self.tangent_y
+    /// The tangent tape and scratch pool for `wrt`, derived on first use.
+    fn tangent_entry(&self, py: Python<'_>, wrt: DiffTarget) -> PyResult<&TangentEntry> {
+        let cell = match wrt {
+            DiffTarget::States => &self.tangent_y,
+            DiffTarget::Params => &self.tangent_p,
         };
-        if let Some(cached) = cell.get() {
-            return Ok(cached);
-        }
-        let source = self.source(py, "tangent derivation")?;
-        let expr = py.detach(|| {
-            let mut tangent = simplify_pipeline(source);
-            tangent.rewrite_in_place(if wrt_params {
-                tangent_wrt_params
-            } else {
-                tangent_wrt_states
+        cell.get_or_try_init(py, || {
+            let source = self.source(py, "tangent derivation")?;
+            let rewrite: fn(&mut Arena, NodeId) -> NodeId = match wrt {
+                DiffTarget::States => tangent_wrt_states,
+                DiffTarget::Params => tangent_wrt_params,
+            };
+            let expr = py.detach(|| {
+                let mut tangent = simplify_pipeline(source);
+                tangent.rewrite_in_place(rewrite);
+                CompiledExpr::new(simplify_pipeline(tangent).as_ref())
             });
-            CompiledExpr::new(simplify_pipeline(tangent).as_ref())
-        });
-        Ok(cell.get_or_init(|| TangentEntry {
-            expr,
-            pool: ScratchPool::default(),
-        }))
+            Ok(TangentEntry {
+                expr,
+                pool: ScratchPool::default(),
+            })
+        })
     }
 
-    /// A reachable copy of the retained root, which the primal tape compiled once simplified.
+    /// A reachable copy of the retained root, for a derivative to simplify then differentiate.
     ///
-    /// Derivatives simplify it the same way before differentiating, so they agree with the primal.
+    /// Re-simplifying it, as the primal tape was, keeps each derivative in step with the
+    /// primal. That repeats work once per derivative, rather than holding the simplified
+    /// graph for the function's lifetime.
     fn source(&self, py: Python<'_>, during: &str) -> PyResult<Dag> {
         let g = self.graph.try_borrow(py).map_err(|_| {
             PyValueError::new_err(format!(
@@ -253,6 +264,18 @@ impl CompiledFunction {
             ))
         })?;
         Ok(dce(DagRef::new(g.arena(), self.root)))
+    }
+
+    /// `wrt` as a differentiation target: `"y"` or `"p"`.
+    fn diff_target(&self, wrt: &str) -> PyResult<DiffTarget> {
+        match wrt {
+            "y" => Ok(DiffTarget::States),
+            "p" => Ok(DiffTarget::Params),
+            other => Err(PyValueError::new_err(format!(
+                "{}: wrt must be 'y' or 'p', got {other:?}",
+                self.metadata.display_name()
+            ))),
+        }
     }
 }
 
@@ -269,8 +292,8 @@ impl CompiledFunction {
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
         let packed = self.metadata.extract_p(p)?;
         let mut out = vec![0.0; self.metadata.output_len];
-        let yd = y_dot.as_ref().map(|a| a.as_slice()).transpose()?;
-        self.eval_inner(t, y.as_slice()?, &packed, yd, &mut out)?;
+        let y_dot = y_dot.as_ref().map(arrays::values);
+        self.eval_inner(t, &arrays::values(&y), &packed, y_dot.as_deref(), &mut out)?;
         Ok(PyArray1::from_vec(py, out))
     }
 
@@ -287,7 +310,7 @@ impl CompiledFunction {
         self.__call__(py, t, y, p, y_dot)
     }
 
-    /// Evaluate into a pre-allocated output array (no intermediate allocation).
+    /// Evaluate into `out`, a contiguous, writeable array of `output_len` values.
     #[pyo3(signature = (t, y, p, out, y_dot = None))]
     fn eval_into(
         &self,
@@ -306,30 +329,36 @@ impl CompiledFunction {
             ))
         })?;
         let packed = self.metadata.extract_p(p)?;
-        let out_slice = out.as_slice_mut()?;
+        let out_slice = out.as_slice_mut().map_err(|_| {
+            PyValueError::new_err(format!(
+                "{}: out must be contiguous",
+                self.metadata.display_name()
+            ))
+        })?;
         self.metadata
             .check_len("out", out_slice.len(), self.metadata.output_len)?;
-        let yd = y_dot.as_ref().map(|a| a.as_slice()).transpose()?;
-        self.eval_inner(t, y.as_slice()?, &packed, yd, out_slice)
+        let y_dot = y_dot.as_ref().map(arrays::values);
+        self.eval_inner(t, &arrays::values(&y), &packed, y_dot.as_deref(), out_slice)
     }
 
     /// Pack a {name: value} mapping into the stacked input layout.
     fn pack<'py>(
         &self,
         py: Python<'py>,
-        mapping: &Bound<'_, PyDict>,
+        mapping: &Bound<'_, PyMapping>,
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
         Ok(PyArray1::from_vec(py, self.metadata.pack(mapping)?))
     }
 
     #[getter]
-    fn input_names<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
-        pyo3::types::PyTuple::new(py, self.metadata.params.names())
+    fn input_names<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        PyTuple::new(py, self.metadata.params.names())
     }
-    /// Registration-space extent (the `vp` seed length), not the packed input width.
+    /// Length of a `vp` direction: one entry per input registration index, not the packed
+    /// input width.
     #[getter]
-    const fn n_inputs(&self) -> usize {
-        self.metadata.params.index_extent()
+    const fn vp_len(&self) -> usize {
+        self.metadata.vp_len()
     }
     #[getter]
     const fn n_states(&self) -> usize {
@@ -341,24 +370,18 @@ impl CompiledFunction {
     }
     /// Declared output names, or `None` for a single-expression function.
     #[getter]
-    fn output_names<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> PyResult<Option<Bound<'py, pyo3::types::PyTuple>>> {
+    fn output_names<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyTuple>>> {
         self.layout
             .as_ref()
-            .map(|layout| pyo3::types::PyTuple::new(py, &layout.names))
+            .map(|layout| PyTuple::new(py, &layout.names))
             .transpose()
     }
     /// Rows each declared output owns, ordered as `output_names`.
     #[getter]
-    fn output_lens<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> PyResult<Option<Bound<'py, pyo3::types::PyTuple>>> {
+    fn output_lens<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyTuple>>> {
         self.layout
             .as_ref()
-            .map(|layout| pyo3::types::PyTuple::new(py, &layout.lens))
+            .map(|layout| PyTuple::new(py, &layout.lens))
             .transpose()
     }
     /// One view (not a copy) per declared output, sliced along the leading axis.
@@ -393,7 +416,7 @@ impl CompiledFunction {
         layout
             .spans()
             .map(|(offset, len)| {
-                let rows = pyo3::types::PySlice::new(
+                let rows = PySlice::new(
                     py,
                     isize::try_from(offset).unwrap_or(isize::MAX),
                     isize::try_from(offset + len).unwrap_or(isize::MAX),
@@ -428,11 +451,8 @@ impl CompiledFunction {
     }
     /// Per-branch block lengths, in tape order.
     #[getter]
-    fn branch_block_lens<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
-        pyo3::types::PyTuple::new(py, self.expr.ir().branch_block_lens())
+    fn branch_block_lens<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        PyTuple::new(py, self.expr.ir().branch_block_lens())
     }
 
     /// Forward-mode JVP: df/dy @ vy (+ df/dp @ vp when given).
@@ -448,37 +468,39 @@ impl CompiledFunction {
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
         self.metadata.reject_y_dot("jvp")?;
         let packed = self.metadata.extract_p(p)?;
-        let y_slice = y.as_slice()?;
+        let (y, vy) = (arrays::values(&y), arrays::values(&vy));
         self.metadata
-            .check_len("y", y_slice.len(), self.metadata.n_states)?;
-        let vy_slice = vy.as_slice()?;
+            .check_len("y", y.len(), self.metadata.n_states)?;
         self.metadata
-            .check_len("vy", vy_slice.len(), self.metadata.n_states)?;
+            .check_len("vy", vy.len(), self.metadata.n_states)?;
+        let vp = vp.as_ref().map(arrays::values);
+        let vp = vp.as_deref();
+        if let Some(vp) = vp {
+            self.metadata.check_vp(vp.len())?;
+        }
 
-        let ty = self.tangent_entry(py, false)?;
-        let mut scratch = ty.pool.acquire(|| buffer(ty.expr.scratch_len()));
+        let ty = self.tangent_entry(py, DiffTarget::States)?;
+        let mut scratch = ty.pool.acquire_buffer(ty.expr.scratch_len());
         let tangent = TangentInputs {
-            dy: Some(vy_slice),
+            dy: Some(&*vy),
             dp: None,
         };
         let mut out: Vec<f64> = ty
             .expr
-            .eval_with_tangent(&mut scratch, t, y_slice, &[], &packed, &tangent)
+            .eval_with_tangent(&mut scratch, t, &y, &[], &packed, &tangent)
             .to_vec();
         ty.pool.release(scratch);
 
         if let Some(vp) = vp {
-            let vp_slice = vp.as_slice()?;
-            self.metadata.check_vp(vp_slice.len())?;
-            let tp = self.tangent_entry(py, true)?;
-            let mut scratch_p = tp.pool.acquire(|| buffer(tp.expr.scratch_len()));
+            let tp = self.tangent_entry(py, DiffTarget::Params)?;
+            let mut scratch_p = tp.pool.acquire_buffer(tp.expr.scratch_len());
             let tangent_p = TangentInputs {
                 dy: None,
-                dp: Some(vp_slice),
+                dp: Some(vp),
             };
             let contrib =
                 tp.expr
-                    .eval_with_tangent(&mut scratch_p, t, y_slice, &[], &packed, &tangent_p);
+                    .eval_with_tangent(&mut scratch_p, t, &y, &[], &packed, &tangent_p);
             for (o, c) in out.iter_mut().zip(contrib) {
                 *o += *c;
             }
@@ -491,37 +513,32 @@ impl CompiledFunction {
     #[pyo3(signature = (wrt = "y"))]
     fn jacobian(&self, py: Python<'_>, wrt: &str) -> PyResult<Py<CompiledJacobian>> {
         self.metadata.reject_y_dot("jacobian")?;
+        let wrt = self.diff_target(wrt)?;
         let cell = match wrt {
-            "y" => &self.jac_y,
-            "p" => &self.jac_p,
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "{}: wrt must be 'y' or 'p', got {:?}",
-                    self.metadata.display_name(),
-                    other
-                )));
-            },
+            DiffTarget::States => &self.jac_y,
+            DiffTarget::Params => &self.jac_p,
         };
         cell.get_or_try_init(py, || {
             let source = self.source(py, "jacobian derivation")?;
+            let n_rows = self.metadata.output_len;
             let data = py.detach(|| {
                 let simplified = simplify_pipeline(source);
                 match wrt {
-                    "y" => pybamm_core::JacobianData::new_wrt_states(
+                    DiffTarget::States => JacobianData::new_wrt_states(
                         simplified.as_ref(),
-                        self.metadata.output_len,
+                        n_rows,
                         self.metadata.n_states,
                     ),
-                    _ => pybamm_core::JacobianData::new_wrt_params(
+                    DiffTarget::Params => JacobianData::new_wrt_params(
                         simplified.as_ref(),
-                        self.metadata.output_len,
-                        self.metadata.params.index_extent(),
+                        n_rows,
+                        self.metadata.vp_len(),
                     ),
                 }
             });
             Py::new(
                 py,
-                CompiledJacobian::build(py, Arc::new(data), self.metadata.clone())?,
+                CompiledJacobian::build(Arc::new(data), self.metadata.clone())?,
             )
         })
         .map(|j| j.clone_ref(py))
@@ -535,46 +552,31 @@ impl CompiledFunction {
         y_traj: PyReadonlyArray2<'_, f64>,
         p: &Bound<'_, PyAny>,
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        let packed = self.metadata.extract_p(p)?;
-        let ts_view = ts.as_array();
-        let ts_slice = contiguous_slice_1d(&ts_view);
-        let view = y_traj.as_array();
-        let (n_rows, n_t) = (view.shape()[0], view.shape()[1]);
-        self.metadata
-            .check_trajectory(n_rows, n_t, ts_slice.len())?;
         self.metadata.reject_y_dot("eval_trajectory")?;
+        let packed = self.metadata.extract_p(p)?;
+        let ts = arrays::values(&ts);
+        let y_view = y_traj.as_array();
+        let (n_rows, n_t) = y_view.dim();
+        self.metadata
+            .check_trajectory("y_traj", n_rows, n_t, ts.len())?;
+        let y_cols = arrays::columns(&y_view);
 
-        let y_cols = columns_slice(&view);
-
+        let expr = &*self.expr;
         let out_len = self.metadata.output_len;
-        let mut out = vec![0.0_f64; out_len * n_t];
-        let expr = Arc::clone(&self.expr);
-        let scratch_len = expr.scratch_len();
-        let k_max = lane_tile(scratch_len);
-        let k_alloc = k_max.min(n_t.max(1));
-        let mut scratch = vec![0.0_f64; scratch_len * k_alloc];
-        let batch_result = py.detach(|| -> Result<(), pybamm_core::BatchEvalError> {
-            let mut j0 = 0;
-            while j0 < n_t {
-                let k = (n_t - j0).min(k_max);
-                let ts_tile = &ts_slice[j0..j0 + k];
-                let y_tile = &y_cols[j0 * n_rows..(j0 + k) * n_rows];
-                let root = expr.eval_batch(&mut scratch, k, ts_tile, y_tile, n_rows, &packed)?;
-                scatter_lanes(root, k, out_len, &mut out[j0 * out_len..(j0 + k) * out_len]);
-                j0 += k;
-            }
-            Ok(())
-        });
-        batch_result.map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        let arr = numpy::ndarray::Array2::from_shape_vec((out_len, n_t).f(), out)
-            .map_err(|e| PyValueError::new_err(format!("eval_trajectory shape error: {e}")))?;
-        Ok(PyArray2::from_owned_array(py, arr))
+        let out = py
+            .detach(|| {
+                eval_tiled(expr.scratch_len(), out_len, n_t, |scratch, lanes| {
+                    let states = &y_cols[lanes.start * n_rows..lanes.end * n_rows];
+                    expr.eval_batch(scratch, lanes.len(), &ts[lanes], states, n_rows, &packed)
+                })
+            })
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        column_major(py, out, (out_len, n_t))
     }
 
     /// Forward-mode JVP per time column: `df/dy @ vy_j (+ df/dp @ vp when given)`.
     ///
-    /// `vy_traj` is `(n_states, n_t)`; `vp` has `n_inputs` entries, not the packed
+    /// `vy_traj` is `(n_states, n_t)`; `vp` has `vp_len` entries, not the packed
     /// width. Returns `(output_len, n_t)` F-contiguous.
     #[pyo3(signature = (ts, y_traj, p, vy_traj, vp = None))]
     fn jvp_trajectory<'py>(
@@ -588,78 +590,56 @@ impl CompiledFunction {
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
         self.metadata.reject_y_dot("jvp_trajectory")?;
         let packed = self.metadata.extract_p(p)?;
-        let ts_view = ts.as_array();
-        let ts_slice = contiguous_slice_1d(&ts_view);
-        let view = y_traj.as_array();
-        let (n_rows, n_t) = (view.shape()[0], view.shape()[1]);
+        let vp = vp.as_ref().map(arrays::values);
+        let vp = vp.as_deref();
+        if let Some(vp) = vp {
+            self.metadata.check_vp(vp.len())?;
+        }
+        let ts = arrays::values(&ts);
+        let (y_view, vy_view) = (y_traj.as_array(), vy_traj.as_array());
+        let (n_rows, n_t) = y_view.dim();
         self.metadata
-            .check_trajectory(n_rows, n_t, ts_slice.len())?;
-        let vy_view = vy_traj.as_array();
-        if vy_view.shape()[0] != self.metadata.n_states || vy_view.shape()[1] != n_t {
+            .check_trajectory("y_traj", n_rows, n_t, ts.len())?;
+        if vy_view.dim() != (n_rows, n_t) {
             return Err(PyValueError::new_err(format!(
-                "{}: vy_traj shape must be (n_states, n_t) = ({}, {}), got ({}, {})",
+                "{}: vy_traj shape must be (n_states, n_t) = ({n_rows}, {n_t}), got {:?}",
                 self.metadata.display_name(),
-                self.metadata.n_states,
-                n_t,
-                vy_view.shape()[0],
-                vy_view.shape()[1]
+                vy_view.dim()
             )));
         }
+        let (y_cols, vy_cols) = (arrays::columns(&y_view), arrays::columns(&vy_view));
 
-        let y_cols = columns_slice(&view);
-        let vy_cols = columns_slice(&vy_view);
-
-        let ty = self.tangent_entry(py, false)?;
-        let vp_slice: Option<&[f64]> = match &vp {
-            Some(arr) => {
-                let s = arr.as_slice()?;
-                self.metadata.check_vp(s.len())?;
-                Some(s)
-            },
-            None => None,
-        };
-        let tp = match vp_slice {
-            Some(_) => Some(self.tangent_entry(py, true)?),
-            None => None,
-        };
+        let ty = self.tangent_entry(py, DiffTarget::States)?;
+        let tp = vp
+            .map(|_| self.tangent_entry(py, DiffTarget::Params))
+            .transpose()?;
 
         let out_len = self.metadata.output_len;
         let mut out = vec![0.0_f64; out_len * n_t];
-        let mut scratch_y = ty.pool.acquire(|| buffer(ty.expr.scratch_len()));
-        let mut scratch_p = tp.map(|t| t.pool.acquire(|| buffer(t.expr.scratch_len())));
+        let mut scratch_y = ty.pool.acquire_buffer(ty.expr.scratch_len());
+        let mut scratch_p = tp.map(|t| t.pool.acquire_buffer(t.expr.scratch_len()));
         py.detach(|| {
-            for j in 0..n_t {
-                let y = &y_cols[j * n_rows..(j + 1) * n_rows];
-                let vy = &vy_cols[j * n_rows..(j + 1) * n_rows];
+            for (j, &t) in ts.iter().enumerate() {
+                let y = column(&y_cols, n_rows, j);
                 let dst = &mut out[j * out_len..(j + 1) * out_len];
 
                 let tangent_y = TangentInputs {
-                    dy: Some(vy),
+                    dy: Some(column(&vy_cols, n_rows, j)),
                     dp: None,
                 };
-                let res_y = ty.expr.eval_with_tangent(
-                    &mut scratch_y,
-                    ts_slice[j],
-                    y,
-                    &[],
-                    &packed,
-                    &tangent_y,
-                );
+                let res_y =
+                    ty.expr
+                        .eval_with_tangent(&mut scratch_y, t, y, &[], &packed, &tangent_y);
                 dst.copy_from_slice(res_y);
 
-                if let (Some(tp), Some(scratch_p), Some(vp)) = (tp, scratch_p.as_mut(), vp_slice) {
+                if let (Some(tp), Some(scratch_p), Some(vp)) = (tp, scratch_p.as_mut(), vp) {
                     let tangent_p = TangentInputs {
                         dy: None,
                         dp: Some(vp),
                     };
-                    let res_p = tp.expr.eval_with_tangent(
-                        scratch_p,
-                        ts_slice[j],
-                        y,
-                        &[],
-                        &packed,
-                        &tangent_p,
-                    );
+                    let res_p =
+                        tp.expr
+                            .eval_with_tangent(scratch_p, t, y, &[], &packed, &tangent_p);
                     for (o, c) in dst.iter_mut().zip(res_p) {
                         *o += *c;
                     }
@@ -670,14 +650,13 @@ impl CompiledFunction {
         if let (Some(tp), Some(scratch_p)) = (tp, scratch_p) {
             tp.pool.release(scratch_p);
         }
-
-        let arr = numpy::ndarray::Array2::from_shape_vec((out_len, n_t).f(), out)
-            .map_err(|e| PyValueError::new_err(format!("jvp_trajectory shape error: {e}")))?;
-        Ok(PyArray2::from_owned_array(py, arr))
+        column_major(py, out, (out_len, n_t))
     }
 
     /// Cubic-Hermite reconstruct the state at each `t_query` from the solver
     /// knots (`ts`, `ys`, `yps`), then evaluate; returns `(output_len, n_query)`.
+    ///
+    /// `ts` must be finite and strictly increasing.
     #[pyo3(signature = (t_query, ts, ys, yps, p))]
     fn eval_trajectory_hermite<'py>(
         &self,
@@ -690,88 +669,53 @@ impl CompiledFunction {
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
         self.metadata.reject_y_dot("eval_trajectory_hermite")?;
         let packed = self.metadata.extract_p(p)?;
-        let tq_view = t_query.as_array();
-        let tq = contiguous_slice_1d(&tq_view);
-        let ts_view = ts.as_array();
-        let ts_slice = contiguous_slice_1d(&ts_view);
-        let y_view = ys.as_array();
-        let yp_view = yps.as_array();
-        let (n_rows, n_knots) = (y_view.shape()[0], y_view.shape()[1]);
+        let (t_query, ts) = (arrays::values(&t_query), arrays::values(&ts));
+        let (y_view, yp_view) = (ys.as_array(), yps.as_array());
+        let (n_rows, n_knots) = y_view.dim();
         self.metadata
-            .check_trajectory(n_rows, n_knots, ts_slice.len())?;
-        if yp_view.shape()[0] != n_rows || yp_view.shape()[1] != n_knots {
+            .check_trajectory("ys", n_rows, n_knots, ts.len())?;
+        if yp_view.dim() != (n_rows, n_knots) {
             return Err(PyValueError::new_err(format!(
-                "{}: yps shape must equal ys shape ({}, {}), got ({}, {})",
+                "{}: yps shape must equal ys shape ({n_rows}, {n_knots}), got {:?}",
                 self.metadata.display_name(),
-                n_rows,
-                n_knots,
-                yp_view.shape()[0],
-                yp_view.shape()[1]
+                yp_view.dim()
             )));
         }
-        self.metadata.check_knots(&ts_slice)?;
+        self.metadata.check_knots(&ts)?;
+        let (y_cols, yp_cols) = (arrays::columns(&y_view), arrays::columns(&yp_view));
 
-        let y_cols = columns_slice(&y_view);
-        let yp_cols = columns_slice(&yp_view);
-
+        let expr = &*self.expr;
         let out_len = self.metadata.output_len;
-        let n_query = tq.len();
-        let mut out = vec![0.0_f64; out_len * n_query];
-        let expr = Arc::clone(&self.expr);
-        let scratch_len = expr.scratch_len();
-        let k_max = lane_tile(scratch_len);
-        let k_alloc = k_max.min(n_query.max(1));
-        let mut scratch = vec![0.0_f64; scratch_len * k_alloc];
+        let n_query = t_query.len();
         // Reconstructed state columns for one tile, (n_states, k) F-contiguous.
-        let mut y_tile = vec![0.0_f64; n_rows * k_alloc];
-        let batch_result = py.detach(|| -> Result<(), pybamm_core::BatchEvalError> {
-            let mut q0 = 0;
-            while q0 < n_query {
-                let k = (n_query - q0).min(k_max);
-                for l in 0..k {
-                    let q = q0 + l;
-                    let i = locate_interval(&ts_slice, tq[q]);
-                    let h = ts_slice[i + 1] - ts_slice[i];
-                    let s = if h > 0.0 {
-                        (tq[q] - ts_slice[i]) / h
-                    } else {
-                        0.0
-                    };
-                    let (s2, s3) = (s * s, s * s * s);
-                    // cubic-Hermite basis; derivative terms scaled by the step h
-                    let h00 = 2.0 * s3 - 3.0 * s2 + 1.0;
-                    let h10 = s3 - 2.0 * s2 + s;
-                    let h01 = -2.0 * s3 + 3.0 * s2;
-                    let h11 = s3 - s2;
-                    let yi = &y_cols[i * n_rows..(i + 1) * n_rows];
-                    let yi1 = &y_cols[(i + 1) * n_rows..(i + 2) * n_rows];
-                    let ypi = &yp_cols[i * n_rows..(i + 1) * n_rows];
-                    let ypi1 = &yp_cols[(i + 1) * n_rows..(i + 2) * n_rows];
-                    let col = &mut y_tile[l * n_rows..(l + 1) * n_rows];
-                    for m in 0..n_rows {
-                        col[m] = h00 * yi[m] + h10 * h * ypi[m] + h01 * yi1[m] + h11 * h * ypi1[m];
+        let mut states = Vec::with_capacity(n_rows * lane_tile(expr.scratch_len()).min(n_query));
+        let out = py
+            .detach(|| {
+                eval_tiled(expr.scratch_len(), out_len, n_query, |scratch, lanes| {
+                    states.clear();
+                    for &t in &t_query[lanes.clone()] {
+                        let i = locate_interval(&ts, t);
+                        let h = ts[i + 1] - ts[i];
+                        let s = (t - ts[i]) / h;
+                        let (s2, s3) = (s * s, s * s * s);
+                        // cubic-Hermite basis; derivative terms scaled by the step h
+                        let h00 = 2.0 * s3 - 3.0 * s2 + 1.0;
+                        let h10 = s3 - 2.0 * s2 + s;
+                        let h01 = -2.0 * s3 + 3.0 * s2;
+                        let h11 = s3 - s2;
+                        let (y0, y1) = (column(&y_cols, n_rows, i), column(&y_cols, n_rows, i + 1));
+                        let (yp0, yp1) =
+                            (column(&yp_cols, n_rows, i), column(&yp_cols, n_rows, i + 1));
+                        states.extend((0..n_rows).map(|m| {
+                            h00 * y0[m] + h10 * h * yp0[m] + h01 * y1[m] + h11 * h * yp1[m]
+                        }));
                     }
-                }
-                let root = expr.eval_batch(
-                    &mut scratch,
-                    k,
-                    &tq[q0..q0 + k],
-                    &y_tile[..k * n_rows],
-                    n_rows,
-                    &packed,
-                )?;
-                scatter_lanes(root, k, out_len, &mut out[q0 * out_len..(q0 + k) * out_len]);
-                q0 += k;
-            }
-            Ok(())
-        });
-        batch_result.map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        let arr =
-            numpy::ndarray::Array2::from_shape_vec((out_len, n_query).f(), out).map_err(|e| {
-                PyValueError::new_err(format!("eval_trajectory_hermite shape error: {e}"))
-            })?;
-        Ok(PyArray2::from_owned_array(py, arr))
+                    let k = lanes.len();
+                    expr.eval_batch(scratch, k, &t_query[lanes], &states, n_rows, &packed)
+                })
+            })
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        column_major(py, out, (out_len, n_query))
     }
 
     fn __repr__(&self) -> String {
@@ -793,11 +737,11 @@ impl CompiledFunction {
     /// Rebuild from the retained `(graph, root)` (pickle protocol).
     ///
     /// `n_states` is re-pinned exactly so a user-widened system round-trips, and the inputs
-    /// are cut back to the `n_inputs` registration indices the function was compiled with.
+    /// are cut back to the `vp_len` registration indices the function was compiled with.
     #[staticmethod]
     #[pyo3(
         name = "_rebuild",
-        signature = (graph, root, name, n_states, n_inputs, output_names = None, output_lens = None)
+        signature = (graph, root, name, n_states, vp_len, output_names = None, output_lens = None)
     )]
     #[allow(clippy::too_many_arguments)]
     fn rebuild(
@@ -806,21 +750,19 @@ impl CompiledFunction {
         root: u32,
         name: Option<String>,
         n_states: Option<usize>,
-        n_inputs: usize,
+        vp_len: usize,
         output_names: Option<Vec<String>>,
         output_lens: Option<Vec<usize>>,
     ) -> PyResult<Self> {
-        let (root, params) = {
+        let root = {
             let g = graph
                 .try_borrow(py)
                 .map_err(|_| PyValueError::new_err("_rebuild: graph borrow conflict"))?;
             let root = g.checked_root(root)?;
-            crate::expr::check_supported(g.arena(), [root])?;
-            (root, registry_at(&g, root, n_inputs)?)
+            g.check_supported([root])?;
+            root
         };
-        let mut this = Self::build(py, graph, root, name, n_states)?;
-        // The restored graph also holds inputs registered after this function was compiled.
-        this.metadata.params = params;
+        let mut this = Self::build(py, graph, root, name, n_states, Some(vp_len))?;
         this.layout = match (output_names, output_lens) {
             (Some(names), Some(lens)) => {
                 Some(OutputLayout::new(names, lens, this.metadata.output_len)?)
@@ -852,7 +794,7 @@ impl CompiledFunction {
                 this.root.raw(),
                 this.name(),
                 Some(this.n_states()),
-                this.n_inputs(),
+                this.vp_len(),
                 output_names,
                 output_lens,
             ),
@@ -866,76 +808,60 @@ fn lane_tile(scratch_len: usize) -> usize {
     (TARGET_BYTES / (8 * scratch_len.max(1))).clamp(8, 64)
 }
 
-/// Scatter lane-minor `root[e * k + l]` (element `e`, lane `l`) into point-major `dst`.
-fn scatter_lanes(root: &[f64], k: usize, out_len: usize, dst: &mut [f64]) {
-    for l in 0..k {
-        for (e, o) in dst[l * out_len..(l + 1) * out_len].iter_mut().enumerate() {
-            *o = root[e * k + l];
+/// Evaluate `n_points` points of a tape with `scratch_len` scratch in lane tiles, gathering
+/// each point's `output_len` values into an `(output_len, n_points)` column-major vector.
+///
+/// `eval_tile(scratch, lanes)` evaluates the points `lanes` in `scratch`, returning the
+/// tape's root lane-minor.
+fn eval_tiled(
+    scratch_len: usize,
+    output_len: usize,
+    n_points: usize,
+    mut eval_tile: impl FnMut(&mut [f64], Range<usize>) -> Result<&[f64], BatchEvalError>,
+) -> Result<Vec<f64>, BatchEvalError> {
+    let lanes_per_tile = lane_tile(scratch_len);
+    let mut scratch = vec![0.0; scratch_len * lanes_per_tile.min(n_points.max(1))];
+    let mut out = vec![0.0; output_len * n_points];
+    for start in (0..n_points).step_by(lanes_per_tile) {
+        let lanes = start..(start + lanes_per_tile).min(n_points);
+        let k = lanes.len();
+        let root = eval_tile(&mut scratch, lanes.clone())?;
+        let dst = &mut out[lanes.start * output_len..lanes.end * output_len];
+        // Lane-minor `root[e * k + l]` (element `e`, lane `l`) into point-major `dst`.
+        for l in 0..k {
+            for (e, o) in dst[l * output_len..(l + 1) * output_len]
+                .iter_mut()
+                .enumerate()
+            {
+                *o = root[e * k + l];
+            }
         }
     }
+    Ok(out)
 }
 
-/// Column-major slice of Y: zero-copy when F-contiguous, else one gathering copy.
-fn columns_slice<'a>(view: &'a numpy::ndarray::ArrayView2<'a, f64>) -> std::borrow::Cow<'a, [f64]> {
-    match view.as_slice_memory_order() {
-        Some(s) if view.strides()[0] == 1 && view.strides().iter().all(|&st| st >= 0) => {
-            std::borrow::Cow::Borrowed(s)
-        },
-        _ => {
-            let (n_rows, n_t) = (view.shape()[0], view.shape()[1]);
-            let mut owned = Vec::with_capacity(n_rows * n_t);
-            for j in 0..n_t {
-                owned.extend(view.column(j).iter());
-            }
-            std::borrow::Cow::Owned(owned)
-        },
-    }
+/// `values` as an `(n_rows, n_cols)` F-contiguous array.
+fn column_major(
+    py: Python<'_>,
+    values: Vec<f64>,
+    (n_rows, n_cols): (usize, usize),
+) -> PyResult<Bound<'_, PyArray2<f64>>> {
+    let array = Array2::from_shape_vec((n_rows, n_cols).f(), values)
+        .map_err(|err| PyValueError::new_err(format!("trajectory shape error: {err}")))?;
+    Ok(PyArray2::from_owned_array(py, array))
 }
 
-/// Contiguous view of a 1-D time array: zero-copy when contiguous, else one copy.
-///
-/// `AllowTypeChange` passes a strided f64 ndarray through, which `.as_slice()` rejects.
-fn contiguous_slice_1d<'a>(
-    view: &'a numpy::ndarray::ArrayView1<'a, f64>,
-) -> std::borrow::Cow<'a, [f64]> {
-    view.as_slice().map_or_else(
-        || std::borrow::Cow::Owned(view.to_vec()),
-        std::borrow::Cow::Borrowed,
-    )
+/// Column `j` of the column-major `columns`, each `n_rows` long.
+fn column(columns: &[f64], n_rows: usize, j: usize) -> &[f64] {
+    &columns[j * n_rows..(j + 1) * n_rows]
 }
 
-/// Bracketing interval of `x` in ascending `ts` (len >= 2), clamped to `[0, n-2]`.
+/// Bracketing interval of `x` in strictly increasing `ts` (len >= 2), clamped to `[0, n-2]`.
 fn locate_interval(ts: &[f64], x: f64) -> usize {
     if x <= ts[0] {
         return 0;
     }
     ts[1..ts.len() - 1].partition_point(|&t| t <= x)
-}
-
-/// `graph`'s registry cut back to `n_inputs` indices, refusing a cut that drops an input
-/// `root` reads.
-fn registry_at(graph: &ExprGraph, root: NodeId, n_inputs: usize) -> PyResult<ParamRegistry> {
-    let registry = graph.params();
-    let params = registry.truncated(n_inputs).ok_or_else(|| {
-        PyValueError::new_err(format!(
-            "_rebuild: n_inputs={n_inputs} exceeds the graph's {} input indices",
-            registry.index_extent()
-        ))
-    })?;
-    let arena = graph.arena();
-    let dropped = arena
-        .topological_order(root)
-        .into_iter()
-        .find_map(|id| match &arena[id] {
-            Node::InputParameter { name, index, .. } if *index >= n_inputs => Some(name.as_str()),
-            _ => None,
-        });
-    if let Some(name) = dropped {
-        return Err(PyValueError::new_err(format!(
-            "_rebuild: the expression reads input '{name}', which n_inputs={n_inputs} excludes"
-        )));
-    }
-    Ok(params)
 }
 
 /// Resolve an `n_states` override against the scanned extent; a smaller one would
@@ -961,5 +887,25 @@ mod tests {
         let layout = OutputLayout::new(names, vec![1, 1], 2).ok();
         let spans: Option<Vec<_>> = layout.map(|layout| layout.spans().collect());
         assert_eq!(spans, Some(vec![(0, 1), (1, 1)]));
+    }
+
+    #[test]
+    fn tiles_cover_every_point_once_in_order() {
+        // Outputs (point, -point) per point, so a misplaced lane or element shows.
+        for n_points in [0, 1, 63, 64, 65, 200] {
+            // Two scratch slots per lane, so tiles hold 64 lanes.
+            let out = eval_tiled(2, 2, n_points, |scratch, lanes| {
+                let k = lanes.len();
+                for (lane, point) in lanes.enumerate() {
+                    scratch[lane] = point as f64;
+                    scratch[k + lane] = -(point as f64);
+                }
+                Ok(&scratch[..2 * k])
+            });
+            let expected: Vec<f64> = (0..n_points)
+                .flat_map(|point| [point as f64, -(point as f64)])
+                .collect();
+            assert_eq!(out.ok(), Some(expected), "n_points = {n_points}");
+        }
     }
 }

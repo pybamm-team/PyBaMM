@@ -1,6 +1,7 @@
 """Hand-maintained stubs for ``pybamm.rust._core``, checked by ``mypy.stubtest``."""
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from os import PathLike
 from typing import Literal, TypeAlias, final
 
 import numpy as np
@@ -15,8 +16,16 @@ __all__ = [
 ]
 
 _FloatArray: TypeAlias = npt.NDArray[np.float64]
+# One input's value: a real number, or a real array or sequence of any shape.
+_RealScalar: TypeAlias = float | np.bool_ | np.integer | np.floating
+_InputValue: TypeAlias = (
+    _RealScalar
+    | Sequence[_RealScalar]
+    | Sequence[Sequence[_RealScalar]]
+    | npt.NDArray[np.bool_ | np.integer | np.floating]
+)
 # The packed parameter vector, or a {name: value} mapping packed on entry.
-_Params: TypeAlias = dict[str, float | _FloatArray] | _FloatArray
+_Params: TypeAlias = Mapping[str, _InputValue] | _FloatArray
 _FloatSequence: TypeAlias = Sequence[float] | _FloatArray
 _IntSequence: TypeAlias = Sequence[int] | npt.NDArray[np.integer]
 _TimeGrid: TypeAlias = (
@@ -40,7 +49,7 @@ class ExprGraph:
     def state_vector(self, start: int, end: int) -> Expr: ...
     def state_vector_dot(self, start: int, end: int) -> Expr: ...
     def input_parameter(self, name: str, width: int = 1) -> Expr:
-        """Register (or re-look-up) a named input; re-registering must repeat the width."""
+        """Register a named input, or look up its node; a lookup must repeat the width."""
 
     def input_index(self, name: str) -> int | None:
         """Registration index of a registered input, or ``None`` for an unknown name."""
@@ -93,7 +102,11 @@ class ExprGraph:
     def index(self, child: Expr, start: int, end: int) -> Expr: ...
     def concat(self, children: Sequence[Expr]) -> Expr: ...
     def conditional(self, selector: Expr, branches: Sequence[Expr]) -> Expr:
-        """Branch ``i`` is active when ``i - 0.5 < selector < i + 0.5`` (1-based)."""
+        """Branch ``i`` is active when ``i - 0.5 < selector < i + 0.5`` (1-based).
+
+        With no branch active (a selector out of range, exactly ``i + 0.5``, or NaN),
+        the result is zero.
+        """
 
     def interpolant_1d_linear(
         self, x_data: _FloatSequence, y_data: _FloatSequence, child: Expr
@@ -120,7 +133,10 @@ class ExprGraph:
         y_dot: _FloatSequence,
         inputs: _FloatSequence,
     ) -> float:
-        """Test/debug helper for a one-value ``expr``; buffers may exceed what it reads."""
+        """Evaluate a one-value ``expr`` as built, without simplifying it first.
+
+        A test/debug helper; the buffers may be longer than ``expr`` reads, not shorter.
+        """
 
     def eval_to_array(
         self,
@@ -130,7 +146,10 @@ class ExprGraph:
         y_dot: _FloatArray,
         inputs: _FloatSequence,
     ) -> _FloatArray:
-        """Test/debug helper; buffers may be longer than ``expr`` reads, not shorter."""
+        """Evaluate ``expr`` as built, without simplifying it first.
+
+        A test/debug helper; the buffers may be longer than ``expr`` reads, not shorter.
+        """
 
     def compile(
         self, expr: Expr, name: str | None = None, n_states: int | None = None
@@ -146,13 +165,20 @@ class ExprGraph:
         """Compile named outputs into one shared tape with cross-output CSE."""
 
     def dump_dag(
-        self, expr: Expr, path: str, model_name: str, n_states: int, n_params: int
+        self,
+        expr: Expr,
+        path: str | PathLike[str],
+        model_name: str,
+        n_states: int | None = None,
     ) -> None:
-        """Serialize the graph rooted at ``expr`` to ``path`` (debug snapshot)."""
+        """Write the graph ``expr`` reaches to ``path`` as a core ``DagSnapshot``.
+
+        ``n_states`` overrides the scanned state extent; the packed input width is the
+        graph's.
+        """
 
     def __getstate__(self) -> bytes: ...
     def __setstate__(self, state: bytes) -> None: ...
-    def __getnewargs__(self) -> tuple[()]: ...
 
 @final
 class Expr:
@@ -171,7 +197,7 @@ class Expr:
     def __rsub__(self, other: Expr, /) -> Expr: ...
     def __rmul__(self, other: Expr, /) -> Expr: ...
     def __rtruediv__(self, other: Expr, /) -> Expr: ...
-    def __rpow__(self, other: Expr, modulo: object = None, /) -> Expr: ...
+    def __rpow__(self, other: Expr, modulo: None = None, /) -> Expr: ...
     def __neg__(self) -> Expr: ...
 
 @final
@@ -202,9 +228,9 @@ class CompiledFunction:
         out: _FloatArray,
         y_dot: _FloatArray | None = None,
     ) -> None:
-        """Evaluate into pre-allocated ``out`` (length ``output_len``)."""
+        """Evaluate into ``out``, a contiguous, writeable array of ``output_len`` values."""
 
-    def pack(self, mapping: dict[str, float | _FloatArray]) -> _FloatArray:
+    def pack(self, mapping: Mapping[str, _InputValue]) -> _FloatArray:
         """Pack a ``{name: value}`` mapping into the stacked input layout."""
 
     def jvp(
@@ -243,13 +269,16 @@ class CompiledFunction:
         yps: _FloatArray,
         p: _Params,
     ) -> _FloatArray:
-        """Cubic-Hermite reconstruct the state at ``t_query``, then evaluate."""
+        """Cubic-Hermite reconstruct the state at ``t_query``, then evaluate.
+
+        ``ts`` must be finite and strictly increasing.
+        """
 
     @property
     def input_names(self) -> tuple[str, ...]: ...
     @property
-    def n_inputs(self) -> int:
-        """Registration-index extent (the ``vp`` seed length), NOT the packed width."""
+    def vp_len(self) -> int:
+        """Length of a ``vp`` direction: one entry per input index, not the packed width."""
 
     @property
     def n_states(self) -> int: ...
@@ -288,7 +317,7 @@ class CompiledFunction:
         root: int,
         name: str | None,
         n_states: int | None,
-        n_inputs: int,
+        vp_len: int,
         output_names: list[str] | None = None,
         output_lens: list[int] | None = None,
     ) -> CompiledFunction: ...
@@ -312,10 +341,10 @@ class CompiledJacobian:
     """Prepared sparse jacobian: colored JVP sweeps assembled into scipy CSC."""
 
     def __call__(self, t: float, y: _FloatArray, p: _Params) -> csc_matrix:
-        """Assemble and return a ``scipy.sparse.csc_matrix``."""
+        """Assemble a ``scipy.sparse.csc_matrix`` that owns all of its arrays."""
 
     def sparsity(self) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32]]:
-        """CSC pattern as ``(indptr, indices)``, cached read-only int32 arrays."""
+        """CSC pattern as ``(indptr, indices)``, in new int32 arrays."""
 
     @property
     def nnz(self) -> int: ...

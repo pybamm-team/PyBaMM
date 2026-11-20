@@ -5,6 +5,7 @@
 
 use pyo3::prelude::*;
 
+mod arrays;
 mod compiled_function;
 mod errors;
 mod expr;

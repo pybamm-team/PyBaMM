@@ -9,10 +9,11 @@ use numpy::{PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
-use pyo3::types::{IntoPyDict, PyType};
+use pyo3::types::PyType;
 
-use pybamm_core::{JacobianData, JacobianScratch};
+use pybamm_core::{DiffTarget, JacobianData, JacobianScratch};
 
+use crate::arrays;
 use crate::function_metadata::FunctionMetadata;
 use crate::scratch_pool::ScratchPool;
 
@@ -24,10 +25,9 @@ pub struct CompiledJacobian {
     data: Arc<JacobianData>,
     metadata: FunctionMetadata,
     scratch_pool: ScratchPool<JacobianScratch>,
-    /// CSC index arrays: int32 so scipy adopts them without a copy, read-only
-    /// so in-place canonicalisation raises instead of corrupting the shared pattern.
-    indptr: Py<PyArray1<i32>>,
-    indices: Py<PyArray1<i32>>,
+    /// CSC pattern as int32, the index type scipy adopts without converting.
+    indptr: Box<[i32]>,
+    indices: Box<[i32]>,
 }
 
 impl std::fmt::Debug for CompiledJacobian {
@@ -41,30 +41,23 @@ impl std::fmt::Debug for CompiledJacobian {
     }
 }
 
-fn to_readonly_i32(py: Python<'_>, values: &[usize]) -> PyResult<Py<PyArray1<i32>>> {
-    let v: Vec<i32> = values
+fn to_i32(values: &[usize]) -> PyResult<Box<[i32]>> {
+    values
         .iter()
         .map(|&x| {
             i32::try_from(x).map_err(|_| {
                 PyValueError::new_err("jacobian pattern exceeds the int32 index range")
             })
         })
-        .collect::<PyResult<_>>()?;
-    let arr = PyArray1::from_vec(py, v);
-    arr.call_method("setflags", (), Some(&[("write", false)].into_py_dict(py)?))?;
-    Ok(arr.unbind())
+        .collect()
 }
 
 impl CompiledJacobian {
-    pub(crate) fn build(
-        py: Python<'_>,
-        data: Arc<JacobianData>,
-        metadata: FunctionMetadata,
-    ) -> PyResult<Self> {
+    pub(crate) fn build(data: Arc<JacobianData>, metadata: FunctionMetadata) -> PyResult<Self> {
         Ok(Self {
             scratch_pool: ScratchPool::default(),
-            indptr: to_readonly_i32(py, data.csc().colptr())?,
-            indices: to_readonly_i32(py, data.csc().rowind())?,
+            indptr: to_i32(data.csc().colptr())?,
+            indices: to_i32(data.csc().rowind())?,
             data,
             metadata,
         })
@@ -73,7 +66,7 @@ impl CompiledJacobian {
 
 #[pymethods]
 impl CompiledJacobian {
-    /// Assemble and return a `scipy.sparse.csc_matrix`.
+    /// Assemble a `scipy.sparse.csc_matrix` that owns all of its arrays.
     fn __call__<'py>(
         &self,
         py: Python<'py>,
@@ -82,9 +75,9 @@ impl CompiledJacobian {
         p: &Bound<'_, PyAny>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let packed = self.metadata.extract_p(p)?;
-        let y_slice = y.as_slice()?;
+        let y = arrays::values(&y);
         self.metadata
-            .check_len("y", y_slice.len(), self.metadata.n_states)?;
+            .check_len("y", y.len(), self.metadata.n_states)?;
 
         let mut values = vec![0.0; self.data.nnz()];
         let mut scratch = self
@@ -96,7 +89,7 @@ impl CompiledJacobian {
                 &mut scratch,
                 data.layout(),
                 t,
-                y_slice,
+                &y,
                 &[],
                 &packed,
                 &mut values,
@@ -104,22 +97,22 @@ impl CompiledJacobian {
         });
         self.scratch_pool.release(scratch);
 
-        let data_arr = PyArray1::from_vec(py, values);
-        let csc = CSC_MATRIX
-            .import(py, "scipy.sparse", "csc_matrix")?
-            .call1((
-                (data_arr, self.indices.bind(py), self.indptr.bind(py)),
-                (self.data.n_rows(), self.data.n_cols()),
-            ))?;
-        Ok(csc)
+        let (indptr, indices) = self.sparsity(py);
+        CSC_MATRIX.import(py, "scipy.sparse", "csc_matrix")?.call1((
+            (PyArray1::from_vec(py, values), indices, indptr),
+            self.shape(),
+        ))
     }
 
-    /// CSC pattern as (indptr, indices), the cached read-only arrays.
+    /// CSC pattern as `(indptr, indices)`, in new int32 arrays.
     fn sparsity<'py>(
         &self,
         py: Python<'py>,
     ) -> (Bound<'py, PyArray1<i32>>, Bound<'py, PyArray1<i32>>) {
-        (self.indptr.bind(py).clone(), self.indices.bind(py).clone())
+        (
+            PyArray1::from_slice(py, &self.indptr),
+            PyArray1::from_slice(py, &self.indices),
+        )
     }
 
     #[getter]
@@ -142,8 +135,8 @@ impl CompiledJacobian {
     #[getter]
     fn wrt(&self) -> &'static str {
         match self.data.wrt() {
-            pybamm_core::DiffTarget::States => "y",
-            pybamm_core::DiffTarget::Params => "p",
+            DiffTarget::States => "y",
+            DiffTarget::Params => "p",
         }
     }
 

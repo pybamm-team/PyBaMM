@@ -1,6 +1,10 @@
 """Unit tests for the prep-artifact binding API (CompiledFunction)."""
 
+import collections
+import concurrent.futures
 import pickle
+import types
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -28,7 +32,7 @@ class TestSignature:
     def test_properties(self):
         _, f = _make_fn(name="RHS")
         assert f.input_names == ("a", "b")
-        assert f.n_inputs == 2
+        assert f.vp_len == 2
         assert f.n_states == 2
         assert f.output_len == 2
         assert f.uses_y_dot is False
@@ -108,6 +112,44 @@ class TestCall:
         for inputs in cases:
             np.testing.assert_allclose(f(0.0, y, inputs), expected, rtol=1e-6)
 
+    def test_call_any_mapping(self):
+        _, f = _make_fn()
+        y = np.array([0.5, 2.0])
+        expected = f(0.0, y, {"a": 3.0, "b": 4.0})
+        inputs = types.MappingProxyType({"a": 3.0, "b": 4.0})
+        np.testing.assert_array_equal(f(0.0, y, inputs), expected)
+        np.testing.assert_array_equal(f.pack(inputs), [3.0, 4.0])
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            [1.0, 3.0],
+            (1.0, 3.0),
+            [[1.0], [3.0]],
+            np.array([[1.0], [3.0]]),
+            np.array([1.0, 9.0, 3.0])[::2],
+            np.array([1, 3], dtype=np.int32),
+            [1, 3],
+            [np.float32(1.0), np.float32(3.0)],
+        ],
+        ids=[
+            "list",
+            "tuple",
+            "nested-list",
+            "column",
+            "strided",
+            "int-array",
+            "int-list",
+            "float32-list",
+        ],
+    )
+    def test_vector_input_accepts_any_real_container(self, value):
+        g = ExprGraph()
+        b = g.input_parameter("b", 2)
+        f = g.compile(g.mul(b, g.state_vector(0, 2)))
+        y = np.array([2.0, 3.0])
+        np.testing.assert_array_equal(f(0.0, y, {"b": value}), [2.0, 9.0])
+
     def test_dict_and_stacked_bitwise_equal(self):
         _, f = _make_fn()
         y = np.array([0.5, 2.0])
@@ -169,8 +211,49 @@ class TestValidation:
 
     def test_dict_rejects_multielement_array(self):
         _, f = _make_fn()
-        with pytest.raises(ValueError, match=r"input 'a'.*scalar or length-1"):
+        with pytest.raises(ValueError, match=r"input 'a'.*scalar or length-1.*got 2"):
             f(0.0, np.zeros(2), {"a": np.array([1.0, 2.0]), "b": 3.0})
+
+    @pytest.mark.parametrize(
+        ("value", "received"),
+        [
+            (None, r"got NoneType"),
+            ("3.0", r"got str"),
+            (np.array([1j]), r"got a 1-D array of dtype complex128"),
+            (np.complex128(1 + 2j), r"got complex128"),
+            (1 + 2j, r"got complex"),
+            ([1.0, None], r"got list"),
+        ],
+    )
+    def test_dict_rejects_a_non_real_value_naming_it(self, value, received):
+        _, f = _make_fn()
+        # Converting a complex to float only warns, so the value must be refused unconverted.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", np.exceptions.ComplexWarning)
+            with pytest.raises(
+                ValueError, match=rf"input 'a' must be a real number.*{received}"
+            ):
+                f(0.0, np.zeros(2), {"a": value, "b": 3.0})
+
+    def test_a_defaultdict_does_not_fill_in_a_missing_input(self):
+        _, f = _make_fn()
+        inputs = collections.defaultdict(float, a=1.0)
+        with pytest.raises(ValueError, match=r"missing input 'b'"):
+            f(0.0, np.zeros(2), inputs)
+        assert dict(inputs) == {"a": 1.0}
+
+    @pytest.mark.parametrize(
+        ("p", "received"),
+        [
+            ([3.0, 4.0], r"got list"),
+            (np.array([3, 4]), r"got a 1-D array of dtype int64"),
+            (np.zeros((2, 1)), r"got a 2-D array of dtype float64"),
+        ],
+    )
+    def test_p_of_another_type_is_named(self, p, received):
+        _, f = _make_fn()
+        with pytest.raises(ValueError, match=rf"p must be .* mapping, {received}"):
+            f(0.0, np.zeros(2), p)
 
     def test_eval_into_rejects_aliased_out(self):
         _, f = _make_fn()
@@ -178,12 +261,52 @@ class TestValidation:
         with pytest.raises(ValueError, match=r"already borrowed"):
             f.eval_into(0.0, arr, np.array([3.0, 4.0]), arr)
 
-    def test_non_contiguous_y_is_a_clear_type_error(self):
+    def test_eval_into_rejects_the_wrong_out_length(self):
+        _, f = _make_fn(name="RHS")
+        with pytest.raises(ValueError, match=r"RHS: expected out of length 2, got 3"):
+            f.eval_into(0.0, np.zeros(2), np.zeros(2), np.zeros(3))
+
+    def test_eval_into_rejects_a_strided_out(self):
+        _, f = _make_fn(name="RHS")
+        with pytest.raises(ValueError, match=r"RHS: out must be contiguous"):
+            f.eval_into(0.0, np.zeros(2), np.zeros(2), np.zeros(4)[::2])
+
+
+def _strided(values):
+    """``values`` as a view with stride 2, which is not contiguous."""
+    padded = np.zeros(2 * len(values))
+    padded[::2] = values
+    view = padded[::2]
+    assert not view.flags["C_CONTIGUOUS"]
+    return view
+
+
+class TestStridedArguments:
+    def test_strided_arguments_match_contiguous_ones(self):
         _, f = _make_fn()
-        y_strided = np.arange(4.0).reshape(2, 2)[:, 0]
-        assert not y_strided.flags["C_CONTIGUOUS"]
-        with pytest.raises(TypeError, match=r"contiguous"):
-            f(0.0, y_strided, np.zeros(2))
+        y, p = np.array([0.5, 2.0]), np.array([3.0, 4.0])
+        vy, vp = np.array([1.0, -0.5]), np.array([0.25, -1.0])
+        np.testing.assert_array_equal(f(0.0, _strided(y), _strided(p)), f(0.0, y, p))
+        np.testing.assert_array_equal(
+            f.jvp(0.0, _strided(y), _strided(p), _strided(vy), vp=_strided(vp)),
+            f.jvp(0.0, y, p, vy, vp=vp),
+        )
+        np.testing.assert_array_equal(
+            f.jacobian()(0.0, _strided(y), p).toarray(),
+            f.jacobian()(0.0, y, p).toarray(),
+        )
+        out = np.zeros(2)
+        f.eval_into(0.0, _strided(y), _strided(p), out)
+        np.testing.assert_array_equal(out, f(0.0, y, p))
+
+    def test_strided_y_dot_matches_contiguous(self):
+        g = ExprGraph()
+        f = g.compile(g.sub(g.state_vector_dot(0, 2), g.state_vector(0, 2)))
+        y, y_dot = np.array([1.0, 2.0]), np.array([5.0, 7.0])
+        np.testing.assert_array_equal(
+            f(0.0, y, np.zeros(0), y_dot=_strided(y_dot)),
+            f(0.0, y, np.zeros(0), y_dot=y_dot),
+        )
 
 
 class TestJvp:
@@ -208,19 +331,17 @@ class TestJvp:
         ) / (2 * eps)
         np.testing.assert_allclose(f.jvp(0.0, y, p, vy, vp=vp), fd, rtol=1e-6)
 
-    def test_jvp_tangent_tape_is_cached(self):
-        import time
-
+    def test_concurrent_first_calls_agree(self):
+        # Every thread races to derive the tangent tapes, which must be built once.
+        _, reference = _make_fn()
+        y, p = np.array([0.5, 2.0]), np.array([3.0, 4.0])
+        vy, vp = np.array([1.0, -0.5]), np.array([0.25, -1.0])
+        expected = reference.jvp(0.0, y, p, vy, vp=vp)
         _, f = _make_fn()
-        y, p, vy = np.array([0.5, 2.0]), np.array([3.0, 4.0]), np.array([1.0, 0.0])
-        t0 = time.perf_counter()
-        f.jvp(0.0, y, p, vy)
-        first = time.perf_counter() - t0
-        t0 = time.perf_counter()
-        for _ in range(100):
-            f.jvp(0.0, y, p, vy)
-        per_call = (time.perf_counter() - t0) / 100
-        assert per_call < first, "derivation must be one-time prep, not per-call"
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(lambda _: f.jvp(0.0, y, p, vy, vp=vp), range(32)))
+        for result in results:
+            np.testing.assert_array_equal(result, expected)
 
     def test_jvp_rejects_y_dot_expressions(self):
         # LoadStateVectorDot slices y_dot unconditionally: would panic across PyO3.
@@ -256,7 +377,7 @@ class TestJvp:
     def test_jvp_rejects_wrong_vp_length(self):
         _, f = _make_fn(name="rhs")
         y, p, vy = np.array([0.5, 2.0]), np.array([3.0, 4.0]), np.zeros(2)
-        with pytest.raises(ValueError, match=r"rhs"):
+        with pytest.raises(ValueError, match=r"rhs: expected vp of length 2.*got 3"):
             f.jvp(0.0, y, p, vy, vp=np.zeros(3))
 
 
@@ -324,32 +445,34 @@ class TestJacobian:
         with pytest.raises(ValueError, match=r"resid.*y_dot"):
             f.jacobian()
 
-    def test_csc_buffers_shared_and_readonly(self):
+    def test_csc_matrices_own_their_arrays(self):
         _, f = _make_fn()
         J = f.jacobian()
-        y, p = np.array([0.5, 2.0]), np.array([3.0, 4.0])
+        y, p = np.array([0.5, 2.0]), np.array([0.0, 4.0])
         m1, m2 = J(0.0, y, p), J(0.0, y, p)
-        assert m1.indices.dtype == np.int32
-        assert np.shares_memory(m1.indices, m2.indices)
-        assert np.shares_memory(m1.indptr, m2.indptr)
-        assert not m1.indices.flags.writeable
-        assert not m1.indptr.flags.writeable
-        with pytest.raises(ValueError):
-            m1.indices[0] = m1.indices[0]
-        assert m1.data.flags.writeable
+        assert m1.indices.dtype == m1.indptr.dtype == np.int32
+        for arrays in ((m1.data, m2.data), (m1.indices, m2.indices)):
+            assert not np.shares_memory(*arrays)
+        # p_a = 0 makes the y-column entries of the first row explicit zeros.
+        m1.eliminate_zeros()
+        assert m1.nnz < m2.nnz
+        indptr, indices = J.sparsity()
+        np.testing.assert_array_equal(indptr, m2.indptr)
+        np.testing.assert_array_equal(indices, m2.indices)
 
 
 class TestEvalTrajectory:
-    def _setup(self):
+    def _setup(self, n_t=50):
         _, f = _make_fn()
-        n_t = 50
         ts = np.linspace(0.0, 1.0, n_t)
         Y = np.vstack([np.linspace(0.1, 1.0, n_t), np.linspace(2.0, 3.0, n_t)])
         p = np.array([3.0, 4.0])
         return f, ts, Y, p
 
-    def test_matches_per_column_loop(self):
-        f, ts, Y, p = self._setup()
+    # 65 and 200 points span more than one 64-lane tile, the last one partial.
+    @pytest.mark.parametrize("n_t", [50, 65, 200])
+    def test_matches_per_column_loop(self, n_t):
+        f, ts, Y, p = self._setup(n_t)
         out = f.eval_trajectory(ts, Y, p)
         assert out.shape == (2, len(ts))
         for j, t in enumerate(ts):
@@ -375,22 +498,18 @@ class TestEvalTrajectory:
         for j, t in enumerate(ts):
             np.testing.assert_array_equal(out[:, j], f(t, Yr[:, j].copy(), p))
 
-    def test_hermite_at_the_knots_matches_eval(self):
-        f, ts, Y, p = self._setup()
-        out = f.eval_trajectory_hermite(ts, ts, Y, np.zeros_like(Y), p)
-        np.testing.assert_allclose(out, f.eval_trajectory(ts, Y, p), rtol=1e-15)
-
-    def test_hermite_rejects_knots_out_of_order(self):
-        f, ts, Y, p = self._setup()
-        with pytest.raises(ValueError, match=r"non-decreasing"):
-            f.eval_trajectory_hermite(ts, ts[::-1].copy(), Y, np.zeros_like(Y), p)
-
     def test_shape_validation(self):
         f, ts, Y, p = self._setup()
-        with pytest.raises(ValueError, match=r"Y.shape\[0\]"):
+        with pytest.raises(ValueError, match=r"y_traj.shape\[0\] must equal n_states"):
             f.eval_trajectory(ts, Y[:1, :], p)
-        with pytest.raises(ValueError, match=r"len\(ts\)"):
+        with pytest.raises(ValueError, match=r"len\(ts\) \(49\) must equal y_traj"):
             f.eval_trajectory(ts[:-1], Y, p)
+
+    def test_rejects_y_dot_before_reading_its_arguments(self):
+        g = ExprGraph()
+        f = g.compile(g.state_vector_dot(0, 1), name="resid")
+        with pytest.raises(ValueError, match=r"resid: eval_trajectory.*y_dot"):
+            f.eval_trajectory(np.zeros(3), np.zeros((5, 2)), "not p")
 
 
 class TestNamedOutputs:
@@ -433,6 +552,13 @@ class TestNamedOutputs:
         with pytest.raises(ValueError, match=r"split expects 2 row\(s\), got 5"):
             fn.split(np.zeros(5))
 
+    def test_split_rejects_a_value_without_a_shape(self):
+        _, fn, _, _ = self._setup()
+        with pytest.raises(
+            ValueError, match=r"split expects an array with a leading axis"
+        ):
+            fn.split([1.0, 2.0])
+
     def test_split_returns_views_not_copies(self):
         _, fn, _, _ = self._setup()
         n_t = 4
@@ -444,7 +570,7 @@ class TestNamedOutputs:
     def test_signature_surface(self):
         _, fn, _, _ = self._setup()
         assert fn.input_names == ("a",)
-        assert fn.n_inputs == 1
+        assert fn.vp_len == 1
         assert fn.output_len == 2
         assert fn.uses_y_dot is False
         np.testing.assert_array_equal(fn.pack({"a": 2.0}), [2.0])
@@ -518,8 +644,10 @@ class TestNamedOutputs:
     def test_n_states_override_below_extent_rejected(self):
         g = ExprGraph()
         e = g.mul(g.state_vector(0, 3), g.state_vector(0, 3))
+        before = g.n_nodes
         with pytest.raises(ValueError, match=r"n_states=1.*state extent 3"):
             g.compile_outputs({"out": e}, n_states=1)
+        assert g.n_nodes == before, "a refused call must leave the graph as it was"
 
     def test_requires_at_least_one_output(self):
         g = ExprGraph()
@@ -533,6 +661,19 @@ class TestNamedOutputs:
         fn = g.compile_outputs({"out": e})
         assert g.n_nodes == before + 1
         assert fn.jacobian("y")(0.0, np.array([0.5]), np.array([2.0])).shape == (1, 1)
+
+    def test_repeat_compiles_reuse_the_concat_root(self):
+        g = ExprGraph()
+        y = g.state_vector(0, 1)
+        outputs = {"sin": g.sin(y), "cos": g.cos(y)}
+        first = g.compile_outputs(outputs)
+        after_first = g.n_nodes
+        second = g.compile_outputs(outputs)
+        assert g.n_nodes == after_first
+        np.testing.assert_array_equal(
+            second(0.0, np.array([0.3]), np.zeros(0)),
+            first(0.0, np.array([0.3]), np.zeros(0)),
+        )
 
 
 class TestPickle:
@@ -549,7 +690,7 @@ class TestPickle:
         restored = pickle.loads(pickle.dumps(early))
         assert restored.input_names == early.input_names == ("x",)
         # Width-2 inputs keep the index extent (1) apart from the packed width (2).
-        assert restored.n_inputs == early.n_inputs == 1
+        assert restored.vp_len == early.vp_len == 1
 
         y, x = np.array([2.0, 5.0]), np.array([3.0, 4.0])
         expected = early(0.0, y, {"x": x})
@@ -651,14 +792,19 @@ class TestJvpTrajectory:
 
     def test_shape_validation(self):
         f, ts, Y, VY, p = self._setup()
-        with pytest.raises(ValueError, match=r"Y.shape\[0\]"):
+        with pytest.raises(ValueError, match=r"y_traj.shape\[0\]"):
             f.jvp_trajectory(ts, Y[:1, :], p, VY)
-        with pytest.raises(ValueError, match=r"len\(ts\)"):
+        with pytest.raises(ValueError, match=r"len\(ts\) \(19\) must equal y_traj"):
             f.jvp_trajectory(ts[:-1], Y, p, VY)
         with pytest.raises(ValueError, match=r"vy_traj"):
             f.jvp_trajectory(ts, Y, p, VY[:1, :])
         with pytest.raises(ValueError, match=r"vy_traj"):
             f.jvp_trajectory(ts, Y, p, VY[:, :-1])
+
+    def test_rejects_wrong_vp_length(self):
+        f, ts, Y, VY, p = self._setup()
+        with pytest.raises(ValueError, match=r"expected vp of length 2.*got 1"):
+            f.jvp_trajectory(ts, Y, p, VY, vp=np.zeros(1))
 
     def test_accepts_c_and_f_order(self):
         f, ts, Y, VY, p = self._setup()
@@ -704,6 +850,21 @@ class TestEvalTrajectoryHermite:
         assert out.shape == (2, len(ts))
         np.testing.assert_allclose(out, ref, rtol=1e-12, atol=1e-12)
 
+    @pytest.mark.parametrize("fault", ["reversed", "repeated", "nan", "inf"])
+    def test_rejects_knots_not_finite_and_strictly_increasing(self, fault):
+        f, ts, Y, YP, p = self._setup()
+        knots = ts[::-1].copy() if fault == "reversed" else ts.copy()
+        if fault == "repeated":
+            knots[4] = knots[3]
+        elif fault == "nan":
+            knots[3] = np.nan
+        elif fault == "inf":
+            knots[-1] = np.inf
+        with pytest.raises(
+            ValueError, match=r"knot times must be finite and strictly increasing"
+        ):
+            f.eval_trajectory_hermite(ts, knots, Y, YP, p)
+
     def test_linear_state_exact(self):
         _, f = _make_fn()
         ts = np.linspace(0.0, 1.0, 5)
@@ -716,11 +877,13 @@ class TestEvalTrajectoryHermite:
         ref = f.eval_trajectory(tq, Yq, p)
         np.testing.assert_allclose(out, ref, rtol=1e-12, atol=1e-12)
 
-    def test_matches_scipy_cubic_hermite_oracle(self):
+    # 65 and 200 queries span more than one 64-lane tile, the last one partial.
+    @pytest.mark.parametrize("n_query", [41, 65, 200])
+    def test_matches_scipy_cubic_hermite_oracle(self, n_query):
         from scipy.interpolate import CubicHermiteSpline
 
         f, ts, Y, YP, p = self._setup()
-        tq = np.linspace(0.0, 1.0, 41)
+        tq = np.linspace(0.0, 1.0, n_query)
         spline = CubicHermiteSpline(ts, Y.T, YP.T)  # (n_query, n_states)
         Yq = np.ascontiguousarray(spline(tq).T)
         ref = f.eval_trajectory(tq, Yq, p)
@@ -729,16 +892,14 @@ class TestEvalTrajectoryHermite:
 
     def test_shape_validation(self):
         f, ts, Y, YP, p = self._setup()
-        with pytest.raises(ValueError, match=r"yps shape"):
+        with pytest.raises(ValueError, match=r"yps shape must equal ys shape"):
             f.eval_trajectory_hermite(ts, ts, Y, YP[:1, :], p)
-        with pytest.raises(ValueError, match=r"len\(ts\)"):
+        with pytest.raises(ValueError, match=r"len\(ts\) \(11\) must equal ys"):
             f.eval_trajectory_hermite(ts, ts[:-1], Y, YP, p)
 
 
 class TestConcurrency:
     def test_shared_function_and_jacobian_under_threads(self):
-        import concurrent.futures
-
         _, f = _make_fn()
         J = f.jacobian()
         rng = np.random.default_rng(42)

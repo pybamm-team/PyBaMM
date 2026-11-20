@@ -1,5 +1,7 @@
 """Boundary validation for the Rust ExprGraph constructors."""
 
+import pickle
+
 import numpy as np
 import pytest
 
@@ -61,6 +63,30 @@ class TestSparseMatrixValidation:
     def test_valid_sparse_matrix_still_works(self):
         g = ExprGraph()
         g.sparse_matrix([0, 1, 2], [0, 1], np.array([1.0, 2.0]), 2, 2)
+
+
+def _constant(graph, kind, data):
+    """An expression reading ``data`` as a constant of kind ``kind``."""
+    y = graph.state_vector(0, 2)
+    if kind == "array":
+        return graph.array(data)
+    if kind == "dense":
+        return graph.matmul(graph.dense_matrix(data, 2, 2), y)
+    return graph.matmul(graph.sparse_matrix([0, 2, 4], [0, 1, 0, 1], data, 2, 2), y)
+
+
+class TestStridedConstants:
+    @pytest.mark.parametrize("kind", ["array", "dense", "sparse"])
+    def test_strided_data_matches_contiguous(self, kind):
+        strided = np.array([1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0])[::2]
+        g = ExprGraph()
+        a = g.eval_to_array(
+            _constant(g, kind, strided), 0.0, np.ones(2), np.zeros(0), []
+        )
+        b = g.eval_to_array(
+            _constant(g, kind, strided.copy()), 0.0, np.ones(2), np.zeros(0), []
+        )
+        np.testing.assert_array_equal(a, b)
 
 
 class TestInterpolantValidation:
@@ -194,7 +220,7 @@ class TestEvalHelperValidation:
     def test_dump_dag_rejects_a_foreign_expression(self, tmp_path):
         foreign = ExprGraph().scalar(1.0)
         with pytest.raises(ValueError, match=r"different ExprGraph"):
-            ExprGraph().dump_dag(foreign, str(tmp_path / "dag.bin"), "model", 0, 0)
+            ExprGraph().dump_dag(foreign, tmp_path / "dag.bin", "model")
 
     @pytest.mark.parametrize(
         ("y", "y_dot", "inputs", "name"),
@@ -228,19 +254,58 @@ class TestEvalHelperValidation:
         with pytest.raises(ValueError, match=r"evaluates to 2 values"):
             g.eval_to_float(g.state_vector(0, 2), 0.0, [3.0, 4.0], [], [])
 
-    def test_eval_to_array_non_contiguous_y_raises(self):
+    def test_eval_to_array_accepts_strided_buffers(self):
         g = ExprGraph()
-        expr = g.state_vector(0, 3)
-        strided = np.arange(6.0)[::2]
-        with pytest.raises(TypeError, match=r"contiguous"):
-            g.eval_to_array(expr, 0.0, strided, np.array([]), [])
+        expr = g.add(g.state_vector(0, 3), g.state_vector_dot(0, 3))
+        y, y_dot = np.arange(6.0)[::2], np.arange(6.0)[1::2]
+        np.testing.assert_array_equal(
+            g.eval_to_array(expr, 0.0, y, y_dot, []),
+            g.eval_to_array(expr, 0.0, y.copy(), y_dot.copy(), []),
+        )
 
     def test_eval_to_float_empty_result_raises(self):
         g = ExprGraph()
         y = g.state_vector(0, 4)
         empty = g.index(y, 1, 1)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"evaluates to 0 values, not one"):
             g.eval_to_float(empty, 0.0, [0.0, 0.0, 0.0, 0.0], [], [])
+
+    @pytest.mark.parametrize("method", ["eval_to_float", "eval_to_array"])
+    def test_eval_helpers_skip_simplification(self, method):
+        # y / y is NaN at y = 0 unless simplification folds it to 1.
+        g = ExprGraph()
+        y = g.state_vector(0, 1)
+        assert np.all(np.isnan(_evaluate(g, method, g.div(y, y), [0.0], [], [])))
+
+
+class TestDumpDag:
+    def test_writes_only_the_reachable_graph(self, tmp_path):
+        def dump(n_padding):
+            # Unreachable nodes on both sides of the expression's own.
+            g = ExprGraph()
+            for value in range(n_padding):
+                g.scalar(float(value))
+            expr = g.mul(g.state_vector(0, 2), g.input_parameter("k"))
+            for value in range(n_padding):
+                g.scalar(-float(value))
+            path = tmp_path / f"padded_{n_padding}.bin"
+            g.dump_dag(expr, path, "model")
+            return path.read_bytes()
+
+        assert dump(20) == dump(0)
+
+    def test_n_states_below_the_extent_raises(self, tmp_path):
+        g = ExprGraph()
+        expr = g.state_vector(0, 3)
+        with pytest.raises(ValueError, match=r"n_states=2.*state extent 3"):
+            g.dump_dag(expr, tmp_path / "dag.bin", "model", n_states=2)
+
+    def test_an_unsupported_graph_raises(self, tmp_path):
+        g = ExprGraph()
+        y = g.state_vector(0, 2)
+        with pytest.raises(NotImplementedError, match=r"MatMul left operand"):
+            g.dump_dag(g.matmul(y, y), tmp_path / "dag.bin", "model")
+        assert not (tmp_path / "dag.bin").exists()
 
 
 class TestInputRegistration:
@@ -251,8 +316,24 @@ class TestInputRegistration:
         g.input_parameter("wide", 3)
         assert g.n_inputs() == 4
 
+    def test_re_registering_a_name_returns_its_node(self):
+        g = ExprGraph()
+        first = g.input_parameter("k")
+        n_nodes = g.n_nodes
+        assert g.input_parameter("k").id == first.id
+        assert g.n_nodes == n_nodes
+
+    def test_a_restored_graph_returns_the_registered_node(self):
+        g = ExprGraph()
+        first = g.input_parameter("k", 2)
+        restored = pickle.loads(pickle.dumps(g))
+        assert restored.input_parameter("k", 2).id == first.id
+        assert restored.n_nodes == g.n_nodes
+
     def test_re_registering_a_name_at_another_width_raises(self):
         g = ExprGraph()
         g.input_parameter("k", 2)
-        with pytest.raises(ValueError, match=r"'k' re-registered with width 3"):
+        with pytest.raises(
+            ValueError, match=r"'k' re-registered with width 3.*width 2"
+        ):
             g.input_parameter("k", 3)
