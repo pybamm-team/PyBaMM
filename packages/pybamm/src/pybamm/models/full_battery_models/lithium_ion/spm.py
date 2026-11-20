@@ -46,7 +46,7 @@ class SPM(BaseModel):
         super().__init__(options, name)
 
         if (
-            self.__class__ in [pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM]
+            not isinstance(self, pybamm.lithium_ion.SPMe)
             and "distribution" in self.options["particle size"]
             and "true"
             in [

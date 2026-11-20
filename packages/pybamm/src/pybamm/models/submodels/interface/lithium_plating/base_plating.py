@@ -62,7 +62,6 @@ class BasePlating(BaseInterface):
             The variables which can be derived from the plated lithium thickness.
         """
         phase_name = self.phase_name
-        phase_param = self.phase_param
         domain, Domain = self.domain_Domain
         if self.size_distribution is True:
             c_plated_Li = pybamm.size_average(c_plated_Li)
@@ -72,12 +71,9 @@ class BasePlating(BaseInterface):
         if isinstance(self, pybamm.lithium_plating.NoPlating):
             c_to_L = 1
             L_k = 1
-        elif domain == "negative":
-            c_to_L = self.param.V_bar_Li / phase_param.a_typ
-            L_k = self.param.n.L
-        elif domain == "positive":
-            c_to_L = self.param.V_bar_Li / phase_param.a_typ
-            L_k = self.param.p.L
+        else:
+            c_to_L = self.param.V_bar_Li / self._get_initial_surface_area()
+            L_k = self.domain_param.L
 
         c_plated_Li_xav = pybamm.x_average(c_plated_Li)
         c_plated_Li_av = pybamm.yz_average(c_plated_Li_xav)

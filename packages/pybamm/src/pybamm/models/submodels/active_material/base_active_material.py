@@ -72,7 +72,13 @@ class BaseModel(pybamm.BaseSubModel):
                     {f"{Domain} electrode {phase_name}phase capacity [A.h]": C}
                 )
 
-            R = self.phase_param.R_mean
+            # For a size distribution, the area-weighted mean radius sets the
+            # surface area
+            domain_options = getattr(self.options, domain)
+            if domain_options["particle size"] == "distribution":
+                R = self.phase_param.R_dist_mean
+            else:
+                R = self.phase_param.R
             R_av = pybamm.x_average(R)
 
             # Compute dimensional particle shape

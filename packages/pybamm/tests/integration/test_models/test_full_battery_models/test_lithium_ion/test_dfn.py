@@ -296,11 +296,20 @@ class TestDFNWithSizeDistribution:
         modeltest.test_all(skip_output_tests=True)
 
     @pytest.mark.parametrize(
-        ("particle_size", "porosity_options"),
+        ("model_class", "particle_size", "extra_options"),
         [
-            (("single", "distribution"), {"SEI porosity change": "true"}),
-            (("single", "distribution"), {"lithium plating porosity change": "true"}),
             (
+                pybamm.lithium_ion.DFN,
+                ("single", "distribution"),
+                {"SEI porosity change": "true"},
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                ("single", "distribution"),
+                {"lithium plating porosity change": "true"},
+            ),
+            (
+                pybamm.lithium_ion.DFN,
                 ("distribution", "single"),
                 {
                     "SEI porosity change": "true",
@@ -308,22 +317,40 @@ class TestDFNWithSizeDistribution:
                 },
             ),
             (
+                pybamm.lithium_ion.DFN,
                 "distribution",
                 {
                     "SEI porosity change": "true",
                     "lithium plating porosity change": "true",
                 },
             ),
+            (
+                pybamm.lithium_ion.SPMe,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                    "x-average side reactions": "true",
+                },
+            ),
         ],
     )
-    def test_reaction_driven_porosity(self, particle_size, porosity_options):
+    def test_reaction_driven_porosity(self, model_class, particle_size, extra_options):
         options = {
             "particle size": particle_size,
             "SEI": "solvent-diffusion limited",
             "lithium plating": "irreversible",
-            **porosity_options,
+            **extra_options,
         }
-        model = pybamm.lithium_ion.DFN(options)
+        model = model_class(options)
         parameter_values = pybamm.get_size_distribution_parameters(
             pybamm.ParameterValues("OKane2022")
         )

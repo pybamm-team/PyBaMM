@@ -109,7 +109,7 @@ class BaseModel(BaseInterface):
             if self.reaction_loc == "interface":
                 c_sei_0 = L_sei_0 / V_bar_sei  # mol.m-2
             else:
-                a_init = pybamm.xyz_average(phase_param.a_init)
+                a_init = pybamm.xyz_average(self._get_initial_surface_area())
                 c_sei_0 = L_sei_0 * a_init / V_bar_sei  # mol.m-3
                 c_sei_cr0 = phase_param.L_sei_cr0 * a_init / V_bar_sei
 

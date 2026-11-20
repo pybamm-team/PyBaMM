@@ -48,6 +48,13 @@ class TestSPM(BaseUnitTestLithiumIon):
         with pytest.raises(pybamm.OptionError, match=r"distributions"):
             pybamm.lithium_ion.SPM(options)
 
+        class SubclassedSPM(pybamm.lithium_ion.SPM):
+            pass
+
+        options["x-average side reactions"] = "true"
+        with pytest.raises(pybamm.OptionError, match=r"distributions"):
+            SubclassedSPM(options)
+
     def test_distribution_options(self):
         options = {"particle size": "distribution"}
         self.check_well_posedness(options)

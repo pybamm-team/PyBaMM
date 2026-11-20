@@ -41,7 +41,7 @@ class ConstantSEI(BaseModel):
             c_sei = L_sei_0 / V_bar_sei
         else:
             # c_sei is a bulk quantity [mol.m-3]
-            c_sei = L_sei_0 * self.phase_param.a_init / V_bar_sei
+            c_sei = L_sei_0 * self._get_initial_surface_area() / V_bar_sei
         variables = self._get_standard_concentration_variables(c_sei)
 
         # Reactions
