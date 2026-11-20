@@ -122,7 +122,8 @@ IDAKLUSolverGroup *create_casadi_solver_group(
   py::dict py_opts,
   const CasadiFunctions::BaseFunctionType &alg_res,
   const CasadiFunctions::BaseFunctionType &alg_jac,
-  const CasadiFunctions::BaseFunctionType &upsampling_fcn)
+  const CasadiFunctions::BaseFunctionType &upsampling_fcn,
+  const std::vector<bool> &events_read_yp)
 {
   auto setup_opts = SetupOptions(py_opts);
   auto solver_opts = SolverOptions(py_opts);
@@ -170,7 +171,8 @@ IDAKLUSolverGroup *create_casadi_solver_group(
       serialized_fcns ? &*serialized_fcns : nullptr,
       alg_res,
       alg_jac,
-      upsampling_fcn
+      upsampling_fcn,
+      events_read_yp
     );
     solvers.emplace_back(
       std::unique_ptr<IDAKLUSolver>(
@@ -250,6 +252,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("alg_res"),
     py::arg("alg_jac"),
     py::arg("upsampling_fcn"),
+    py::arg("events_read_yp") = std::vector<bool>{},
     py::return_value_policy::take_ownership);
 
   m.def("observe", &observe,
@@ -392,6 +395,7 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("ypS", &Solution::ypS)
     .def_readwrite("y_init", &Solution::y_init)
     .def_readwrite("y_term", &Solution::y_term)
+    .def_readwrite("yp_term", &Solution::yp_term)
     .def_readwrite("yS_init", &Solution::yS_init)
     .def_readwrite("yS_term", &Solution::yS_term)
     .def_readwrite("flag", &Solution::flag)

@@ -567,6 +567,8 @@ class BaseModel:
         def resolve(node, new_leaves):
             if not isinstance(node, pybamm.CoupledVariable):
                 return pybamm.rebuild(node, new_leaves)
+            if isinstance(node, pybamm.CoupledVariableDot):
+                return resolve(node.get_coupled_variable(), new_leaves).diff(pybamm.t)
             if node.name not in self._variables:
                 raise ValueError(
                     f"CoupledVariable '{node.name}' not found in model.variables"

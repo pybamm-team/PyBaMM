@@ -2,10 +2,15 @@
 resolver = "3"
 members = [
     "pybamm-core",
+    "pybamm-python",
 ]
 
 [workspace.package]
 rust-version = "1.89"
+
+# Versions both crates use; each crate pins the rest itself.
+[workspace.dependencies]
+bincode = "1"
 
 [workspace.lints.rust]
 unsafe_code = "warn"
