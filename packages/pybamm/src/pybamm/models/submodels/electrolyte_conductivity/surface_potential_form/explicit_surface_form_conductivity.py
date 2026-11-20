@@ -19,32 +19,34 @@ class Explicit(BaseElectrolyteConductivity):
         The domain in which the model holds
     options : dict
         A dictionary of options to be passed to the model.
+    inverse_kinetics : bool, optional
+        Whether the interface submodel uses inverse kinetics, in which case it
+        defines the x-averaged surface potential difference. Default is False.
     """
 
-    def __init__(self, param, domain, options):
+    def __init__(self, param, domain, options, inverse_kinetics=False):
         super().__init__(param, domain, options)
+        self.inverse_kinetics = inverse_kinetics
 
-    def get_coupled_variables(self, variables):
-        # skip for separator
+    def build(self):
         if self.domain == "separator":
-            return variables
+            return
 
         Domain = self.domain.capitalize()
-        phi_s = variables[f"{Domain} electrode potential [V]"]
-        phi_e = variables[f"{Domain} electrolyte potential [V]"]
+        electrode = f"{self.domain} electrode"
+        phi_s = self._coupled_domain_variable(
+            f"{Domain} electrode potential [V]", electrode
+        )
+        phi_e = self._coupled_domain_variable(
+            f"{Domain} electrolyte potential [V]", electrode
+        )
         delta_phi = phi_s - phi_e
-        variables.update(
+        self.variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
-
-        delta_phi_av = pybamm.x_average(delta_phi)
-        variables.update(
-            self._get_standard_average_surface_potential_difference_variables(
-                delta_phi_av
+        if not self.inverse_kinetics:
+            self.variables.update(
+                self._get_standard_average_surface_potential_difference_variables(
+                    pybamm.x_average(delta_phi)
+                )
             )
-        )
-        return variables
-
-    def set_boundary_conditions(self, variables):
-        # don't set any boundary conditions
-        return

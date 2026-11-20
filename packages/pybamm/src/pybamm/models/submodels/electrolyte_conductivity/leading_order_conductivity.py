@@ -24,46 +24,63 @@ class LeadingOrder(BaseElectrolyteConductivity):
     def __init__(self, param, domain=None, options=None):
         super().__init__(param, domain, options=options)
 
-    def get_coupled_variables(self, variables):
-        if "negative electrode" not in self.options.whole_cell_domains:
-            phi_e_av = variables["Lithium metal interface electrolyte potential [V]"]
+    def build(self):
+        if self.options.electrode_types["negative"] == "planar":
+            delta_phi_n_av = None
         else:
-            # delta_phi = phi_s - phi_e
-            delta_phi_n_av = variables[
-                "X-averaged negative electrode surface potential difference [V]"
-            ]
-            phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
-            phi_e_av = phi_s_n_av - delta_phi_n_av
+            delta_phi_n_av = self.coupled_variable(
+                "X-averaged negative electrode surface potential difference [V]",
+                domain="current collector",
+            )
+        self._build_leading_order(delta_phi_n_av)
 
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+    def _build_leading_order(self, delta_phi_n_av):
+        """
+        Set the leading-order electrolyte potential and current variables, and the
+        boundary conditions on the electrolyte potential.
 
-        L_n = self.param.n.L
-        L_p = self.param.p.L
-        L_x = self.param.L_x
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
-
-        if "negative electrode" not in self.options.whole_cell_domains:
+        Parameters
+        ----------
+        delta_phi_n_av : :class:`pybamm.Symbol` or None
+            The x-averaged negative electrode surface potential difference, or None
+            for a planar negative electrode
+        """
+        i_boundary_cc = self.coupled_variable(
+            "Current collector current density [A.m-2]", domain="current collector"
+        )
+        if self.options.electrode_types["negative"] == "planar":
+            phi_e_av = self._coupled_lithium_metal_electrolyte_potential()
             i_e_n = None
         else:
-            i_e_n = i_boundary_cc * x_n / L_n
+            # delta_phi = phi_s - phi_e
+            phi_s_n_av = self.coupled_variable(
+                "X-averaged negative electrode potential [V]",
+                domain="current collector",
+            )
+            phi_e_av = phi_s_n_av - delta_phi_n_av
+            x_n = pybamm.standard_spatial_vars.x_n
+            i_e_n = i_boundary_cc * x_n / self.param.n.L
+
+        x_p = pybamm.standard_spatial_vars.x_p
+        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, ["separator"])
+        i_e_p = i_boundary_cc * (self.param.L_x - x_p) / self.param.p.L
+        i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
         phi_e_dict = {
             domain: pybamm.PrimaryBroadcast(phi_e_av, domain)
             for domain in self.options.whole_cell_domains
         }
-
-        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, ["separator"])
-        i_e_p = i_boundary_cc * (L_x - x_p) / L_p
-        i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
-
-        variables.update(self._get_standard_potential_variables(phi_e_dict))
+        variables = self._get_standard_potential_variables(phi_e_dict)
         variables.update(self._get_standard_current_variables(i_e))
 
-        # concentration overpotential
+        # concentration overpotential and ohmic losses are zero at leading order
         eta_c_av = pybamm.PrimaryBroadcast(0, "current collector")
-        # ohmic losses
         delta_phi_e_av = pybamm.PrimaryBroadcast(0, "current collector")
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
+        self.variables.update(variables)
 
-        return variables
+        self.boundary_conditions.update(
+            self._get_electrolyte_potential_boundary_conditions(
+                variables["Electrolyte potential [V]"]
+            )
+        )

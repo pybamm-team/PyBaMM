@@ -1,6 +1,8 @@
 #
 # Lead-acid LOQS model
 #
+import functools
+
 import pybamm
 
 from .base_lead_acid_model import BaseModel
@@ -167,7 +169,8 @@ class LOQS(BaseModel):
             self.submodels["leading-order electrolyte conductivity"] = (
                 pybamm.electrolyte_conductivity.LeadingOrder(self.param)
             )
-            surf_model = surf_form.Explicit
+            # The inverse kinetics define the x-averaged surface potential difference
+            surf_model = functools.partial(surf_form.Explicit, inverse_kinetics=True)
         elif self.options["surface form"] == "differential":
             surf_model = surf_form.LeadingOrderDifferential
         elif self.options["surface form"] == "algebraic":
