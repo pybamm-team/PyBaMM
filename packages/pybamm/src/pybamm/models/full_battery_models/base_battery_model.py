@@ -1514,8 +1514,21 @@ class BaseBatteryModel(pybamm.BaseModel):
             thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
         x_average = getattr(self, "x_average", False)
+        conductivity = pybamm.electrolyte_conductivity
+        full_conductivity = (
+            conductivity.Full,
+            conductivity.surface_potential_form.FullAlgebraic,
+            conductivity.surface_potential_form.FullDifferential,
+        )
         self.submodels["thermal"] = thermal_submodel(
-            self.param, self.options, x_average
+            self.param,
+            self.options,
+            x_average,
+            x_average_particles=getattr(self, "x_average_particles", x_average),
+            full_electrolyte_conductivity=any(
+                isinstance(submodel, full_conductivity)
+                for submodel in self.submodels.values()
+            ),
         )
 
     def set_surface_temperature_submodel(self):

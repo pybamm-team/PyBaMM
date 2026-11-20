@@ -19,15 +19,15 @@ class Ambient(pybamm.BaseSubModel):
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
 
-    def get_coupled_variables(self, variables):
-        T_amb = variables["Ambient temperature [K]"]
-        T_amb_av = variables["Volume-averaged ambient temperature [K]"]
-
-        variables.update(
+    def build(self):
+        T_amb = self.coupled_variable(
+            "Ambient temperature [K]", domain="current collector"
+        )
+        T_amb_av = self.coupled_variable("Volume-averaged ambient temperature [K]")
+        self.variables.update(
             {
                 "Surface temperature [K]": T_amb,
                 "Volume-averaged surface temperature [K]": T_amb_av,
                 "Environment total cooling [W]": pybamm.Scalar(0),
             }
         )
-        return variables

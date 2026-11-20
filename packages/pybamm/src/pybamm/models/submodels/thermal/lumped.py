@@ -20,53 +20,37 @@ class Lumped(BaseThermal):
 
     """
 
-    def __init__(self, param, options=None, x_average=False):
-        super().__init__(param, options=options, x_average=x_average)
+    def __init__(self, param, options=None, x_average=False, **kwargs):
+        super().__init__(param, options=options, x_average=x_average, **kwargs)
         pybamm.citations.register("Timms2021")
 
-    def get_fundamental_variables(self):
+    def build(self):
         T_vol_av = pybamm.Variable(
             "Volume-averaged cell temperature [K]",
             scale=self.param.T_ref,
             print_name="T_av",
         )
         T_x_av = pybamm.PrimaryBroadcast(T_vol_av, ["current collector"])
-        T_dict = {
-            "negative current collector": T_x_av,
-            "positive current collector": T_x_av,
-            "x-averaged cell": T_x_av,
-            "volume-averaged cell": T_vol_av,
-        }
-        for domain in ["negative electrode", "separator", "positive electrode"]:
-            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
-
-        variables = self._get_standard_fundamental_variables(T_dict)
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        variables.update(self._get_standard_coupled_variables(variables))
+        T_dict = self._get_x_uniform_temperatures(T_x_av, T_vol_av)
+        self.variables.update(self._get_standard_fundamental_variables(T_dict))
+        self.variables.update(self._get_heat_source_variables(T_dict))
 
         # Newton cooling, accounting for surface area to volume ratio
-        T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        T_surf = variables["Surface temperature [K]"]
-        T_surf_av = self._yz_average(T_surf)
-        V = variables["Cell thermal volume [m3]"]
+        T_surf_av = self._yz_average(self._coupled_surface_temperature())
+        V = self.param.V_cell
         Q_cool_W = -self.param.h_total * (T_vol_av - T_surf_av) * self.param.A_cooling
         Q_cool_vol_av = Q_cool_W / V
 
-        # Contact resistance heating Q_cr
         if self.options["contact resistance"] == "true":
-            I = variables["Current [A]"]
+            I = self._coupled("Current [A]")
             R_contact = self.param.R_contact(T_vol_av)
             Q_cr_W = self.calculate_Q_cr_W(I, R_contact)
-            V = self.param.V_cell
             Q_cr_vol_av = self.calculate_Q_cr_vol_av(I, R_contact, V)
         else:
             Q_cr_W = pybamm.Scalar(0)
             Q_cr_vol_av = Q_cr_W
 
-        variables.update(
+        self.variables.update(
             {
                 # Lumped cooling
                 "Surface total cooling [W.m-3]": Q_cool_vol_av,
@@ -76,22 +60,13 @@ class Lumped(BaseThermal):
                 "Lumped contact resistance heating [W]": Q_cr_W,
             }
         )
-        return variables
 
-    def set_rhs(self, variables):
-        T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
-        Q_cool_vol_av = variables["Surface total cooling [W.m-3]"]
-        rho_c_p_eff_av = variables[
+        Q_vol_av = self.variables["Volume-averaged total heating [W.m-3]"]
+        rho_c_p_eff_av = self.variables[
             "Volume-averaged effective heat capacity [J.K-1.m-3]"
         ]
-
-        self.rhs = {T_vol_av: (Q_vol_av + Q_cool_vol_av) / rho_c_p_eff_av}
-
-    def set_initial_conditions(self, variables):
-        T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        T_init_av = pybamm.x_average(self.param.T_init)
-        self.initial_conditions = {T_vol_av: T_init_av}
+        self.rhs[T_vol_av] = (Q_vol_av + Q_cool_vol_av) / rho_c_p_eff_av
+        self.initial_conditions[T_vol_av] = pybamm.x_average(self.param.T_init)
 
     def calculate_Q_cr_W(self, current, contact_resistance):
         Q_cr_W = current**2 * contact_resistance

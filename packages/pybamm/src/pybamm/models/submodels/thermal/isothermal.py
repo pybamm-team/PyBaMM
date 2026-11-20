@@ -18,10 +18,10 @@ class Isothermal(BaseThermal):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, options=None, x_average=False):
-        super().__init__(param, options=options, x_average=x_average)
+    def __init__(self, param, options=None, x_average=False, **kwargs):
+        super().__init__(param, options=options, x_average=x_average, **kwargs)
 
-    def get_fundamental_variables(self):
+    def build(self):
         # Set the x-averaged temperature to the ambient temperature, which can be
         # specified as a function of space (y, z) only and time
         y = pybamm.standard_spatial_vars.y
@@ -31,23 +31,11 @@ class Isothermal(BaseThermal):
         t_broadcast = pybamm.PrimaryBroadcast(pybamm.t, "current collector")
         T_x_av = self.param.T_amb(y, z, t_broadcast)
         T_vol_av = self._yz_average(T_x_av)
+        T_dict = self._get_x_uniform_temperatures(T_x_av, T_vol_av)
+        self.variables.update(self._get_standard_fundamental_variables(T_dict))
 
-        T_dict = {
-            "negative current collector": T_x_av,
-            "positive current collector": T_x_av,
-            "x-averaged cell": T_x_av,
-            "volume-averaged cell": T_vol_av,
-        }
-        for domain in ["negative electrode", "separator", "positive electrode"]:
-            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
-
-        variables = self._get_standard_fundamental_variables(T_dict)
-
-        return variables
-
-    def get_coupled_variables(self, variables):
         if self.options["calculate heat source for isothermal models"] == "true":
-            variables.update(self._get_standard_coupled_variables(variables))
+            self.variables.update(self._get_heat_source_variables(T_dict))
         else:
             zero = pybamm.Scalar(0)
             for var in [
@@ -76,7 +64,4 @@ class Isothermal(BaseThermal):
                 "Surface total cooling [W.m-3]",
                 "Surface total cooling [W]",
             ]:
-                # All variables are zero
-                variables.update({var: zero})
-
-        return variables
+                self.variables[var] = zero
