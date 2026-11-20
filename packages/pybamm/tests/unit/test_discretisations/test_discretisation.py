@@ -20,6 +20,23 @@ from tests.shared import SpatialMethodForTesting
 
 
 class TestDiscretise:
+    def test_missing_spatial_method_has_domain_specific_error(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"negative electrode": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        variable = pybamm.Variable("c", domain=["separator"])
+        model = pybamm.BaseModel()
+        model.rhs = {variable: -variable}
+        model.initial_conditions = {variable: pybamm.Scalar(1)}
+        model.variables = {"c": variable}
+
+        with pytest.raises(
+            pybamm.DiscretisationError,
+            match="Spatial method has not been given for variable c with domain 'separator'",
+        ):
+            disc.process_model(model)
+
     def test_concatenate_in_order(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")

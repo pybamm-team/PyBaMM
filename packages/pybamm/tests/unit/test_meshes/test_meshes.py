@@ -126,6 +126,37 @@ class TestMesh:
         with pytest.raises(NotImplementedError, match=r"for symbol var"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
+    @pytest.mark.parametrize("points", [0, -1, 1.5, True])
+    def test_var_pts_requires_positive_integers(self, points):
+        x_n = pybamm.standard_spatial_vars.x_n
+        geometry = {"negative electrode": {x_n: {"min": 0, "max": 1}}}
+        submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
+
+        with pytest.raises(pybamm.GeometryError, match="positive integer"):
+            pybamm.Mesh(geometry, submesh_types, {x_n: points})
+
+    def test_particle_var_pts_requires_at_least_two_points(self):
+        r_n = pybamm.standard_spatial_vars.r_n
+        geometry = {"negative particle": {r_n: {"min": 0, "max": 1}}}
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+
+        with pytest.raises(pybamm.GeometryError, match="at least 2"):
+            pybamm.Mesh(geometry, submesh_types, {r_n: 1})
+
+    def test_var_pts_rejects_unknown_spatial_variable(self):
+        geometry = {"negative particle": {"r_n": {"min": 0, "max": 1}}}
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+
+        with pytest.raises(pybamm.GeometryError, match="Unknown spatial variable 'q'"):
+            pybamm.Mesh(geometry, submesh_types, {"q": 5})
+
+    def test_submesh_types_must_cover_geometry_domains(self):
+        r_n = pybamm.standard_spatial_vars.r_n
+        geometry = {"negative particle": {r_n: {"min": 0, "max": 1}}}
+
+        with pytest.raises(pybamm.GeometryError, match="No submesh type provided"):
+            pybamm.Mesh(geometry, {}, {r_n: 5})
+
     def test_mesh_sizes(self, submesh_types):
         param = get_param()
 
