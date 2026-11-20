@@ -259,7 +259,13 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
   CheckErrors(IDASetLinearSolver(ida_mem, LS, J), "IDASetLinearSolver");
 
-  if (setup_opts.preconditioner != "none") {
+  if (setup_opts.preconditioner == "block") {
+    DEBUG("\tsetting block preconditioner");
+    functions->preconditioner = setup_opts.make_preconditioner();
+    CheckErrors(IDASetPreconditioner(
+      ida_mem, precon_setup_matrix<ExprSet>, precon_solve_matrix<ExprSet>),
+      "IDASetPreconditioner");
+  } else if (setup_opts.preconditioner != "none") {
     DEBUG("\tsetting IDADDB preconditioner");
     // setup preconditioner
     CheckErrors(IDABBDPrecInit(
@@ -268,9 +274,11 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
       setup_opts.precon_half_bandwidth_keep, 0.0, residual_eval_approx<ExprSet>, NULL), "IDABBDPrecInit");
   }
 
-  if (setup_opts.jacobian == "matrix-free") {
+  if (setup_opts.using_iterative_solver) {
+    // Exact products; IDA's difference quotients read its unset y in IC solves
     CheckErrors(IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>), "IDASetJacTimes");
-  } else if (setup_opts.jacobian != "none") {
+  }
+  if (setup_opts.jacobian != "none" && setup_opts.jacobian != "matrix-free") {
     CheckErrors(IDASetJacFn(ida_mem, jacobian_eval<ExprSet>), "IDASetJacFn");
   }
 
@@ -647,9 +655,14 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
 ) {
   DEBUG("IDAKLUSolver::SetupInitialState");
 
-  // Set inputs
-  for (size_t i = 0; i < functions->inputs.size(); i++) {
+  // Set inputs, then the values derived from them, which stay fixed for the solve
+  for (int i = 0; i < functions->number_of_inputs; i++) {
     functions->inputs[i] = inputs[i];
+  }
+  if (functions->precompute != nullptr) {
+    (*functions->precompute)(
+      {functions->inputs.data()},
+      {functions->inputs.data() + functions->number_of_inputs});
   }
 
   // Sanitised once per solve, then re-applied unchanged after each reinit.
