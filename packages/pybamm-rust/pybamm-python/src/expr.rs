@@ -599,7 +599,7 @@ impl ExprGraph {
     /// Serialize the graph to bytes (pickle protocol).
     ///
     /// The arena alone: the registry is rebuilt from its `InputParameter` nodes, so the two
-    /// cannot disagree. The bytes match the one-field wrapper older pickles were written with.
+    /// cannot disagree.
     #[cfg(feature = "serialize")]
     fn __getstate__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, pyo3::types::PyBytes>> {
         let bytes = bincode::serialize(&self.arena).map_err(|e| {

@@ -678,7 +678,6 @@ impl CompiledFunction {
     /// Cubic-Hermite reconstruct the state at each `t_query` from the solver
     /// knots (`ts`, `ys`, `yps`), then evaluate; returns `(output_len, n_query)`.
     #[pyo3(signature = (t_query, ts, ys, yps, p))]
-    #[allow(clippy::suboptimal_flops)] // mul_add would obscure the cubic-Hermite basis
     fn eval_trajectory_hermite<'py>(
         &self,
         py: Python<'py>,
