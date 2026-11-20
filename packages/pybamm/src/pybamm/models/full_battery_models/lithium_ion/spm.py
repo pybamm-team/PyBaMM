@@ -20,6 +20,9 @@ class SPM(BaseModel):
 
     """
 
+    x_average_electrolyte = True
+    x_average_surface_potential = True
+
     def __init__(self, options=None, name="Single Particle Model", build=True):
         # For degradation models we use the "x-average", note that for side reactions
         # this is set by "x-average side reactions"
@@ -56,6 +59,10 @@ class SPM(BaseModel):
         ):
             pybamm.citations.register("BrosaPlanella2022")
 
+    @property
+    def _uses_inverse_kinetics(self):
+        return self.options["surface form"] == "false"
+
     def set_intercalation_kinetics_submodel(self):
         for domain in ["negative", "positive"]:
             electrode_type = self.options.electrode_types[domain]
@@ -68,7 +75,11 @@ class SPM(BaseModel):
                     self.get_inverse_intercalation_kinetics(domain)
                 )
                 self.submodels[f"{domain} interface"] = inverse_intercalation_kinetics(
-                    self.param, domain, "lithium-ion main", self.options
+                    self.param,
+                    domain,
+                    "lithium-ion main",
+                    self.options,
+                    x_average=self.x_average_electrolyte,
                 )
                 self.submodels[f"{domain} interface current"] = (
                     pybamm.kinetics.CurrentForInverseKinetics(
@@ -80,7 +91,13 @@ class SPM(BaseModel):
                 phases = self.options.phases[domain]
                 for phase in phases:
                     submod = intercalation_kinetics(
-                        self.param, domain, "lithium-ion main", self.options, phase
+                        self.param,
+                        domain,
+                        "lithium-ion main",
+                        self.options,
+                        phase,
+                        x_average=self.x_average_electrolyte,
+                        x_average_surface_potential=self.x_average_surface_potential,
                     )
                     self.submodels[f"{domain} {phase} interface"] = submod
                 if len(phases) > 1:

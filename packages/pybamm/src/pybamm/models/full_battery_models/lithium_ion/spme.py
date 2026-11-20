@@ -21,6 +21,9 @@ class SPMe(SPM):
 
     """
 
+    x_average_electrolyte = False
+    x_average_surface_potential = False
+
     def __init__(
         self, options=None, name="Single Particle Model with electrolyte", build=True
     ):

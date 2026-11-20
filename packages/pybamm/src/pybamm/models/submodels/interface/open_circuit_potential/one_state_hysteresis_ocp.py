@@ -35,7 +35,14 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
     """
 
     def __init__(
-        self, param, domain, reaction, options, phase="primary", x_average=False
+        self,
+        param,
+        domain,
+        reaction,
+        options,
+        phase="primary",
+        x_average=False,
+        x_average_particles=None,
     ):
         warnings.warn(
             "The definition of the hysteresis decay rate parameter has changed in "
@@ -43,38 +50,20 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
             stacklevel=2,
         )
         super().__init__(
-            param, domain, reaction, options=options, phase=phase, x_average=x_average
+            param, domain, reaction, options, phase, x_average, x_average_particles
         )
         pybamm.citations.register("Axen2022")
 
-    def get_fundamental_variables(self):
-        return self._get_hysteresis_state_variables()
+    def build(self):
+        variables = self._get_hysteresis_state_variables()
+        variables.update(self._get_hysteresis_ocp_variables(variables))
+        self.variables.update(variables)
 
-    def get_coupled_variables(self, variables):
-        return self._get_coupled_variables(variables)
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
+        h = self._get_hysteresis_state(variables)
+        i_vol, sto_surf, T = self._get_hysteresis_rate_inputs()
         c_max = self.phase_param.c_max
         eps = self.phase_param.epsilon_s
-        if self.x_average is False:
-            i_vol = variables[
-                f"{Domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
-            T = variables[f"{Domain} electrode temperature [K]"]
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        else:
-            i_vol = variables[
-                f"X-averaged {domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[
-                f"X-averaged {domain} {phase_name}particle surface stoichiometry"
-            ]
-            T = variables[f"X-averaged {domain} electrode temperature [K]"]
-            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
+        if self.x_average is True:
             eps = pybamm.x_average(eps)
         gamma_lith = self.phase_param.hysteresis_decay(sto_surf, T, "lithiation")
         gamma_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
@@ -88,3 +77,4 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
         dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
 
         self.rhs[h] = dhdt
+        self._set_hysteresis_initial_conditions(h)

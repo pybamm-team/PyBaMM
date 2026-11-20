@@ -23,37 +23,45 @@ class BaseInverseKinetics(BaseInterface):
 
     """
 
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
+    def build(self):
+        domain = self.domain
         reaction_name = self.reaction_name
+        planar = self.options.electrode_types[domain] == "planar"
 
-        ocp = variables[f"{Domain} electrode {reaction_name}open-circuit potential [V]"]
-
-        j0 = self._get_exchange_current_density(variables)
-        # Broadcast to match j0's domain
-
-        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(
-            variables
+        ocp = self._coupled_electrode_variable(
+            f"electrode {reaction_name}open-circuit potential [V]"
         )
+        j0 = self._get_exchange_current_density()
+
+        # Broadcast to match j0's domain
+        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density()
         if j0.domain in [[], ["current collector"]]:
             j_tot = j_tot_av
         else:
             j_tot = pybamm.PrimaryBroadcast(j_tot_av, [f"{domain} electrode"])
-        variables.update(
-            self._get_standard_total_interfacial_current_variables(j_tot, a_j_tot_av)
+        variables = self._get_standard_total_interfacial_current_variables(
+            j_tot, a_j_tot_av
         )
 
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
-        if self.options.electrode_types[domain] == "planar":
-            T = variables["X-averaged cell temperature [K]"]
-            u = variables["Lithium metal interface utilisation"]
+        if planar:
+            T = self.coupled_variable(
+                "X-averaged cell temperature [K]", domain="current collector"
+            )
+            u = self.coupled_variable(
+                "Lithium metal interface utilisation", domain="current collector"
+            )
         elif j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature [K]"]
-            u = variables[f"X-averaged {domain} electrode interface utilisation"]
+            T = self.coupled_variable(
+                "X-averaged cell temperature [K]", domain="current collector"
+            )
+            u = self._coupled_electrode_variable(
+                "electrode interface utilisation", x_average=True
+            )
         else:
-            T = variables[f"{Domain} electrode temperature [K]"]
-            u = variables[f"{Domain} electrode interface utilisation"]
+            T = self._coupled_electrode_variable("electrode temperature [K]")
+            u = self._coupled_electrode_variable("electrode interface utilisation")
 
         # eta_r is the overpotential from inverting Butler-Volmer, regardless of any
         # additional SEI resistance. What changes is how delta_phi is defined in terms
@@ -66,10 +74,7 @@ class BaseInverseKinetics(BaseInterface):
         # With SEI resistance (distributed and averaged have the same effect here)
         if self.options["SEI film resistance"] != "none":
             R_sei = self.phase_param.R_sei
-            if self.options.electrode_types[domain] == "planar":
-                L_sei = variables[f"{Domain} SEI thickness [m]"]
-            else:
-                L_sei = variables[f"X-averaged {domain} SEI thickness [m]"]
+            L_sei = self._get_coupled_sei_thickness(x_average=not planar)
             eta_sei = -j_tot * L_sei * R_sei
         # Without SEI resistance
         else:
@@ -85,8 +90,7 @@ class BaseInverseKinetics(BaseInterface):
                 pybamm.x_average(delta_phi)
             )
         )
-
-        return variables
+        self.variables.update(variables)
 
     def _get_overpotential(self, j, j0, ne, T, u):
         # Use a specialized arcsinh2(a,b) = arcsinh(a/b) to avoid division by zero
@@ -129,24 +133,23 @@ class CurrentForInverseKinetics(BaseInterface):
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction, options=options)
 
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
+    def build(self):
+        Domain = self.domain.capitalize()
 
-        j_tot = variables[
-            f"X-averaged {domain} electrode total interfacial current density [A.m-2]"
-        ]
-        j_sei = variables[f"{Domain} electrode SEI interfacial current density [A.m-2]"]
-        j_stripping = variables[
-            f"{Domain} electrode lithium plating interfacial current density [A.m-2]"
-        ]
+        # The inverse kinetics submodel uses the x-averaged total current density
+        j_tot, _ = self._get_average_total_interfacial_current_density()
+        j_sei = self._coupled_electrode_variable(
+            "electrode SEI interfacial current density [A.m-2]"
+        )
+        j_stripping = self._coupled_electrode_variable(
+            "electrode lithium plating interfacial current density [A.m-2]"
+        )
         j = j_tot - j_sei - j_stripping
 
-        variables.update(self._get_standard_interfacial_current_variables(j))
-        variables.update(
-            self._get_standard_volumetric_current_density_variables(variables)
-        )
-
-        return variables
+        variables = self._get_standard_interfacial_current_variables(j)
+        j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
+        variables.update(self._get_standard_volumetric_current_density_variables(j))
+        self.variables.update(variables)
 
 
 class CurrentForInverseKineticsLithiumMetal(BaseInterface):
@@ -169,10 +172,10 @@ class CurrentForInverseKineticsLithiumMetal(BaseInterface):
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction, options=options)
 
-    def get_coupled_variables(self, variables):
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        variables.update(
+    def build(self):
+        i_boundary_cc = self.coupled_variable(
+            "Current collector current density [A.m-2]", domain="current collector"
+        )
+        self.variables.update(
             self._get_standard_interfacial_current_variables(i_boundary_cc)
         )
-
-        return variables

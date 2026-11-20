@@ -32,14 +32,13 @@ class NoReaction(BaseInterface):
         }
         super().__init__(param, domain, reaction, options, phase)
 
-    def get_fundamental_variables(self):
+    def build(self):
         zero = pybamm.Scalar(0)
         variables = self._get_standard_interfacial_current_variables(zero)
         variables.update(self._get_standard_exchange_current_variables(zero))
-        return variables
-
-    def get_coupled_variables(self, variables):
-        variables.update(
-            self._get_standard_volumetric_current_density_variables(variables)
-        )
-        return variables
+        j = variables[
+            f"{self.domain.capitalize()} electrode {self.reaction_name}"
+            "interfacial current density [A.m-2]"
+        ]
+        variables.update(self._get_standard_volumetric_current_density_variables(j))
+        self.variables.update(variables)

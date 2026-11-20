@@ -20,12 +20,10 @@ class LinearisedOpenCircuitPotential(
     slope parameter is needed.
     """
 
-    def get_coupled_variables(self, variables: dict) -> dict:
+    def build(self) -> None:
         _, Domain = self.domain_Domain
         phase_name = self.phase_name
-        sto_surf, sto_bulk, T, T_bulk = self._get_stoichiometry_and_temperature(
-            variables
-        )
+        sto_surf, sto_bulk, T, T_bulk = self._get_stoichiometry_and_temperature()
         sto_0 = self.phase_param.sto_init_av
         # At T_ref - not T, as a temperature-dependent slope makes `dUdT` wrong.
         gradient = self.phase_param.U(sto_0, self.param.T_ref).diff(sto_0)
@@ -37,7 +35,7 @@ class LinearisedOpenCircuitPotential(
         if ocp_surf.domain and ocp_surf.domain[0].endswith("particle size"):
             dUdT = pybamm.FullBroadcast(dUdT, broadcast_domains=ocp_surf.domains)
 
-        variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
+        variables = self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT)
         self._alias_ocp_as_equilibrium(variables)
         variables.update(
             {
@@ -48,7 +46,7 @@ class LinearisedOpenCircuitPotential(
                 "gradient [V]": gradient,
             }
         )
-        return variables
+        self.variables.update(variables)
 
 
 class LinearisedSPM(pybamm.lithium_ion.SPM):

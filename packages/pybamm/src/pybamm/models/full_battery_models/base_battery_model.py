@@ -1064,6 +1064,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         The name of the model. The default is "Unnamed battery model".
     """
 
+    # Whether the electrolyte concentration and the surface potential difference
+    # are uniform in x; models that x-average them pass this to the reactions
+    x_average_electrolyte = False
+    x_average_surface_potential = False
+
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options

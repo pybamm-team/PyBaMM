@@ -26,20 +26,22 @@ class TotalMainKinetics(pybamm.BaseSubModel):
     def __init__(self, param, domain, reaction, options):
         super().__init__(param, domain, name=reaction, options=options)
 
-    def get_coupled_variables(self, variables):
+    def build(self):
         domain, Domain = self.domain_Domain
-
-        phases = self.options.phases[domain]
-        # The variable name without the phase name
-        # is constructed by summing all of the variable names with the phases
+        electrode_domains = {
+            "primary": f"{domain} electrode",
+            "secondary": "current collector",
+        }
+        # The variable name without the phase name is the sum over the phases
         sumvar = sum(
-            variables[
+            self.coupled_variable(
                 f"{Domain} electrode {phase} volumetric "
-                "interfacial current density [A.m-3]"
-            ]
-            for phase in phases
+                "interfacial current density [A.m-3]",
+                domains=electrode_domains,
+            )
+            for phase in self.options.phases[domain]
         )
-        variables.update(
+        self.variables.update(
             {
                 f"{Domain} electrode volumetric "
                 "interfacial current density [A.m-3]": sumvar,
@@ -47,5 +49,3 @@ class TotalMainKinetics(pybamm.BaseSubModel):
                 "interfacial current density [A.m-3]": pybamm.x_average(sumvar),
             }
         )
-
-        return variables

@@ -23,14 +23,32 @@ class BaseOpenCircuitPotential(BaseInterface):
     phase : str, optional
         Phase of the particle (default is "primary")
     x_average : bool
-        Whether the particle concentration is averaged over the x-direction. Default is False.
+        Whether the particle (or, for lead-acid, electrolyte) concentration is
+        averaged over the x-direction. Default is False.
+    x_average_particles : bool, optional
+        Whether the particle concentrations the open-circuit potential depends on
+        are uniform in x. Default is ``x_average``.
     """
 
     def __init__(
-        self, param, domain, reaction, options, phase="primary", x_average=False
+        self,
+        param,
+        domain,
+        reaction,
+        options,
+        phase="primary",
+        x_average=False,
+        x_average_particles=None,
     ):
-        super().__init__(param, domain, reaction, options=options, phase=phase)
-        self.x_average = x_average
+        super().__init__(param, domain, reaction, options, phase, x_average)
+        if x_average_particles is None:
+            x_average_particles = x_average
+        self.x_average_particles = x_average_particles
+
+    @property
+    def _x_average_inputs(self):
+        """Whether the particle and temperature inputs are x-averaged."""
+        return self.x_average_particles and self.options["thermal"] != "x-full"
 
     def _alias_ocp_as_equilibrium(self, variables):
         """Publish the "equilibrium open-circuit potential [V]" variables as
@@ -159,35 +177,32 @@ class BaseOpenCircuitPotential(BaseInterface):
 
         return variables
 
-    def _get_stoichiometry_and_temperature(self, variables):
-        domain, Domain = self.domain_Domain
-        domain_options = getattr(self.options, domain)
+    def _get_stoichiometry_and_temperature(self):
+        domain = self.domain
         phase_name = self.phase_name
+        x_average = self._x_average_inputs
 
-        sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
-        T = variables[f"{Domain} electrode temperature [K]"]
+        sto_bulk = self.coupled_variable(
+            f"{self.domain.capitalize()} electrode {phase_name}stoichiometry",
+            domain="current collector",
+        )
+        T = self._coupled_electrode_variable("electrode temperature [K]")
         T_bulk = pybamm.xyzs_average(T)
+        if x_average:
+            T = self._coupled_electrode_variable("electrode temperature [K]", True)
 
         # For "particle-size distribution" models, take distribution version
         # of sto_surf that depends on particle size.
-        if domain_options["particle size"] == "distribution":
-            sto_surf = variables[
-                f"{Domain} {phase_name}particle surface stoichiometry distribution"
-            ]
-            # If variable was broadcast, take only the orphan
-            if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
-                T, pybamm.Broadcast
-            ):
-                sto_surf = sto_surf.orphans[0]
-                T = T.orphans[0]
+        if self.size_distribution:
+            sto_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface stoichiometry distribution",
+                x_average,
+                size=True,
+            )
             T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
         else:
-            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
-            # If variable was broadcast, take only the orphan
-            if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
-                T, pybamm.Broadcast
-            ):
-                sto_surf = sto_surf.orphans[0]
-                T = T.orphans[0]
+            sto_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface stoichiometry", x_average
+            )
 
         return sto_surf, sto_bulk, T, T_bulk

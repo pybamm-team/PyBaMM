@@ -17,7 +17,7 @@ class NoPlating(BasePlating):
         A dictionary of options to be passed to the model.
     """
 
-    def get_fundamental_variables(self):
+    def build(self):
         phase_name = self.phase_name
         if self.size_distribution is False:
             zero = pybamm.FullBroadcast(
@@ -43,11 +43,5 @@ class NoPlating(BasePlating):
         else:
             variables.update(self._get_standard_reaction_variables(zero))
         variables.update(self._get_standard_overpotential_variables(zero))
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        # Update whole cell variables, which also updates the "sum of" variables
-        variables.update(super().get_coupled_variables(variables))
-
-        return variables
+        variables.update(self._get_standard_volumetric_plating_variables(variables))
+        self.variables.update(variables)

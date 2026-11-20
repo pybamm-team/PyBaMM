@@ -17,6 +17,17 @@ from pybamm.models.submodels.interface.kinetics.inverse_kinetics.inverse_linear 
 )
 
 
+def substitute_coupled_variables(symbol, values):
+    """Replace the coupled variables in ``symbol`` by the symbols in ``values``."""
+
+    def replace(node, new_leaves):
+        if isinstance(node, pybamm.CoupledVariable):
+            return values[node.name]
+        return pybamm.rebuild(node, new_leaves)
+
+    return pybamm.tree_map(replace, symbol)
+
+
 def _make_options(**kwargs):
     """Create options dict for inverse kinetics, with sensible defaults."""
     return {
@@ -227,10 +238,7 @@ class TestCurrentForInverseKinetics:
             param, "negative", "lithium-ion main", options
         )
 
-        variables = {
-            "X-averaged negative electrode total interfacial current density [A.m-2]": pybamm.Scalar(
-                j_tot
-            ),
+        values = {
             "Negative electrode SEI interfacial current density [A.m-2]": pybamm.Scalar(
                 j_sei
             ),
@@ -239,21 +247,16 @@ class TestCurrentForInverseKinetics:
             ),
         }
 
-        with (
-            patch.object(
-                model, "_get_standard_interfacial_current_variables"
-            ) as mock_std,
-            patch.object(
-                model, "_get_standard_volumetric_current_density_variables"
-            ) as mock_vol,
+        with patch.object(
+            model,
+            "_get_average_total_interfacial_current_density",
+            return_value=(pybamm.Scalar(j_tot), pybamm.Scalar(0)),
         ):
-            mock_std.return_value = {}
-            mock_vol.return_value = {}
+            model.build()
 
-            model.get_coupled_variables(variables)
-
-            j_computed = mock_std.call_args[0][0]
-            assert j_computed.evaluate() == pytest.approx(expected, rel=1e-10)
+        j = model.variables["Negative electrode interfacial current density [A.m-2]"]
+        j = substitute_coupled_variables(j, values)
+        assert j.evaluate() == pytest.approx(expected, rel=1e-10)
 
 
 class TestCurrentForInverseKineticsLithiumMetal:
@@ -268,11 +271,11 @@ class TestCurrentForInverseKineticsLithiumMetal:
             param, "negative", "lithium metal plating", options
         )
 
-        variables = {
-            "Current collector current density [A.m-2]": pybamm.Scalar(i_cc),
-        }
-        result = model.get_coupled_variables(variables)
-        j = result["Lithium metal plating current density [A.m-2]"]
+        model.build()
+        j = model.variables["Lithium metal plating current density [A.m-2]"]
+        j = substitute_coupled_variables(
+            j, {"Current collector current density [A.m-2]": pybamm.Scalar(i_cc)}
+        )
 
         assert j.evaluate() == pytest.approx(i_cc, rel=1e-10)
 

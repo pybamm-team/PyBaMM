@@ -29,55 +29,63 @@ class DiffusionLimited(BaseInterface):
         super().__init__(param, domain, reaction, options)
         self.order = order
 
-    def get_coupled_variables(self, variables):
-        _domain, Domain = self.domain_Domain
+    def build(self):
         reaction_name = self.reaction_name
 
-        delta_phi_s = variables[f"{Domain} electrode surface potential difference [V]"]
-        # If delta_phi_s was broadcast, take only the orphan
-        if isinstance(delta_phi_s, pybamm.Broadcast):
-            delta_phi_s = delta_phi_s.orphans[0]
-
+        delta_phi_s = self._coupled_electrode_variable(
+            "electrode surface potential difference [V]"
+        )
         # Get exchange-current density
-        j0 = self._get_exchange_current_density(variables)
+        j0 = self._get_exchange_current_density()
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode {reaction_name}open-circuit potential [V]"]
+        ocp = self._coupled_electrode_variable(
+            f"electrode {reaction_name}open-circuit potential [V]"
+        )
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
-        j = self._get_diffusion_limited_current_density(variables)
-        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(
-            variables
-        )
+        j = self._get_diffusion_limited_current_density()
+        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density()
 
-        variables.update(self._get_standard_interfacial_current_variables(j))
+        variables = self._get_standard_interfacial_current_variables(j)
+        j = variables[
+            f"{self.domain.capitalize()} electrode {reaction_name}"
+            "interfacial current density [A.m-2]"
+        ]
         variables.update(
             self._get_standard_total_interfacial_current_variables(j_tot_av, a_j_tot_av)
         )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
-
-        variables.update(
-            self._get_standard_volumetric_current_density_variables(variables)
-        )
+        variables.update(self._get_standard_volumetric_current_density_variables(j))
 
         # No SEI film resistance in this model
         eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
+        self.variables.update(variables)
 
-        return variables
-
-    def _get_diffusion_limited_current_density(self, variables):
+    def _get_diffusion_limited_current_density(self):
         if self.domain == "negative":
             if self.order == "leading":
-                j_p = variables[
+                j_p = self.coupled_variable(
                     f"X-averaged positive electrode {self.reaction_name}"
-                    "interfacial current density [A.m-2]"
-                ]
+                    "interfacial current density [A.m-2]",
+                    domain="current collector",
+                )
                 j = -self.param.p.L * j_p / self.param.n.L
             elif self.order == "full":
-                tor_s = variables["Separator electrolyte transport efficiency"]
-                c_ox_s = variables["Separator oxygen concentration [mol.m-3]"]
+                separator_domains = {
+                    "primary": "separator",
+                    "secondary": "current collector",
+                }
+                tor_s = self.coupled_variable(
+                    "Separator electrolyte transport efficiency",
+                    domains=separator_domains,
+                )
+                c_ox_s = self.coupled_variable(
+                    "Separator oxygen concentration [mol.m-3]",
+                    domains=separator_domains,
+                )
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")
                     * self.param.D_ox
