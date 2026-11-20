@@ -31,7 +31,7 @@ class ConstantSEI(BaseModel):
         else:
             self.reaction_loc = "full electrode"
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain = self.domain.lower()
         L_sei_0 = self.phase_param.L_sei_0
         V_bar_sei = self.phase_param.V_bar_sei
@@ -52,5 +52,5 @@ class ConstantSEI(BaseModel):
                 pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
         variables.update(self._get_standard_reaction_variables(zero))
-
-        return variables
+        variables.update(self._get_standard_volumetric_sei_variables(variables))
+        self.variables.update(variables)

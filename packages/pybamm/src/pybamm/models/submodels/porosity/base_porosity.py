@@ -48,3 +48,17 @@ class BaseModel(pybamm.BaseSubModel):
             )
 
         return variables
+
+    def _get_porosity_cut_off_events(self, domain, eps_k):
+        return [
+            pybamm.Event(
+                f"Zero {domain} porosity cut-off",
+                pybamm.min(eps_k),
+                pybamm.EventType.TERMINATION,
+            ),
+            pybamm.Event(
+                f"Max {domain} porosity cut-off",
+                1 - pybamm.max(eps_k),
+                pybamm.EventType.TERMINATION,
+            ),
+        ]

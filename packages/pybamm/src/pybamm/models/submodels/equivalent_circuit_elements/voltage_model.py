@@ -20,29 +20,23 @@ class VoltageModel(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def get_coupled_variables(self, variables):
-        ocv = variables["Open-circuit voltage [V]"]
-
-        number_of_rc_elements = self.model_options["number of rc elements"]
-        number_of_elements = number_of_rc_elements + 1
-
+    def build(self):
+        number_of_elements = self.model_options["number of rc elements"] + 1
+        ocv = self.coupled_variable("Open-circuit voltage [V]")
+        diffusion_overpotential = self.coupled_variable("Diffusion overpotential [V]")
+        current = self.coupled_variable("Current [A]")
         overpotential = pybamm.Scalar(0)
         for i in range(number_of_elements):
-            overpotential += variables[f"Element-{i} overpotential [V]"]
-
-        diffusion_overpotential = variables["Diffusion overpotential [V]"]
+            overpotential += self.coupled_variable(f"Element-{i} overpotential [V]")
 
         voltage = ocv + overpotential + diffusion_overpotential
-
-        # Power and Resistance
-        current = variables["Current [A]"]
 
         def x_not_zero(x):
             return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
 
         non_zero_current = x_not_zero(current)
 
-        variables.update(
+        self.variables.update(
             {
                 "Voltage [V]": voltage,
                 "Overpotential [V]": overpotential,
@@ -52,39 +46,27 @@ class VoltageModel(pybamm.BaseSubModel):
             }
         )
 
-        return variables
-
-    def add_events_from(self, variables):
-        voltage = variables["Voltage [V]"]
-
-        # Add voltage events
-        maximum_voltage = pybamm.Event(
-            "Maximum voltage [V]",
-            self.param.voltage_high_cut - voltage,
-            pybamm.EventType.TERMINATION,
-        )
-        self.events.append(maximum_voltage)
-
-        minimum_voltage = pybamm.Event(
-            "Minimum voltage [V]",
-            voltage - self.param.voltage_low_cut,
-            pybamm.EventType.TERMINATION,
-        )
-        self.events.append(minimum_voltage)
-
         # Cut-off voltage for event switch with casadi 'fast with events'
         tol = 0.125
-        self.events.append(
+        self.events += [
+            pybamm.Event(
+                "Maximum voltage [V]",
+                self.param.voltage_high_cut - voltage,
+                pybamm.EventType.TERMINATION,
+            ),
+            pybamm.Event(
+                "Minimum voltage [V]",
+                voltage - self.param.voltage_low_cut,
+                pybamm.EventType.TERMINATION,
+            ),
             pybamm.Event(
                 "Minimum voltage switch",
                 voltage - (self.param.voltage_low_cut - tol),
                 pybamm.EventType.SWITCH,
-            )
-        )
-        self.events.append(
+            ),
             pybamm.Event(
                 "Maximum voltage switch",
                 voltage - (self.param.voltage_high_cut + tol),
                 pybamm.EventType.SWITCH,
-            )
-        )
+            ),
+        ]

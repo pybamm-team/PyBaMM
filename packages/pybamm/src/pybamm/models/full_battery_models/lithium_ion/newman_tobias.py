@@ -20,6 +20,10 @@ class NewmanTobias(DFN):
 
     """
 
+    # Particles and electrolyte are x-averaged although the rest of the model is not
+    x_average_electrolyte = True
+    x_average_particles = True
+
     def __init__(self, options=None, name="Newman-Tobias model", build=True):
         # Set default option "uniform profile" for particle submodel. Other
         # default options are those given in `pybamm.BatteryModelOptions` defined in

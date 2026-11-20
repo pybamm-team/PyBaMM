@@ -26,26 +26,26 @@ class TotalSEI(pybamm.BaseSubModel):
             self.reaction = "SEI"
         super().__init__(param, domain, options=options)
 
-    def get_coupled_variables(self, variables):
+    def build(self):
         domain, Domain = self.domain_Domain
         phases = self.options.phases[domain]
+        electrode = {"primary": f"{domain} electrode", "secondary": "current collector"}
+        x_averaged = {"primary": "current collector"}
+        volumetric = "volumetric interfacial current density [A.m-3]"
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases
-        for variable_template in [
+        for variable_template, domains in [
+            (f"{Domain} electrode {{}}{self.reaction} {volumetric}", electrode),
             (
-                f"{Domain} electrode {{}}{self.reaction} volumetric "
-                "interfacial current density [A.m-3]"
+                f"X-averaged {domain} electrode {{}}{self.reaction} {volumetric}",
+                x_averaged,
             ),
-            (
-                f"X-averaged {domain} electrode {{}}{self.reaction} volumetric "
-                "interfacial current density [A.m-3]"
-            ),
-            f"Loss of lithium to {domain} {{}}{self.reaction} [mol]",
-            f"Loss of capacity to {domain} {{}}{self.reaction} [A.h]",
+            (f"Loss of lithium to {domain} {{}}{self.reaction} [mol]", {}),
+            (f"Loss of capacity to {domain} {{}}{self.reaction} [A.h]", {}),
         ]:
-            sumvar = sum(
-                variables[variable_template.format(phase + " ")] for phase in phases
+            self.variables[variable_template.format("")] = sum(
+                self.coupled_variable(
+                    variable_template.format(phase + " "), domains=domains
+                )
+                for phase in phases
             )
-            variables[variable_template.format("")] = sumvar
-
-        return variables

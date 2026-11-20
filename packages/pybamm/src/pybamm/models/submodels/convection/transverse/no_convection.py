@@ -21,19 +21,17 @@ class NoConvection(BaseTransverseModel):
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
 
-    def get_fundamental_variables(self):
+    def build(self):
         p_s = pybamm.PrimaryBroadcast(0, "current collector")
-        variables = self._get_standard_separator_pressure_variables(p_s)
+        self.variables.update(self._get_standard_separator_pressure_variables(p_s))
 
         Vbox_s = pybamm.PrimaryBroadcast(0, "current collector")
-        variables.update(
+        self.variables.update(
             self._get_standard_transverse_velocity_variables(Vbox_s, "velocity")
         )
 
         div_Vbox_s = pybamm.PrimaryBroadcast(0, "current collector")
 
-        variables.update(
+        self.variables.update(
             self._get_standard_transverse_velocity_variables(div_Vbox_s, "acceleration")
         )
-
-        return variables

@@ -30,25 +30,11 @@ class SwellingOnly(BaseMechanics):
         pybamm.citations.register("Ai2019")
         pybamm.citations.register("Deshpande2012")
 
-    def get_fundamental_variables(self):
-        domain, Domain = self.domain_Domain
-
-        zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), f"{domain} electrode", "current collector"
-        )
-        zero_av = pybamm.x_average(zero)
-        variables = self._get_standard_variables(zero)
-        variables.update(
-            {
-                f"{Domain} particle cracking rate [m.s-1]": zero,
-                f"X-averaged {domain} particle cracking rate [m.s-1]": zero_av,
-            }
-        )
-        return variables
-
-    def get_coupled_variables(self, variables):
-        variables.update(self._get_standard_surface_variables(variables))
-        variables.update(self._get_mechanical_results(variables))
+    def build(self):
+        variables = self._get_zero_cracking_variables()
+        l_cr = variables[self._build_var_name("particle crack length", "[m]")]
+        variables.update(self._get_standard_surface_variables(l_cr))
+        variables.update(self._get_mechanical_results())
         if self.size_distribution:
-            variables.update(self._get_mechanical_size_distribution_results(variables))
-        return variables
+            variables.update(self._get_mechanical_size_distribution_results())
+        self.variables.update(variables)

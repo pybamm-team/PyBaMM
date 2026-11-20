@@ -23,24 +23,27 @@ class TotalConcentration(BaseParticle):
         Phase of the particle (default is "primary")
     """
 
-    def get_coupled_variables(self, variables):
+    def build(self):
         domain, Domain = self.domain_Domain
         phase = self.phase
         phase_name = self.phase_name
+        electrode_domains = self._domains()
 
-        c_s_rav = variables[
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
-        eps_s = variables[
-            f"{Domain} electrode {phase_name}active material volume fraction"
-        ]
+        c_s_rav = self.coupled_variable(
+            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]",
+            domains=electrode_domains,
+        )
+        eps_s = self.coupled_variable(
+            f"{Domain} electrode {phase_name}active material volume fraction",
+            domains=electrode_domains,
+        )
         eps_s_av = pybamm.x_average(eps_s)
         c_s_vol_av = pybamm.x_average(eps_s * c_s_rav) / eps_s_av
         c_scale = self.phase_param.c_max
         L = self.domain_param.L
         A = self.param.A_cc
 
-        variables.update(
+        self.variables.update(
             {
                 f"{Domain} electrode {phase_name}stoichiometry": c_s_vol_av / c_scale,
                 f"{Domain} electrode {phase_name}volume-averaged "
@@ -51,4 +54,3 @@ class TotalConcentration(BaseParticle):
                 "": pybamm.yz_average(c_s_vol_av * eps_s_av) * L * A,
             }
         )
-        return variables

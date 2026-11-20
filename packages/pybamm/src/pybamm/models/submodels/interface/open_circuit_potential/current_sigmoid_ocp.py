@@ -8,20 +8,27 @@ from . import BaseHysteresisOpenCircuitPotential
 
 class CurrentSigmoidOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     def __init__(
-        self, param, domain, reaction, options, phase="primary", x_average=False
+        self,
+        param,
+        domain,
+        reaction,
+        options,
+        phase="primary",
+        x_average=False,
+        x_average_particles=None,
     ):
         super().__init__(
-            param, domain, reaction, options=options, phase=phase, x_average=x_average
+            param, domain, reaction, options, phase, x_average, x_average_particles
         )
         pybamm.citations.register("Ai2022")
 
-    def get_coupled_variables(self, variables):
+    def build(self):
         domain, Domain = self.domain_Domain
         domain_options = getattr(self.options, domain)
         phase_name = self.phase_name
 
         # Set hysteresis state
-        current = variables["Total current density [A.m-2]"]
+        current = self.coupled_variable("Total current density [A.m-2]")
         k = 100
 
         if Domain == "Positive":
@@ -35,12 +42,10 @@ class CurrentSigmoidOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
             [f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
-        variables.update(
-            {
-                f"{Domain} electrode {phase_name}hysteresis state": h,
-                f"X-averaged {domain} electrode {phase_name}hysteresis state": h_x_av,
-            }
-        )
+        variables = {
+            f"{Domain} electrode {phase_name}hysteresis state": h,
+            f"X-averaged {domain} electrode {phase_name}hysteresis state": h_x_av,
+        }
         if domain_options["particle size"] == "distribution":
             h_dist = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
             h_dist_x_av = pybamm.x_average(h_dist)
@@ -52,9 +57,5 @@ class CurrentSigmoidOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
             )
 
         # Get single-state hysteresis variables
-        variables.update(self._get_coupled_variables(variables))
-
-        return variables
-
-    def set_initial_conditions(self, variables):
-        pass
+        variables.update(self._get_hysteresis_ocp_variables(variables))
+        self.variables.update(variables)

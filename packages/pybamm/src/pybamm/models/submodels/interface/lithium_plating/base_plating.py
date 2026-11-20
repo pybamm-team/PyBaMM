@@ -17,36 +17,19 @@ class BasePlating(BaseInterface):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, domain, options=None, phase="primary"):
+    def __init__(self, param, domain, options=None, phase="primary", x_average=False):
         reaction = "lithium plating"
-        super().__init__(param, domain, reaction, options=options, phase=phase)
-
-    def get_coupled_variables(self, variables):
-        # Update some common variables
-        domain, Domain = self.domain_Domain
-
-        j_plating_av = variables[
-            f"X-averaged {domain} electrode {self.phase_name}lithium plating "
-            "interfacial current density [A.m-2]"
-        ]
-        j_plating = variables[
-            f"{Domain} electrode {self.phase_name}lithium plating "
-            "interfacial current density [A.m-2]"
-        ]
-        variables.update(
-            {
-                f"X-averaged {domain} electrode {self.phase_name}lithium plating "
-                "interfacial current density [A.m-2]": j_plating_av,
-                f"{Domain} electrode {self.phase_name}lithium plating "
-                "interfacial current density [A.m-2]": j_plating,
-            }
+        super().__init__(
+            param, domain, reaction, options=options, phase=phase, x_average=x_average
         )
 
-        variables.update(
-            self._get_standard_volumetric_current_density_variables(variables)
-        )
-
-        return variables
+    def _get_standard_volumetric_plating_variables(self, variables):
+        """Volumetric current density variables of the plating in ``variables``."""
+        j_stripping = variables[
+            f"{self.domain.capitalize()} electrode {self.phase_name}lithium plating "
+            "interfacial current density [A.m-2]"
+        ]
+        return self._get_standard_volumetric_current_density_variables(j_stripping)
 
     def _get_standard_concentration_variables(self, c_plated_Li, c_dead_Li):
         """

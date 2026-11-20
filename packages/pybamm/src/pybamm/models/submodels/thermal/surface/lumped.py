@@ -21,31 +21,20 @@ class Lumped(pybamm.BaseSubModel):
         super().__init__(param, options=options)
         pybamm.citations.register("Lin2014")
 
-    def get_fundamental_variables(self):
+    def build(self):
         T_surf = pybamm.Variable("Surface temperature [K]")
-        variables = {"Surface temperature [K]": T_surf}
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        T_surf = variables["Surface temperature [K]"]
-        T_amb = variables["Volume-averaged ambient temperature [K]"]
+        T_amb = self.coupled_variable("Volume-averaged ambient temperature [K]")
         R_env = pybamm.Parameter("Environment thermal resistance [K.W-1]")
         Q_cool_env = -(T_surf - T_amb) / R_env
-        variables["Environment total cooling [W]"] = Q_cool_env
-        return variables
+        self.variables.update(
+            {
+                "Surface temperature [K]": T_surf,
+                "Environment total cooling [W]": Q_cool_env,
+            }
+        )
 
-    def set_rhs(self, variables):
-        T_surf = variables["Surface temperature [K]"]
-
-        Q_cool_bulk = variables["Surface total cooling [W]"]
-        Q_heat_bulk = -Q_cool_bulk
-
-        Q_cool_env = variables["Environment total cooling [W]"]
+        # Heat flows from the cell into the casing
+        Q_heat_bulk = -self.coupled_variable("Surface total cooling [W]")
         rho_c_p_case = pybamm.Parameter("Casing heat capacity [J.K-1]")
-
         self.rhs[T_surf] = (Q_heat_bulk + Q_cool_env) / rho_c_p_case
-
-    def set_initial_conditions(self, variables):
-        T_surf = variables["Surface temperature [K]"]
-        self.initial_conditions = {T_surf: self.param.T_init}
+        self.initial_conditions[T_surf] = self.param.T_init

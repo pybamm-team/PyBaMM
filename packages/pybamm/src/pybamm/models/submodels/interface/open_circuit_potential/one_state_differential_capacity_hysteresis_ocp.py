@@ -33,11 +33,22 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
     phase : str, optional
         Phase of the particle (default is "primary")
     x_average : bool
-        Whether the particle concentration is averaged over the x-direction. Default is False.
+        Whether the particle concentration, and hence the hysteresis state, is
+        averaged over the x-direction. Default is False.
+    x_average_particles : bool, optional
+        Whether the particle concentrations the open-circuit potential depends on
+        are uniform in x. Default is ``x_average``.
     """
 
     def __init__(
-        self, param, domain, reaction, options, phase="primary", x_average=False
+        self,
+        param,
+        domain,
+        reaction,
+        options,
+        phase="primary",
+        x_average=False,
+        x_average_particles=None,
     ):
         warnings.warn(
             "The definition of the hysteresis decay rate parameter has changed in "
@@ -45,29 +56,27 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
             stacklevel=2,
         )
         super().__init__(
-            param, domain, reaction, options=options, phase=phase, x_average=x_average
+            param, domain, reaction, options, phase, x_average, x_average_particles
         )
         pybamm.citations.register("Wycisk2022")
 
-    def get_fundamental_variables(self):
-        return self._get_hysteresis_state_variables()
-
-    def get_coupled_variables(self, variables):
+    def build(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        variables = self._get_coupled_variables(variables)
+        variables = self._get_hysteresis_state_variables()
+        variables.update(self._get_hysteresis_ocp_variables(variables))
 
         if self.reaction == "lithium-ion main":
             # determine dQ/dU
-            sto_surf, _, _T, T_bulk = self._get_stoichiometry_and_temperature(variables)
+            sto_surf, _, _T, T_bulk = self._get_stoichiometry_and_temperature()
             sto_surf = pybamm.size_average(sto_surf)
             if phase_name == "":
-                Q_mag = variables[f"{Domain} electrode capacity [A.h]"]
+                Q_mag = self.coupled_variable(f"{Domain} electrode capacity [A.h]")
             else:
-                Q_mag = variables[
+                Q_mag = self.coupled_variable(
                     f"{Domain} electrode {phase_name}phase capacity [A.h]"
-                ]
+                )
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
             dQdU = Q_mag / dU
@@ -78,37 +87,14 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
                     f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]": dQdU_xav,
                 }
             )
+        self.variables.update(variables)
 
-        return variables
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
+        h = self._get_hysteresis_state(variables)
+        i_vol, sto_surf, T = self._get_hysteresis_rate_inputs()
         c_max = self.phase_param.c_max
         eps = self.phase_param.epsilon_s
-        if self.x_average is False:
-            i_vol = variables[
-                f"{Domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
-            T = variables[f"{Domain} electrode temperature [K]"]
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-            dQdU = variables[
-                f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
-            ]
-        else:
-            i_vol = variables[
-                f"X-averaged {domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[
-                f"X-averaged {domain} {phase_name}particle surface stoichiometry"
-            ]
-            T = variables[f"X-averaged {domain} electrode temperature [K]"]
-            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
-            dQdU = variables[
-                f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]"
-            ]
+        if self.x_average is True:
+            dQdU = dQdU_xav
             eps = pybamm.x_average(eps)
 
         Gamma = self.phase_param.hysteresis_decay(sto_surf, T)
@@ -122,3 +108,4 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
         dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
 
         self.rhs[h] = dhdt
+        self._set_hysteresis_initial_conditions(h)

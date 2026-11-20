@@ -19,26 +19,26 @@ class TotalLithiumPlating(pybamm.BaseSubModel):
         See :class:`pybamm.BaseBatteryModel`
     """
 
-    def get_coupled_variables(self, variables):
+    def build(self):
         domain, Domain = self.domain_Domain
         phases = self.options.phases[domain]
+        electrode = {"primary": f"{domain} electrode", "secondary": "current collector"}
+        x_averaged = {"primary": "current collector"}
+        volumetric = "volumetric interfacial current density [A.m-3]"
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases
-        for variable_template in [
+        for variable_template, domains in [
+            (f"{Domain} electrode {{}}lithium plating {volumetric}", electrode),
             (
-                f"{Domain} electrode {{}}lithium plating volumetric "
-                "interfacial current density [A.m-3]"
+                f"X-averaged {domain} electrode {{}}lithium plating {volumetric}",
+                x_averaged,
             ),
-            (
-                f"X-averaged {domain} electrode {{}}lithium plating volumetric "
-                "interfacial current density [A.m-3]"
-            ),
-            f"Loss of lithium to {domain} {{}}lithium plating [mol]",
-            f"Loss of capacity to {domain} {{}}lithium plating [A.h]",
+            (f"Loss of lithium to {domain} {{}}lithium plating [mol]", {}),
+            (f"Loss of capacity to {domain} {{}}lithium plating [A.h]", {}),
         ]:
-            sumvar = sum(
-                variables[variable_template.format(phase + " ")] for phase in phases
+            self.variables[variable_template.format("")] = sum(
+                self.coupled_variable(
+                    variable_template.format(phase + " "), domains=domains
+                )
+                for phase in phases
             )
-            variables[variable_template.format("")] = sumvar
-
-        return variables

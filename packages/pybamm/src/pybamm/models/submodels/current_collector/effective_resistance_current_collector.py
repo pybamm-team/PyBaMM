@@ -121,22 +121,16 @@ class EffectiveResistance(BaseEffectiveResistance):
         self.options = options
         self.param = pybamm.LithiumIonParameters()
 
-        self.variables = self.get_fundamental_variables()
-        self.set_algebraic(self.variables)
-        self.set_boundary_conditions(self.variables)
-        self.set_initial_conditions(self.variables)
+        self._build()
 
-        pybamm.citations.register("Timms2021")
-
-    def get_fundamental_variables(self):
-        # Get necessary parameters
+    def _build(self):
+        """Set the variables and equations of the resistance problem."""
         L_cn = self.param.n.L_cc
         L_cp = self.param.p.L_cc
         sigma_cn = self.param.n.sigma_cc
         sigma_cp = self.param.p.sigma_cc
 
-        # Set model variables: Note: we solve using a scaled version that is
-        # better conditioned
+        # Solve for scaled resistances, which are better conditioned
         R_cn_scaled = pybamm.Variable(
             "Scaled negative current collector resistance [Ohm]",
             domain="current collector",
@@ -148,16 +142,21 @@ class EffectiveResistance(BaseEffectiveResistance):
         R_cn = R_cn_scaled / (L_cn * sigma_cn)
         R_cp = R_cp_scaled / (L_cp * sigma_cp)
 
-        # Define effective current collector resistance
+        var = pybamm.standard_spatial_vars
         if self.options["dimensionality"] == 1:
             R_cc_n = -pybamm.z_average(R_cn)
             R_cc_p = -pybamm.z_average(R_cp)
-        elif self.options["dimensionality"] == 2:
+            spatial_variables = {"z [m]": var.z}
+            other_tab_n = other_tab_p = "no tab"
+        else:
             R_cc_n = -pybamm.yz_average(R_cn)
             R_cc_p = -pybamm.yz_average(R_cp)
+            spatial_variables = {"y [m]": var.y, "z [m]": var.z}
+            other_tab_n = "positive tab"
+            other_tab_p = "negative tab"
         R_cc = R_cc_n + R_cc_p
 
-        variables = {
+        self.variables = {
             "Scaled negative current collector resistance [Ohm]": R_cn_scaled,
             "Negative current collector resistance [Ohm]": R_cn,
             "Scaled positive current collector resistance [Ohm]": R_cp_scaled,
@@ -165,55 +164,22 @@ class EffectiveResistance(BaseEffectiveResistance):
             "Effective current collector resistance [Ohm]": R_cc,
             "Effective negative current collector resistance [Ohm]": R_cc_n,
             "Effective positive current collector resistance [Ohm]": R_cc_p,
+            **spatial_variables,
         }
-
-        # Add spatial variables
-        var = pybamm.standard_spatial_vars
-        if self.options["dimensionality"] == 1:
-            variables.update({"z [m]": var.z})
-        elif self.options["dimensionality"] == 2:
-            variables.update({"y [m]": var.y, "z [m]": var.z})
-
-        return variables
-
-    def set_algebraic(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
-        R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
         self.algebraic = {
             R_cn_scaled: pybamm.laplacian(R_cn_scaled) - pybamm.source(1, R_cn_scaled),
             R_cp_scaled: pybamm.laplacian(R_cp_scaled) - pybamm.source(1, R_cp_scaled),
         }
-
-    def set_boundary_conditions(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
-        R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
-
-        if self.options["dimensionality"] == 1:
-            self.boundary_conditions = {
-                R_cn_scaled: {
-                    "negative tab": (0, "Dirichlet"),
-                    "no tab": (0, "Neumann"),
-                },
-                R_cp_scaled: {
-                    "positive tab": (0, "Dirichlet"),
-                    "no tab": (0, "Neumann"),
-                },
-            }
-        elif self.options["dimensionality"] == 2:
-            self.boundary_conditions = {
-                R_cn_scaled: {
-                    "negative tab": (0, "Dirichlet"),
-                    "positive tab": (0, "Neumann"),
-                },
-                R_cp_scaled: {
-                    "positive tab": (0, "Dirichlet"),
-                    "negative tab": (0, "Neumann"),
-                },
-            }
-
-    def set_initial_conditions(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
-        R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
+        self.boundary_conditions = {
+            R_cn_scaled: {
+                "negative tab": (0, "Dirichlet"),
+                other_tab_n: (0, "Neumann"),
+            },
+            R_cp_scaled: {
+                "positive tab": (0, "Dirichlet"),
+                other_tab_p: (0, "Neumann"),
+            },
+        }
         self.initial_conditions = {
             R_cn_scaled: pybamm.Scalar(0),
             R_cp_scaled: pybamm.Scalar(0),

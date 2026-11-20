@@ -11,6 +11,17 @@ REORGANIZATION_ENERGY = 0.2
 RATE_CONSTANT = 10.0
 
 
+def substitute_coupled_variables(symbol, values):
+    """Replace the coupled variables in ``symbol`` by the symbols in ``values``."""
+
+    def replace(node, new_leaves):
+        if isinstance(node, pybamm.CoupledVariable):
+            return values[node.name]
+        return pybamm.rebuild(node, new_leaves)
+
+    return pybamm.tree_map(replace, symbol)
+
+
 def mhc_rate(eta):
     """Marcus-Hush-Chidsey rate integral, with eta and lambda in units of kT/e."""
     F_RT = pybamm.constants.F.value / (pybamm.constants.R.value * T)
@@ -44,7 +55,7 @@ class TestCoupledIonElectronTransfer:
         submodel = pybamm.kinetics.CoupledIonElectronTransfer(
             param, "negative", "lithium-ion main", options, "primary"
         )
-        variables = {
+        values = {
             "Negative electrolyte concentration [mol.m-3]": pybamm.Scalar(
                 relative_c_e * C_E_INIT
             ),
@@ -53,11 +64,12 @@ class TestCoupledIonElectronTransfer:
                 stoichiometry * C_MAX
             ),
         }
-        submodel._concentrations = submodel._get_surface_fractions(variables)
-        j0 = submodel._get_exchange_current_density(variables)
+        submodel._concentrations = submodel._get_surface_fractions()
+        j0 = submodel._get_exchange_current_density()
         j = submodel._get_kinetics(
             j0, pybamm.Scalar(1), pybamm.Scalar(eta_r), pybamm.Scalar(T), 1
         )
+        j0, j = (substitute_coupled_variables(symbol, values) for symbol in (j0, j))
         parameter_values = pybamm.ParameterValues(
             {
                 "Maximum concentration in negative electrode [mol.m-3]": C_MAX,

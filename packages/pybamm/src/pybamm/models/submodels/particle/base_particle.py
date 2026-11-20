@@ -19,13 +19,92 @@ class BaseParticle(pybamm.BaseSubModel):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool, optional
+        Whether the particle is x-averaged, i.e. a single particle represents the
+        whole electrode (default is False)
     """
 
-    def __init__(self, param, domain, options, phase="primary"):
+    def __init__(self, param, domain, options, phase="primary", x_average=False):
         super().__init__(param, domain, options=options, phase=phase)
         # Read from options to see if we have a particle size distribution
         domain_options = getattr(self.options, domain)
         self.size_distribution = domain_options["particle size"] == "distribution"
+        self.x_average = x_average
+
+    @property
+    def _x_prefix(self):
+        """Start of the name of a variable that is x-averaged if the particle is."""
+        domain, Domain = self.domain_Domain
+        return f"X-averaged {domain}" if self.x_average else Domain
+
+    def _domains(self, *inner):
+        """
+        Domains of a quantity over the ``inner`` domains and the electrode (just the
+        current collector if the particle is x-averaged).
+        """
+        outer = ["current collector"]
+        if not self.x_average:
+            outer.insert(0, f"{self.domain} electrode")
+        levels = ["primary", "secondary", "tertiary", "quaternary"]
+        return dict(zip(levels, [*inner, *outer], strict=False))
+
+    @property
+    def _particle_domains(self):
+        """Domains of the particle concentration (or potential) being solved for."""
+        particle = f"{self.domain} {self.phase_name}particle"
+        if self.size_distribution:
+            return self._domains(particle, f"{particle} size")
+        return self._domains(particle)
+
+    def _broadcast_to_particle(self, symbol):
+        """Broadcast an electrode quantity to the particle (and size) domains."""
+        particle = f"{self.domain} {self.phase_name}particle"
+        if self.size_distribution:
+            symbol = pybamm.PrimaryBroadcast(symbol, [f"{particle} size"])
+        return pybamm.PrimaryBroadcast(symbol, [particle])
+
+    def _coupled_temperature(self):
+        """Electrode temperature [K], x-averaged if the particle is."""
+        return self.coupled_variable(
+            f"{self._x_prefix} electrode temperature [K]", domains=self._domains()
+        )
+
+    def _coupled_interfacial_current_density(self):
+        """
+        Interfacial current density [A.m-2] of this phase, x-averaged if the
+        particle is and as a function of particle size if there is a distribution.
+        """
+        name = (
+            f"{self._x_prefix} electrode {self.phase_name}interfacial current density"
+        )
+        if self.size_distribution:
+            size = f"{self.domain} {self.phase_name}particle size"
+            return self.coupled_variable(
+                f"{name} distribution [A.m-2]", domains=self._domains(size)
+            )
+        return self.coupled_variable(f"{name} [A.m-2]", domains=self._domains())
+
+    def _get_size_distribution(self):
+        """
+        Particle-size spatial variable, its distribution variables and the
+        volume-weighted distribution used to size-average volume-based quantities.
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        R = pybamm.SpatialVariable(
+            f"R_{domain[0]}",
+            domains=self._domains(f"{domain} {phase_name}particle size"),
+            coord_sys="cartesian",
+        )
+        variables = self._get_distribution_variables(R)
+        if self.x_average:
+            prefix = f"X-averaged {domain}"
+        else:
+            prefix = f"{self.phase_param.phase_prefactor}{Domain}"
+        f_v_dist = variables[
+            f"{prefix} volume-weighted {phase_name}particle-size distribution [m-1]"
+        ]
+        return R, f_v_dist, variables
 
     def _get_effective_diffusivity(self, c, T, current):
         domain, Domain = self.domain_Domain
@@ -72,8 +151,8 @@ class BaseParticle(pybamm.BaseSubModel):
         All particle submodels must provide the particle concentration as an argument
         to this method. Some submodels solve for quantities other than the concentration
         itself, for example the 'XAveragedPolynomialProfile' models solves for the
-        x-averaged concentration. In such cases the variables being solved for (set in
-        'get_fundamental_variables') must also be passed as keyword arguments. If not
+        x-averaged concentration. In such cases the variables being solved for must
+        also be passed as keyword arguments. If not
         passed as keyword arguments, the various average concentrations and surface
         concentration are computed automatically from the particle concentration.
         """
@@ -425,6 +504,34 @@ class BaseParticle(pybamm.BaseSubModel):
                 }
             )
 
+        return variables
+
+    def _get_flux_and_diffusivity_variables(self, N_s, D_eff):
+        """
+        Standard flux and diffusivity variables, given the flux and effective
+        diffusivity in the domains of the variable being solved for.
+        """
+        if self.x_average:
+            if self.size_distribution:
+                broadcast = pybamm.TertiaryBroadcast
+            else:
+                broadcast = pybamm.SecondaryBroadcast
+            D_eff = broadcast(D_eff, [f"{self.domain} electrode"])
+            N_s = broadcast(N_s, [f"{self.domain} electrode"])
+
+        variables = {}
+        if self.size_distribution:
+            variables.update(
+                self._get_standard_diffusivity_distribution_variables(D_eff)
+            )
+            variables.update(self._get_standard_flux_distribution_variables(N_s))
+            # Size-average with the area-weighted distribution
+            D_eff = pybamm.size_average(D_eff)
+            R = pybamm.SpatialVariable("R", domains=D_eff.domains)
+            f_a_dist = self.phase_param.f_a_dist(R)
+            N_s = pybamm.Integral(f_a_dist * N_s, R)
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
+        variables.update(self._get_standard_flux_variables(N_s))
         return variables
 
     def _get_standard_diffusivity_variables(self, D_eff):

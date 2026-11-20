@@ -1346,10 +1346,10 @@ class BaseModel:
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
 
-    def build_fundamental(self):
-        # Get the fundamental variables
-        self._variables_by_submodel = {submodel: {} for submodel in self.submodels}
-        for submodel_name, submodel in self.submodels.items():
+    def build_fundamental(self, submodels=None):
+        """Get the fundamental variables of submodels that do not define ``build``."""
+        submodels = self.submodels if submodels is None else submodels
+        for submodel_name, submodel in submodels.items():
             pybamm.logger.debug(
                 f"Getting fundamental variables for {submodel_name} submodel ({self.name})"
             )
@@ -1361,20 +1361,20 @@ class BaseModel:
 
         self._built_fundamental = True
 
-    def build_coupled_variables(self):
-        # Note: pybamm will try to get the coupled variables for the submodels in the
-        # order they are set by the user. If this fails for a particular submodel,
-        # return to it later and try again. If setting coupled variables fails and
-        # there are no more submodels to try, raise an error.
-        submodels = list(self.submodels.keys())
+    def build_coupled_variables(self, submodels=None):
+        """Get the coupled variables of submodels that do not define ``build``."""
+        # Submodels are tried in the order they are set. If one fails, return to it
+        # later and try again; raise once no submodel can make progress.
+        submodels = self.submodels if submodels is None else submodels
+        remaining = list(submodels.keys())
         count = 0
         # For this part the FuzzyDict of variables is briefly converted back into a
         # normal dictionary for speed with KeyErrors
         self._variables = dict(self._variables)
-        while len(submodels) > 0:
+        while len(remaining) > 0:
             count += 1
-            for submodel_name, submodel in self.submodels.items():
-                if submodel_name in submodels:
+            for submodel_name, submodel in submodels.items():
+                if submodel_name in remaining:
                     pybamm.logger.debug(
                         f"Getting coupled variables for {submodel_name} submodel ({self.name})"
                     )
@@ -1391,9 +1391,9 @@ class BaseModel:
                             }
                         )
                         self.variables.update(updated_variables)
-                        submodels.remove(submodel_name)
+                        remaining.remove(submodel_name)
                     except KeyError as key:
-                        if len(submodels) == 1 or count == 100:
+                        if len(remaining) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
                                 f"Missing variable for submodel '{submodel_name}': {key}.\n"
@@ -1408,32 +1408,139 @@ class BaseModel:
         # Convert variables back into FuzzyDict
         self.variables = pybamm.FuzzyDict(self._variables)
 
-    def build_model_equations(self):
-        # Set model equations
-        for submodel_name, submodel in self.submodels.items():
+    def build_model_equations(self, submodels=None):
+        """Set the equations of submodels that do not define ``build``."""
+        submodels = self.submodels if submodels is None else submodels
+        for submodel_name, submodel in submodels.items():
             pybamm.logger.verbose(
-                f"Setting rhs for {submodel_name} submodel ({self.name})"
+                f"Setting equations for {submodel_name} submodel ({self.name})"
             )
-
             submodel.set_rhs(self.variables)
-            pybamm.logger.verbose(
-                f"Setting algebraic for {submodel_name} submodel ({self.name})"
-            )
-
             submodel.set_algebraic(self.variables)
-            pybamm.logger.verbose(
-                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
-            )
-
             submodel.set_boundary_conditions(self.variables)
-            pybamm.logger.verbose(
-                f"Setting initial conditions for {submodel_name} submodel ({self.name})"
-            )
             submodel.set_initial_conditions(self.variables)
             submodel.add_events_from(self.variables)
-            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
+
+    def build_submodels(self):
+        """
+        Build each submodel and add its variables, equations and events to the model.
+
+        Submodels that define :meth:`pybamm.BaseSubModel.build` are built first, in
+        any order. Submodels that only define the deprecated
+        ``get_fundamental_variables``/``get_coupled_variables``/``set_*`` methods
+        are then built with those.
+        """
+        self._variables_by_submodel = {name: {} for name in self.submodels}
+        legacy_submodels = {}
+        for submodel_name, submodel in self.submodels.items():
+            if not submodel.defines_build:
+                legacy_submodels[submodel_name] = submodel
+                continue
+            pybamm.logger.debug(f"Building {submodel_name} submodel ({self.name})")
+            submodel.build()
+            self._variables_by_submodel[submodel_name].update(submodel.variables)
+            self.update(submodel)
+            self.check_no_repeated_keys()
+
+        deprecated = [
+            name
+            for name, submodel in legacy_submodels.items()
+            if submodel.overrides_deprecated_methods
+        ]
+        if deprecated:
+            warnings.warn(
+                "Building submodels with get_fundamental_variables, "
+                "get_coupled_variables and the set_* methods is deprecated; define "
+                "`build` instead and use `coupled_variable` for variables from other "
+                f"submodels. Submodels using the old methods: {deprecated}",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        if legacy_submodels:
+            self.build_fundamental(legacy_submodels)
+            self.build_coupled_variables(legacy_submodels)
+            self.build_model_equations(legacy_submodels)
+
+    def resolve_coupled_variables(self):
+        """
+        Replace the coupled variables in the model with the variables they name.
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If a coupled variable is missing from the model's variables, its domains
+            differ from those of the variable it names, or variables depend on each
+            other circularly.
+        """
+        owners = {
+            name: submodel_name
+            for submodel_name, submodel in self.submodels.items()
+            for name in submodel.coupled_variables
+        }
+        unresolved = self._variables
+        resolved = {}
+        in_progress = []
+        cache = {}
+
+        def resolve_name(name):
+            if name in resolved:
+                return resolved[name]
+            if name in in_progress:
+                cycle = " -> ".join([*in_progress[in_progress.index(name) :], name])
+                raise pybamm.ModelError(
+                    f"Circular dependency between variables: {cycle}"
+                )
+            if name not in unresolved:
+                owner = owners.get(name)
+                prefix = f" for submodel '{owner}'" if owner else ""
+                raise pybamm.ModelError(
+                    f"Missing variable{prefix}: '{name}'.\nCheck the selected "
+                    "submodels provide all of the required variables."
+                )
+            in_progress.append(name)
+            resolved[name] = resolve(unresolved[name])
+            in_progress.pop()
+            return resolved[name]
+
+        def replace(node, new_leaves):
+            if not isinstance(node, pybamm.CoupledVariable):
+                new_node = pybamm.rebuild(node, new_leaves)
+                # rebuilding drops display labels, which are not part of identity
+                if node.print_name is not None and new_node.print_name is None:
+                    new_node.print_name = node._raw_print_name
+                return new_node
+            target = resolve_name(node.name)
+            if dict(node.domains) != dict(target.domains):
+                raise pybamm.ModelError(
+                    f"Coupled variable '{node.name}' has domains {dict(node.domains)} "
+                    f"but the variable it names has domains {dict(target.domains)}"
+                )
+            return target
+
+        def resolve(symbol):
+            return pybamm.tree_map(replace, symbol, cache=cache)
+
+        def resolve_equations(equations):
+            return {resolve(var): resolve(eqn) for var, eqn in equations.items()}
+
+        self.variables = pybamm.FuzzyDict(
+            {name: resolve_name(name) for name in unresolved}
+        )
+        self.rhs = resolve_equations(self.rhs)
+        self.algebraic = resolve_equations(self.algebraic)
+        self.initial_conditions = resolve_equations(self.initial_conditions)
+        self.boundary_conditions = {
+            resolve(var): {
+                side: (resolve(expr), bc_type) for side, (expr, bc_type) in bcs.items()
+            }
+            for var, bcs in self.boundary_conditions.items()
+        }
+        self.events = [
+            pybamm.Event(event.name, resolve(event.expression), event.event_type)
+            for event in self.events
+        ]
 
     def build_model(self):
         self._build_model()
@@ -1449,13 +1556,8 @@ class BaseModel:
             )
 
         pybamm.logger.info(f"Start building {self.name}")
-
-        if self._built_fundamental is False:
-            self.build_fundamental()
-
-        self.build_coupled_variables()
-
-        self.build_model_equations()
+        self.build_submodels()
+        self.resolve_coupled_variables()
 
     def set_initial_conditions_from(
         self,
