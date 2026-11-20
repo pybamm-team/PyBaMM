@@ -15,6 +15,7 @@
 - PyBaMM no longer depends on xarray: `ProcessedVariable.xr_array_raw_initialized` is removed, bad interpolation queries raise `ValueError`, and a NaN only affects interpolation next to it. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - An interpolation axis of one point gives its value at that point, or everywhere with `fill_value="extrapolate"`, where xarray gave NaN except at the point of a 1D grid. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - Solutions saved by 26.10 or earlier load without xarray only through `pybamm.load`, which raises an `ImportError` if the loaded object keeps an xarray or pandas object it could not import. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
+- `pybamm` now ships platform wheels with its Rust core compiled in as `pybamm.rust._core`: one `cp311-abi3` wheel per platform for Python 3.11-3.15. Building from source or the sdist requires `cargo` 1.89+; `pip install --only-binary pybamm pybamm` forces a wheel. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 
 ## Deprecated
 
@@ -25,6 +26,7 @@
 
 ## Features
 
+- `IDAKLUSolver` events can use time derivatives, e.g. `x.diff(pybamm.t)`, with `pybammsolvers` v0.13.0, which `pybamm` now requires. ([#6056](https://github.com/pybamm-team/PyBaMM/pull/6056))
 - Added `Solution.save_vtu`, which exports variables on unstructured finite-volume meshes to ParaView as one `.vtu` per output time plus a `.pvd` time index. Requires `vtk`. ([#5853](https://github.com/pybamm-team/PyBaMM/pull/5853))
 - Added flux boundary conditions for 1D finite volume method. This is an alternative way to apply Neumann boundary conditions without specifying them as an explicit expression for the gradient. ([#5524](https://github.com/pybamm-team/PyBaMM/pull/5524))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
@@ -39,10 +41,14 @@
 - `pybamm.UserSuppliedUnstructuredMesh` loads hexahedral mesh files with planar faces, such as structured gmsh meshes of thin pouch-cell layers, with quad boundary tags. Warped or collapsed hexahedra, mixed volume cell types and wedges, pyramids or polyhedra raise `GeometryError`. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 - `pybamm-core` compiles a model into a `CompiledModel`: a DAE with a symbolic Jacobian, per-output sparsity, coloured and lane-batched Jacobian sweeps, fused event and output tapes, and a versioned C ABI (`ffi.rs`) that a drift test pins against pybammsolvers' header. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
 - `pybamm-core`'s reverse-mode AD values the primitives through the same definitions as the interpreters, and a test holds its partials bitwise to them. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
+- `pybamm.rust` exposes `ExprGraph`, `CompiledFunction` (one expression, or a named set via `compile_outputs`, with lane-batched trajectory and Hermite evaluation) and `CompiledJacobian`, with hand-written type stubs that `mypy.stubtest` pins against the built extension. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 - Added an example notebook, `pouch-cell-DFN-3D`, that builds a 3D pouch cell DFN with both current collectors, their tabs and a 3D heat equation on hexahedral meshes, solved with `FiniteVolumeUnstructured` and animated with `VTKQuickPlot`. ([#5930](https://github.com/pybamm-team/PyBaMM/pull/5930))
 
 ## Bug fixes
 
+- `symbol.diff(pybamm.t)` now works through functions, concatenations, `CoupledVariable`s, variables with a reference or bounds, and spatial operators that do not use boundary conditions. `CoupledVariable`s in events are now resolved. ([#6056](https://github.com/pybamm-team/PyBaMM/pull/6056))
+- Preserve the latest completed experiment state and avoid a duplicate cycle callback when a solver fails before the first step of an unsaved cycle. ([#5898](https://github.com/pybamm-team/PyBaMM/pull/5898))
+- A voltage termination without `>` or `<` on a step that is neither a charge nor a discharge, such as `"Rest for 1 hour or until 3.5 V"`, now warns that it is ignored instead of being dropped silently. ([#6032](https://github.com/pybamm-team/PyBaMM/issues/6032), [#6033](https://github.com/pybamm-team/PyBaMM/pull/6033))
 - `FiniteVolume` now averages a node-valued divisor of a gradient, as in `grad(u) / w`, onto faces as a series resistance, matching `grad(u) * (1 / w)`, and a term added to a gradient arithmetically; both took the harmonic mean. ([#5863](https://github.com/pybamm-team/PyBaMM/issues/5863), [#5940](https://github.com/pybamm-team/PyBaMM/pull/5940))
 - Experiments run on models without summary variables, such as a `pybamm.BaseModel`, and `Simulation` raises a `ModelError` when the model reads neither `"Current function [A]"` nor, for steps with a temperature, `"Ambient temperature [K]"`, rather than ignoring the steps. ([#6013](https://github.com/pybamm-team/PyBaMM/issues/6013), [#6014](https://github.com/pybamm-team/PyBaMM/pull/6014))
 - `IDAKLUSolver` solves forward sensitivities with IDAS's staggered corrector instead of the simultaneous one, so sensitivity solves at tight tolerances no longer fail with `IDA_CONV_FAIL`. ([#6045](https://github.com/pybamm-team/PyBaMM/pull/6045))
@@ -53,6 +59,7 @@
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
 - One-state hysteresis models now take their initial potentials from the OCP at the initial hysteresis state, not the equilibrium OCP, so an inconsistent equilibrium OCP no longer stops them starting. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
+- `FuzzyDict.search` with blank entries in a list of terms, such as `search(["", "Electrolyte", "Potenteel"])`, now labels each result with the right term and searches every term. ([#6019](https://github.com/pybamm-team/PyBaMM/pull/6019))
 - `pybamm.parameter_sets` and `pybamm.dispatch.models` now list names in sorted order. Before, the order depended on which installed package was found first. ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))

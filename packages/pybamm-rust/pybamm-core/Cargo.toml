@@ -13,7 +13,7 @@ thiserror = "2"
 # 754-2019 `minimumNumber`/`maximumNumber`, as `f64::min`/`max` leave signed zeros unordered.
 libm = "0.2"
 serde = { version = "1", features = ["derive"], optional = true }
-bincode = { version = "1", optional = true }
+bincode = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 # Compiles matrix products for the detected instruction set, so `accumulate` needs no `unsafe`.

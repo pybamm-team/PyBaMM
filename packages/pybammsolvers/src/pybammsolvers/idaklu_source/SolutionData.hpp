@@ -58,6 +58,7 @@ class SolutionData
       std::vector<sunrealtype>&& ypS,
       std::vector<sunrealtype>&& yinit,
       std::vector<sunrealtype>&& yterm,
+      std::vector<sunrealtype>&& ypterm,
       std::vector<sunrealtype>&& yS_init,
       std::vector<sunrealtype>&& yS_term,
       ptrdiff_t arg_sens0,
@@ -73,6 +74,7 @@ class SolutionData
         ypS_vec(std::move(ypS)),
         yinit_vec(std::move(yinit)),
         yterm_vec(std::move(yterm)),
+        ypterm_vec(std::move(ypterm)),
         yS_init_vec(std::move(yS_init)),
         yS_term_vec(std::move(yS_term)),
         arg_sens0(arg_sens0),
@@ -112,6 +114,7 @@ class SolutionData
                            ypS_vec.empty() ? 0 : arg_sens0, arg_sens1, arg_sens2),
         vector_to_numpy(std::move(yinit_vec)),
         vector_to_numpy(std::move(yterm_vec)),
+        vector_to_numpy(std::move(ypterm_vec)),
         vector_to_numpy_2d(std::move(yS_init_vec), n_state_sens, n_states),
         vector_to_numpy_2d(std::move(yS_term_vec), n_state_sens, n_states),
         stats
@@ -128,6 +131,7 @@ private:
     std::vector<sunrealtype> ypS_vec;
     std::vector<sunrealtype> yinit_vec;
     std::vector<sunrealtype> yterm_vec;
+    std::vector<sunrealtype> ypterm_vec;
     std::vector<sunrealtype> yS_init_vec;
     std::vector<sunrealtype> yS_term_vec;
     ptrdiff_t arg_sens0 = 0;
