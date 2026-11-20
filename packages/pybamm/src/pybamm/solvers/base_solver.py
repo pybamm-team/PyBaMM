@@ -70,6 +70,8 @@ class BaseSolver:
 
     #: Whether the solver uses the jacobian of the rhs on its own
     uses_rhs_jacobian = True
+    #: Whether termination events can use the state derivatives, `y_dot`
+    supports_state_derivative_events = False
 
     def __init__(
         self,
@@ -577,6 +579,7 @@ class BaseSolver:
             y_diff = casadi.MX.sym("y_diff", model.len_rhs)
             y_alg = casadi.MX.sym("y_alg", model.len_alg)
             y_casadi = casadi.vertcat(y_diff, y_alg)
+            y_dot_casadi = casadi.MX.sym("y_dot", model.len_rhs_and_alg)
             p_casadi = {}
             for name, value in inputs.items():
                 if isinstance(value, numbers.Number):
@@ -590,6 +593,7 @@ class BaseSolver:
                     "y_diff": y_diff,
                     "y_alg": y_alg,
                     "y_casadi": y_casadi,
+                    "y_dot_casadi": y_dot_casadi,
                     "p_casadi": p_casadi,
                     "p_casadi_stacked": p_casadi_stacked,
                 }
@@ -728,18 +732,25 @@ class BaseSolver:
                 )[0]
                 # use the actual casadi object as this will go into the rhs
                 casadi_switch_events.append(event_casadi)
-            else:
-                # use the function call
-                event_call = process(
-                    event.expression,
-                    f"event_{n}",
-                    vars_for_processing,
-                    use_jacobian=False,
-                )[0]
-                if event.event_type == pybamm.EventType.TERMINATION:
-                    terminate_events.append(event_call)
-                elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                    interpolant_extrapolation_events.append(event_call)
+            elif event.event_type == pybamm.EventType.TERMINATION:
+                terminate_events.append(
+                    process(
+                        event.expression,
+                        f"event_{n}",
+                        vars_for_processing,
+                        use_jacobian=False,
+                        use_state_derivatives=self.supports_state_derivative_events,
+                    )[0]
+                )
+            elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                interpolant_extrapolation_events.append(
+                    process(
+                        event.expression,
+                        f"event_{n}",
+                        vars_for_processing,
+                        use_jacobian=False,
+                    )[0]
+                )
 
         return (
             casadi_switch_events,
@@ -1540,15 +1551,19 @@ class BaseSolver:
             events_eval[idx] = event_eval
 
         if events_eval.min() <= 0:
-            # find the events that were triggered by initial conditions
-            termination_events = [
-                x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
-            ]
-            idxs = np.where(events_eval <= 0)[0]
-            event_names = [termination_events[idx].name for idx in idxs]
-            raise pybamm.SolverError(
-                f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
+            self._raise_events_at_initial_conditions(
+                model, events_eval <= 0, inputs_dict
             )
+
+    @staticmethod
+    def _raise_events_at_initial_conditions(model, fired, inputs_dict):
+        termination_events = [
+            x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
+        ]
+        event_names = [termination_events[idx].name for idx in np.flatnonzero(fired)]
+        raise pybamm.SolverError(
+            f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
+        )
 
     @staticmethod
     def _overlay_options(
@@ -2413,7 +2428,12 @@ def stack_inputs(inputs_dict: dict) -> casadi.DM:
 
 
 def process(
-    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+    symbol,
+    name,
+    vars_for_processing,
+    use_jacobian=None,
+    return_jacp_stacked=None,
+    use_state_derivatives=False,
 ):
     """
     Parameters
@@ -2429,6 +2449,9 @@ def process(
     return_jacp_stacked: bool, optional
         returns Jacobian function wrt the stacked sensitivity parameters instead
         of jacp
+    use_state_derivatives: bool, optional
+        whether the CasADi functions take the state derivatives, `y_dot`, as a
+        fourth input. Default is False
 
     Returns
     -------
@@ -2521,7 +2544,12 @@ def process(
 
         # Process with CasADi
         report(f"Converting {name} to CasADi")
-        casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+        args = [t_casadi, y_casadi, p_casadi_stacked]
+        y_dot_casadi = None
+        if use_state_derivatives:
+            y_dot_casadi = vars_for_processing["y_dot_casadi"]
+            args.append(y_dot_casadi)
+        casadi_expression = symbol.to_casadi(t_casadi, y_casadi, y_dot_casadi, p_casadi)
         # Add sensitivity vectors to the rhs and algebraic equations
         jacp = None
 
@@ -2538,7 +2566,7 @@ def process(
                 )
                 jacp = casadi.Function(
                     f"d{name}_dp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
+                    args,
                     [casadi.jacobian(casadi_expression, sensitivity_inputs_stacked)],
                 )
             else:
@@ -2547,7 +2575,7 @@ def process(
                 # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
                 jacp = casadi.Function(
                     name + "_jacp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
+                    args,
                     [
                         casadi.densify(
                             casadi.jacobian(casadi_expression, p_casadi[pname])
@@ -2583,8 +2611,6 @@ def process(
             jac = None
             jac_action = None
 
-        func = casadi.Function(
-            name, [t_casadi, y_casadi, p_casadi_stacked], [casadi_expression]
-        )
+        func = casadi.Function(name, args, [casadi_expression])
 
     return func, jac, jacp, jac_action

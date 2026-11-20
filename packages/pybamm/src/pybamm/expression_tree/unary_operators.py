@@ -528,6 +528,13 @@ class SpatialOperator(UnaryOperator):
     # Names of __init__ args (besides the child) to serialise; subclasses set this.
     _json_extra_fields: tuple[str, ...] = ()
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Commutes with d/dt; overridden if not linear in the child's values alone
+        if variable == pybamm.t:
+            return self._unary_new_copy(self.child.diff(variable))
+        return super()._diff(variable)
+
     def to_json(self):
         json_dict = super().to_json()
         for field in self._json_extra_fields:
@@ -559,6 +566,11 @@ class Gradient(SpatialOperator):
                 f"Cannot take gradient of '{child}' since it evaluates on edges"
             )
         super().__init__("grad", child)
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Uses the child's boundary conditions, which its time derivative lacks
+        raise NotImplementedError
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -667,6 +679,11 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Uses the child's boundary conditions, which its time derivative lacks
+        raise NotImplementedError
+
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
@@ -685,6 +702,11 @@ class GradientSquared(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad squared", child)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Not linear in the child, unlike the other spatial operators
+        raise NotImplementedError
+
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
@@ -701,6 +723,10 @@ class Mass(SpatialOperator):
     def __init__(self, child):
         super().__init__("mass", child)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
+
     def _evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self._domains, typ="matrix")
 
@@ -716,6 +742,10 @@ class BoundaryMass(SpatialOperator):
 
     def __init__(self, child):
         super().__init__("boundary mass", child)
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
 
     def _evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self._domains, typ="matrix")
@@ -962,6 +992,10 @@ class DefiniteIntegralVector(SpatialOperator):
         self.vector_type = vector_type
         # integrating removes the domain
         super().__init__(name, child, domains=_EMPTY_DOMAINS)
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -1274,6 +1308,10 @@ class BoundaryMeshSize(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary mesh size", child, side)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
+
 
 class ExplicitTimeIntegral(UnaryOperator):
     __slots__ = ("initial_condition",)
@@ -1406,6 +1444,11 @@ class UpwindDownwind(SpatialOperator):
             raise TypeError(
                 f"Cannot upwind '{child}' since it does not " + "evaluate on nodes."
             )
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Uses the child's boundary conditions, which its time derivative lacks
+        raise NotImplementedError
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""

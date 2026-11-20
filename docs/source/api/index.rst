@@ -24,6 +24,7 @@ For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>` 
    spatial_methods/index
    solvers/index
    codegen/index
+   rust
    experiment/index
    simulation/index
    plotting/index
