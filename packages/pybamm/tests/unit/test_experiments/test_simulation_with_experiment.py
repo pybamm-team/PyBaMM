@@ -2852,3 +2852,95 @@ class TestSimulationExperiment:
 
         # Reusing the same Simulation must refresh experiment ICs when SOC changes.
         assert ic1 != ic2
+
+    @staticmethod
+    def _heated_body(control):
+        model = pybamm.BaseModel()
+        temperature = pybamm.Variable("Temperature [K]")
+        model.rhs = {temperature: control / 1000}
+        model.initial_conditions = {temperature: 300}
+        model.variables = {"Temperature [K]": temperature}
+        return model
+
+    def test_experiment_on_model_without_summary_variables(self):
+        current = pybamm.FunctionParameter(
+            "Current function [A]", {"Time [s]": pybamm.t}
+        )
+        model = self._heated_body(current)
+        experiment = pybamm.Experiment(
+            ["Rest for 10 seconds", "Discharge at 2 A for 10 seconds"]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Current function [A]": 1}),
+            experiment=experiment,
+        )
+        solution = sim.solve()
+
+        temperature = solution["Temperature [K]"]
+        np.testing.assert_allclose(temperature(10), 300, rtol=1e-6)
+        np.testing.assert_allclose(temperature(20), 300.02, rtol=1e-6)
+        assert solution.summary_variables.all_variables == []
+
+    def test_experiment_on_model_that_does_not_read_the_current(self):
+        model = self._heated_body(pybamm.Parameter("Heating power [W]"))
+        experiment = pybamm.Experiment(
+            ["Rest for 10 seconds", "Discharge at 1 A for 10 seconds"] * 2
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Heating power [W]": 100}),
+            experiment=experiment,
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"steps 'Rest for 10 seconds', 'Discharge at 1 A for 10 seconds' "
+            r"set 'Current function \[A\]', which the model 'Unnamed model' does not",
+        ):
+            sim.solve()
+
+    def test_experiment_on_model_that_reads_only_the_ambient_temperature(self):
+        model = pybamm.BaseModel()
+        temperature = pybamm.Variable("Temperature [K]")
+        ambient_temperature = pybamm.Parameter("Ambient temperature [K]")
+        model.rhs = {temperature: (ambient_temperature - temperature) / 10}
+        model.initial_conditions = {temperature: 300}
+        model.variables = {"Temperature [K]": temperature}
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Rest for 100 seconds", temperature="30 oC"),
+                pybamm.step.string("Rest for 100 seconds", temperature="40 oC"),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Ambient temperature [K]": 300}),
+            experiment=experiment,
+        )
+        solution = sim.solve()
+
+        temperature = solution["Temperature [K]"]
+        np.testing.assert_allclose(temperature(100), 303.15, rtol=1e-5)
+        np.testing.assert_allclose(temperature(200), 313.15, rtol=1e-5)
+
+    def test_experiment_temperature_step_on_model_that_reads_neither(self):
+        model = self._heated_body(pybamm.Parameter("Heating power [W]"))
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Rest for 10 seconds", temperature="30 oC"),
+                "Rest for 20 seconds",
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Heating power [W]": 100}),
+            experiment=experiment,
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"steps 'Rest for 10 seconds' set 'Current function \[A\]' and "
+            r"'Ambient temperature \[K\]', neither of which the model 'Unnamed "
+            r"model' reads, so they would have no effect on it\. The experiment "
+            r"steps 'Rest for 20 seconds' set 'Current function \[A\]', which",
+        ):
+            sim.solve()
