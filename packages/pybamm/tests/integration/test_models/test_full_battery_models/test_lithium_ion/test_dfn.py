@@ -398,3 +398,29 @@ class TestDFNWithSizeDistribution:
             parameter_values["Positive electrode porosity"],
             rtol=1e-12,
         )
+
+    def test_initial_sei_thickness_with_graded_active_material(self):
+        options = {
+            "particle size": "distribution",
+            "SEI": "solvent-diffusion limited",
+            "SEI porosity change": "true",
+        }
+        parameter_values = pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("OKane2022")
+        )
+        L_n = parameter_values["Negative electrode thickness [m]"]
+        parameter_values["Negative electrode active material volume fraction"] = (
+            lambda x, y, z: 0.60 + 0.15 * x / L_n
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(options),
+            parameter_values=parameter_values,
+            var_pts=self.var_pts,
+        )
+        solution = sim.solve([0, 3600])
+
+        np.testing.assert_allclose(
+            solution["Negative SEI thickness [m]"](0.0),
+            parameter_values["Initial SEI thickness [m]"],
+            rtol=1e-12,
+        )
