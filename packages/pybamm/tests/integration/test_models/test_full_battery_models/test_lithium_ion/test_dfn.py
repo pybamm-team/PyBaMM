@@ -333,6 +333,30 @@ class TestDFNWithSizeDistribution:
                 },
             ),
             (
+                pybamm.lithium_ion.SPM,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.SPM,
+                ("single", "distribution"),
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.MPM,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
                 pybamm.lithium_ion.DFN,
                 "distribution",
                 {

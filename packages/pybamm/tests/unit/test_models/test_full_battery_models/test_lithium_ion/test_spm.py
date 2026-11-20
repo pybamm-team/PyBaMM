@@ -43,17 +43,15 @@ class TestSPM(BaseUnitTestLithiumIon):
     @pytest.mark.parametrize(
         "particle_size", ["distribution", ("single", "distribution")]
     )
-    def test_distribution_porosity_change_not_implemented(self, particle_size):
-        options = {"particle size": particle_size, "SEI porosity change": "true"}
-        with pytest.raises(pybamm.OptionError, match=r"distributions"):
-            pybamm.lithium_ion.SPM(options)
-
-        class SubclassedSPM(pybamm.lithium_ion.SPM):
-            pass
-
-        options["x-average side reactions"] = "true"
-        with pytest.raises(pybamm.OptionError, match=r"distributions"):
-            SubclassedSPM(options)
+    def test_distribution_porosity_change(self, particle_size):
+        options = {
+            "particle size": particle_size,
+            "SEI": "solvent-diffusion limited",
+            "SEI porosity change": "true",
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        self.check_well_posedness(options)
 
     def test_distribution_options(self):
         options = {"particle size": "distribution"}

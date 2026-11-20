@@ -42,6 +42,7 @@
 
 ## Bug fixes
 
+- SPM and MPM with a particle-size distribution now support `"SEI porosity change"` and `"lithium plating porosity change"`. ([#6081](https://github.com/pybamm-team/PyBaMM/pull/6081))
 - SEI and lithium plating thicknesses now use the initial local surface area, so without `"x-average side reactions"` the SEI starts at `"Initial SEI thickness [m]"` when particle size or active material fraction varies. ([#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
 - The DFN with a particle-size distribution now builds with `"SEI porosity change"` or `"lithium plating porosity change"`; the SEI concentration is now always size-averaged. SPM and MPM raise an `OptionError` for this combination. ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417), [#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
 - `FiniteVolume` now averages a node-valued divisor of a gradient, as in `grad(u) / w`, onto faces as a series resistance, matching `grad(u) * (1 / w)`, and a term added to a gradient arithmetically; both took the harmonic mean. ([#5863](https://github.com/pybamm-team/PyBaMM/issues/5863), [#5940](https://github.com/pybamm-team/PyBaMM/pull/5940))
