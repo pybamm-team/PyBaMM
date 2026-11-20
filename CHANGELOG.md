@@ -42,6 +42,7 @@
 
 ## Bug fixes
 
+- A voltage termination without `>` or `<` on a step that is neither a charge nor a discharge, such as `"Rest for 1 hour or until 3.5 V"`, now warns that it is ignored instead of being dropped silently. ([#6032](https://github.com/pybamm-team/PyBaMM/issues/6032), [#6033](https://github.com/pybamm-team/PyBaMM/pull/6033))
 - `FiniteVolume` now averages a node-valued divisor of a gradient, as in `grad(u) / w`, onto faces as a series resistance, matching `grad(u) * (1 / w)`, and a term added to a gradient arithmetically; both took the harmonic mean. ([#5863](https://github.com/pybamm-team/PyBaMM/issues/5863), [#5940](https://github.com/pybamm-team/PyBaMM/pull/5940))
 - Experiments run on models without summary variables, such as a `pybamm.BaseModel`, and `Simulation` raises a `ModelError` when the model reads neither `"Current function [A]"` nor, for steps with a temperature, `"Ambient temperature [K]"`, rather than ignoring the steps. ([#6013](https://github.com/pybamm-team/PyBaMM/issues/6013), [#6014](https://github.com/pybamm-team/PyBaMM/pull/6014))
 - `IDAKLUSolver` solves forward sensitivities with IDAS's staggered corrector instead of the simultaneous one, so sensitivity solves at tight tolerances no longer fail with `IDA_CONV_FAIL`. ([#6045](https://github.com/pybamm-team/PyBaMM/pull/6045))
