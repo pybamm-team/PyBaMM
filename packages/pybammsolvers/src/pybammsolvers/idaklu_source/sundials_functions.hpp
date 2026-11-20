@@ -2,6 +2,7 @@
 #define PYBAMM_SUNDIALS_FUNCTIONS_HPP
 
 #include "common.hpp"
+#include <cmath>
 
 template<typename T>
 void axpy(int const n, T alpha, const T* x, T* y) {
@@ -13,6 +14,19 @@ void axpy(int const n, T alpha, const T* x, T* y) {
   }
 }
 
+/**
+ * @brief Whether every entry of x is finite, i.e. neither NaN nor inf
+ */
+template<typename T>
+bool all_finite(int const n, const T* x) {
+  // No early exit, so the compiler can vectorise the scan
+  bool finite = true;
+  for (int i = 0; i < n; ++i) {
+    finite &= std::isfinite(x[i]);
+  }
+  return finite;
+}
+
 int residual_eval(sunrealtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data);
 
@@ -22,6 +36,13 @@ int jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 
 int events_eval(sunrealtype t, N_Vector yy, N_Vector yp, sunrealtype *events_ptr,
                   void *user_data);
+
+/**
+ * @brief events_eval, but with the events reading yp zero before IDA's first step
+ * after a (re)initialization, where yp is unknown, so that IDA skips them until then
+ */
+int events_with_derivatives_eval(sunrealtype t, N_Vector yy, N_Vector yp,
+                                   sunrealtype *events_ptr, void *user_data);
 
 int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
                          N_Vector resval, N_Vector *yS, N_Vector *ypS,

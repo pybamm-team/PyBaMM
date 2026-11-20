@@ -225,6 +225,31 @@ class TestDiscretise:
         np.testing.assert_array_equal(disc.bounds[0], [-np.inf] * 100)
         np.testing.assert_array_equal(disc.bounds[1], [np.inf] * 100)
 
+    def test_boundary_operator_time_derivative(self):
+        var = pybamm.Variable("var", domain="negative electrode")
+        surface_dot = pybamm.boundary_value(var, "left").diff(pybamm.t)
+        flux_dot = pybamm.BoundaryGradient(var, "right").diff(pybamm.t)
+        bcs = {var: {"left": (pybamm.t, "Dirichlet"), "right": (pybamm.t, "Neumann")}}
+        mesh = get_mesh_for_testing(xpts=5)
+
+        # extrapolating from the interior commutes with d/dt
+        disc = pybamm.Discretisation(mesh, {"macroscale": pybamm.FiniteVolume()})
+        disc.set_variable_slices([var])
+        disc.bcs = bcs
+        y_dot = np.arange(5.0)[:, np.newaxis]
+        np.testing.assert_allclose(
+            disc.process_symbol(surface_dot).evaluate(y_dot=y_dot), [[-0.5]]
+        )
+
+        # the boundary conditions of a time derivative are not available
+        options = {"extrapolation": {"use bcs": True}}
+        disc = pybamm.Discretisation(mesh, {"macroscale": pybamm.FiniteVolume(options)})
+        disc.set_variable_slices([var])
+        disc.bcs = bcs
+        for symbol in [surface_dot, flux_dot]:
+            with pytest.raises(NotImplementedError, match="use bcs"):
+                disc.process_symbol(symbol)
+
     def test_process_symbol_base(self):
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -249,6 +274,14 @@ class TestDiscretise:
         var_dot_disc = disc.process_symbol(var_dot)
         assert isinstance(var_dot_disc, pybamm.StateVectorDot)
         assert var_dot_disc.y_slices[0] == disc.y_slices[var][0]
+
+        # the constant reference drops out of a time derivative
+        var_ref = pybamm.Variable("var ref", scale=2, reference=3)
+        disc.y_slices[var_ref] = [slice(93, 94)]
+        var_ref_dot_disc = disc.process_symbol(var_ref.diff(pybamm.t))
+        np.testing.assert_array_equal(
+            var_ref_dot_disc.evaluate(y_dot=np.full(94, 5.0)), [[10.0]]
+        )
 
         # scalar
         scal = pybamm.Scalar(5)
@@ -853,6 +886,21 @@ class TestDiscretise:
             pybamm.ModelError, match=r"initial condition is outside of variable bounds"
         ):
             disc.process_model(model)
+
+    def test_initial_condition_bounds_with_inputs(self):
+        # bounds that depend on inputs cannot be checked before solving
+        c = pybamm.Variable("c", bounds=(0, pybamm.InputParameter("c_max")))
+        model = pybamm.BaseModel()
+        model.rhs = {c: 1}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        pybamm.Discretisation().process_model(model, inplace=False)
+
+        # the other bound is still checked
+        model.initial_conditions = {c: pybamm.Scalar(-1)}
+        with pytest.raises(
+            pybamm.ModelError, match=r"initial condition is outside of variable bounds"
+        ):
+            pybamm.Discretisation().process_model(model)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()

@@ -2,9 +2,9 @@ name: Scheduled
 
 on:
   workflow_dispatch:
-  # Run every day at 3 am UTC
+  # Off the hour, where GitHub delays schedules least: "0 3 * * *" started 6-8 hours late.
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "17 2 * * *"
 
 
 permissions: {}
@@ -25,111 +25,70 @@ jobs:
   # Build the solver wheels once (like test_on_push.yml) and download them per
   # job; otherwise every nox/uv sync would compile the solver from source and fail.
   build_solver:
-    name: Solver wheels
+    name: Solver wheels (linux-x64)
     # Pass contents:read to the reusable workflow (top-level permissions are {},
     # so its checkout would otherwise get no token scope).
     permissions:
       contents: read
     uses: $/.github/workflows/_build_solver_wheels.yml
     with:
+      target: linux-x64
       cache_wheels: true
-      build_sdist: false
 
-  run_unit_integration_and_coverage_tests:
+  run_tests:
     needs: build_solver
-    runs-on: ${{ matrix.os }}
+    name: Tests
     permissions:
       contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: "unit integration"
+      target: linux-x64
+      pythons: '["3.11", "3.12", "3.14", "3.15"]'
 
+  run_coverage:
+    needs: build_solver
+    name: Coverage
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      sessions: coverage
+      target: linux-x64
+      pythons: '["3.13"]'
+      upload_coverage: true
+      install_latex: true
+
+  # Its own job, as in test_on_push.yml, so a failure here can't skip the upload.
+  run_integration_tests:
+    needs: build_solver
+    name: Integration tests
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: integration
+      target: linux-x64
+      pythons: '["3.13"]'
+
+  # One leg at a time per pool, so the sweep never holds more than one runner of
+  # any scarce pool, wherever GitHub's schedule delay lands it.
+  run_platform_tests:
+    name: ${{ matrix.target }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
-      # Full sweep: every OS x Python. Complements test_on_push.yml's sparse PR matrix;
-      # keep the Python list in sync with it.
       matrix:
-        os: [ ubuntu-latest, macos-15-intel, macos-latest, windows-latest ]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
-    name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
-
-    env:
-      # noxfile install_locked installs the matching prebuilt solver wheel from
-      # this directory instead of building the solver from source.
-      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
-
-    steps:
-      - name: Check out PyBaMM repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Linux system dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc libosmesa6 libegl1
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
-
-      - name: Install macOS system dependencies
-        if: matrix.os == 'macos-15-intel' || matrix.os == 'macos-latest'
-        env:
-          HOMEBREW_NO_INSTALL_CLEANUP: 1
-          HOMEBREW_NO_AUTO_UPDATE: 1
-          HOMEBREW_NO_COLOR: 1
-          # Speed up CI
-          NONINTERACTIVE: 1
-        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
-        run: |
-          brew analytics off
-          brew install graphviz libomp
-          brew reinstall gcc
-
-      - name: Install Windows system dependencies
-        if: matrix.os == 'windows-latest'
-        run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
-
-      # VTK save_gif needs OSMesa on headless Windows runners (osmesa.dll on PATH).
-      - name: Setup headless OpenGL on Windows
-        if: matrix.os == 'windows-latest'
-        uses: pyvista/setup-headless-display-action@c103a2ff45650d38cb71684b5dc6cdfeb9442c79 # v5.1.0
-        with:
-          pyvista: "false"
-          mesa3d-release: "24.3.0"
-          install-mesa3d-offscreen: "true"
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          version: "latest"
-          enable-cache: true
-
-      - name: Install nox
-        run: uv tool install nox
-
-      - name: Download in-repo solver wheels
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
-          path: solver-wheels
-
-      - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.13'
-        run: nox -s unit
-
-      - name: Run coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        run: nox -s coverage
-
-      - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: nox -s integration
+        target: [linux-arm64, windows-x64, macos-arm64, macos-x64]
+    uses: $/.github/workflows/_target.yml
+    with:
+      target: ${{ matrix.target }}
+      pythons: '["3.11", "3.12", "3.13", "3.14", "3.15"]'
+      sessions: "unit integration"
+      max_parallel: 1
 
   run_doctests:
     needs: build_solver
@@ -141,7 +100,8 @@ jobs:
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
       fetch_depth: 0
-      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+      target: linux-x64
+      pythons: '["3.13"]'
 
   run_example_tests:
     needs: build_solver
@@ -151,8 +111,8 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
-      texlive: true
-      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+      target: linux-x64
+      pythons: '["3.13"]'
 
   run_scripts_tests:
     needs: build_solver
@@ -162,4 +122,5 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: scripts
-      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+      target: linux-x64
+      pythons: '["3.13"]'

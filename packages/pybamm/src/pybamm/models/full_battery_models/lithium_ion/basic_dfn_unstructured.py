@@ -273,7 +273,12 @@ class BasicDFNUnstructured(BaseModel):
         ######################
         # (Some) variables
         ######################
-        voltage = pybamm.boundary_value(phi_s_p, "top-right")
+        # Area-weighted mean of phi_s_p over the positive face: the current density
+        # there is uniform, so this gives the right power; phi_s_n is 0 on the left
+        positive_face_area = pybamm.BoundaryIntegral(
+            pybamm.PrimaryBroadcast(1, "positive electrode"), "right"
+        )
+        voltage = pybamm.BoundaryIntegral(phi_s_p, "right") / positive_face_area
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
