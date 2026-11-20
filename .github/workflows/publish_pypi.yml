@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, arch: x86_64, artifact: wheels_manylinux, crossversion: true }
+          - { os: ubuntu-latest, arch: x86_64, artifact: wheels_manylinux }
           - { os: ubuntu-24.04-arm, arch: aarch64, artifact: wheels_manylinux_aarch64 }
           - { os: macos-latest, arch: arm64, artifact: wheels_macos_arm64, deployment_target: "11.0" }
           - { os: macos-15-intel, arch: x86_64, artifact: wheels_macos_x86_64, deployment_target: "10.13" }
@@ -66,19 +66,20 @@ jobs:
           persist-credentials: false
           # Full history + tags so hatch-vcs can resolve the pybamm-v* version.
           fetch-depth: 0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13
 
       # No cargo cache: a PR-poisoned cache entry could reach a published wheel.
       - name: Build wheels
         # Pinned: cibuildwheel's abi3audit default is load-bearing here.
-        run: pipx run cibuildwheel==4.1.1 packages/pybamm --output-dir wheelhouse
+        run: pipx run cibuildwheel==4.3.5 packages/pybamm --output-dir wheelhouse
         env:
           CIBW_BUILD_VERBOSITY: 1
-          # One abi3 wheel per platform serves CPython 3.11 and later.
-          CIBW_BUILD: "cp311-*"
-          CIBW_SKIP: "pp* *musllinux* *t-*"
+          # One abi3 wheel serves CPython 3.11+; cibuildwheel reuses it for cp315, so
+          # the same wheel is tested on the oldest and newest supported Python.
+          CIBW_BUILD: "cp311-* cp315-*"
+          CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.arch }}
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
           # manylinux containers have no rustup; the crate graph needs cargo >= 1.89.
@@ -90,19 +91,6 @@ jobs:
 
       - name: Check wheel metadata
         run: pipx run twine check --strict wheelhouse/*.whl
-
-      - name: Verify the abi3 wheel imports on the newest Python
-        # CIBW_TEST_COMMAND only exercises the build interpreter (3.11).
-        if: ${{ matrix.crossversion }}
-        run: |
-          pipx run --spec 'uv' uv venv --python 3.15 /tmp/abi3-check
-          VIRTUAL_ENV=/tmp/abi3-check pipx run --spec 'uv' uv pip install wheelhouse/*.whl
-          /tmp/abi3-check/bin/python -c "
-          import sys
-          from pybamm.rust import ExprGraph
-          assert sys.version_info[:2] == (3, 15), sys.version_info
-          print(sys.version_info[:2], ExprGraph.__module__)
-          "
 
       - name: Upload wheels
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
