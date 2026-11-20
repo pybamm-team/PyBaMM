@@ -321,15 +321,15 @@ jobs:
       target: linux-x64
       pythons: '["3.13"]'
 
-  # `uv sync` based so the solver's auto-bootstrap fires.
-  #  Guards both the bootstrap and the clean-clone dev experience.
+  # Checks pybamm and pybammsolvers build from a clean clone and work together;
+  # `uv sync` based so the solver's SUNDIALS/SuiteSparse bootstrap fires too.
   from_source_smoke:
     needs: changes
     if: ${{ github.event_name == 'merge_group' || needs.changes.outputs.full_push == 'true' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.pybamm == 'true' }}
     runs-on: ${{ vars.RUNNER_LINUX_X64 || 'ubuntu-latest' }}
     permissions:
       contents: read
-    name: From-source solver smoke (linux-x64 / Python 3.13)
+    name: Build pybamm + pybammsolvers from source together (linux-x64 / Python 3.13)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
