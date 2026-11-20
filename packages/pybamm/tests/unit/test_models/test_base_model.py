@@ -1679,8 +1679,9 @@ class TestBaseModel:
 
         class Submodel2(pybamm.BaseSubModel):
             def build(self):
-                u = self.coupled_variable("u")
-                self.variables.update({"w": 2 * u})
+                w = 2 * self.coupled_variable("u")
+                w.print_name = "w"
+                self.variables.update({"w": w})
 
         model = pybamm.BaseModel()
         # submodel 2 needs a variable from submodel 1, so build order must not matter
@@ -1697,6 +1698,7 @@ class TestBaseModel:
         assert model.rhs[u].value == 2
         assert model.algebraic[v] == -1.0 + v
         assert model.variables["w"] == 2 * u
+        assert model.variables["w"].print_name == "w"
         assert model.submodels["submodel 2"].list_coupled_variables() == ["u"]
 
     def test_build_legacy_submodels(self):

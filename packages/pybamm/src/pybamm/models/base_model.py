@@ -1498,7 +1498,11 @@ class BaseModel:
 
         def replace(node, new_leaves):
             if not isinstance(node, pybamm.CoupledVariable):
-                return pybamm.rebuild(node, new_leaves)
+                new_node = pybamm.rebuild(node, new_leaves)
+                # rebuilding drops display labels, which are not part of identity
+                if node.print_name is not None and new_node.print_name is None:
+                    new_node.print_name = node._raw_print_name
+                return new_node
             target = resolve_name(node.name)
             if dict(node.domains) != dict(target.domains):
                 raise pybamm.ModelError(
