@@ -155,7 +155,7 @@ gets wrong:
   in the same commit. `mypy.stubtest` (run by `packages/pybamm/tests/unit/test_rust_stubs.py`)
   machine-checks names, arities and defaults against the built extension; the types are
   review-enforced, so keep them as precise as the bindings' own coercions (e.g. the `p`
-  dict-or-array union).
+  mapping-or-array union).
 - Every feature or fix adds a `CHANGELOG.md` bullet under `# [Unreleased]` (Keep a Changelog
   format), ending with the PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`.
   Get a prediction from `uv run --no-project scripts/next_pr_number.py`. If another issue, pull
