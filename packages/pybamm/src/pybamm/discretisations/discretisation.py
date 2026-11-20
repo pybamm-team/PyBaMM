@@ -1583,6 +1583,7 @@ Discretisation._handlers = {
     pybamm.Magnitude: Discretisation._disc_magnitude,
     pybamm.Function: Discretisation._disc_children_copy,
     pybamm.Conditional: Discretisation._disc_children_copy,
+    pybamm._Brent: Discretisation._disc_children_copy,
     pybamm.VariableDot: Discretisation._disc_variable_dot,
     pybamm.Variable: Discretisation._disc_variable,
     pybamm.SpatialVariable: Discretisation._disc_spatial_variable,
