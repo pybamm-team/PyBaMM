@@ -153,7 +153,7 @@ A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous
    ```bash
    git cherry-pick -x <commit-sha-from-main>
    ```
-4. Run `uv run python scripts/update_version.py YY.MM.N.P` to update `CITATION.cff` and build the cherry-picked fixes' fragments into a dated block of `CHANGELOG.md`. Commit the result on the release branch.
+4. Check that `changelog.d/` holds only the cherry-picked fixes' fragments: `git diff --name-only --diff-filter=A pybamm-vYY.MM.N.{P-1} HEAD -- changelog.d` lists them, and any other fragment left over from `main` at the previous tag must be `git rm`ed in a separate commit. Then run `uv run python scripts/update_version.py YY.MM.N.P` to update `CITATION.cff` and build those fragments into a dated block of `CHANGELOG.md`. Commit the result on the release branch.
 5. Create a GitHub _release_ with the tag `pybamm-vYY.MM.N.P` from the `release/vYY.MM.N.P` branch (NOT from `main`). Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml`.
 6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.P`.
 7. Update the changelog on `main` separately. **Do not merge the release branch back to `main`** — that would duplicate commits with new hashes. Instead:
@@ -161,7 +161,7 @@ A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous
    git checkout main
    git checkout -b update-changelog-vYY.MM.N.P
    ```
-   Copy the new dated `vYY.MM.N.P` block from the release branch's `CHANGELOG.md` into `CHANGELOG.md`, `git rm` the fragments it consumed (`git diff --name-only --diff-filter=D pybamm-vYY.MM.N.{P-1} pybamm-vYY.MM.N.P -- changelog.d`), and update `CITATION.cff`. Open a PR to `main`.
+   Copy the new dated `vYY.MM.N.P` block from the release branch's `CHANGELOG.md` into `CHANGELOG.md`, `git rm` the fragments the release commit consumed (`git show --name-only --diff-filter=D --format= pybamm-vYY.MM.N.P -- changelog.d`), and update `CITATION.cff`. Open a PR to `main`.
 8. Delete the release branch after tagging — it is no longer needed.
 
 ### Cutting a `pybammsolvers` release

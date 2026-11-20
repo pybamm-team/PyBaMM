@@ -26,6 +26,9 @@ from the file name. Nested bullets go on the following lines, unindented:
 - Missing inputs raise a `SolverError`.
 ```
 
+To cite an issue as well, link it in the entry text, e.g. `Fixes [#1200](https://github.com/pybamm-team/PyBaMM/issues/1200).`;
+a fragment named after the issue fails CI's check that fragments are named after their PR.
+
 Preview the next release's notes with:
 
 ```bash
