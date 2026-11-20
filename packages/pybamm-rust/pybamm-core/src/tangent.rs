@@ -32,7 +32,11 @@ pub fn tangent_wrt_params(arena: &mut Arena, expr: NodeId) -> NodeId {
 /// `active_indices` must ascend. Overlap is all-or-nothing: a node straddling the
 /// boundary is seeded over its whole range.
 #[must_use]
-pub fn tangent_wrt_subset(arena: &mut Arena, expr: NodeId, active_indices: &[usize]) -> NodeId {
+pub(crate) fn tangent_wrt_subset(
+    arena: &mut Arena,
+    expr: NodeId,
+    active_indices: &[usize],
+) -> NodeId {
     assert!(
         active_indices.is_sorted(),
         "active state indices must ascend"
@@ -579,6 +583,7 @@ mod tests {
     use std::f64::consts::{FRAC_2_SQRT_PI, FRAC_PI_4};
 
     use super::*;
+    use crate::adjoint::AdjointTape;
     use crate::arena::DagRef;
     use crate::eval::{CompiledExpr, TangentInputs};
     use crate::node::{
@@ -629,6 +634,16 @@ mod tests {
             .collect()
     }
 
+    /// The gradient of a scalar `root` from one reverse pass.
+    fn reverse_gradient(arena: &Arena, root: NodeId, y: &[f64], inputs: &[f64]) -> Vec<f64> {
+        let tape = AdjointTape::new(DagRef::new(arena, root), y.len());
+        let mut scratch = vec![0.0; tape.scratch_len()];
+        let mut bar = vec![0.0; tape.scratch_len()];
+        let mut grad = vec![0.0; y.len()];
+        tape.assemble(&mut scratch, &mut bar, &mut grad, 0.0, y, &[], inputs);
+        grad
+    }
+
     #[test]
     fn power_rule_with_an_input_exponent_holds_at_a_zero_or_negative_base() {
         // d(y0^p)/dy0 = p * y0^(p - 1); a 0 * (1 / 0) form made it NaN at the origin.
@@ -644,18 +659,20 @@ mod tests {
         for y in [0.0, -1.0, 2.0] {
             let closed_form = [2.0 * y];
             assert_eq!(forward_gradient(&arena, root, &[y], &[2.0]), closed_form);
+            assert_eq!(reverse_gradient(&arena, root, &[y], &[2.0]), closed_form);
         }
     }
 
     #[test]
     fn power_rule_with_a_state_exponent_is_finite_at_a_zero_base() {
-        // At (0, 2): d/dy0 = 2 * 0 and d/dy1 is 0 by the `a > 0` convention.
+        // At (0, 2): d/dy0 = 2 * 0 and d/dy1 is 0 by the `a > 0` convention both modes share.
         let mut arena = Arena::new();
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
         let root = arena.alloc(Node::Pow(y0, y1));
         let y = [0.0, 2.0];
         assert_eq!(forward_gradient(&arena, root, &y, &[]), [0.0, 0.0]);
+        assert_eq!(reverse_gradient(&arena, root, &y, &[]), [0.0, 0.0]);
     }
 
     #[test]
@@ -674,6 +691,12 @@ mod tests {
         };
         let got = compiled.eval_with_tangent(&mut scratch, 0.0, &[0.0, 2.0], &[], &[], &seed);
         assert_eq!(got, [0.0, 0.0]);
+
+        let mut arena = Arena::new();
+        let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let zero = arena.alloc(Node::Scalar(0.0));
+        let root = arena.alloc(Node::Pow(y0, zero));
+        assert_eq!(reverse_gradient(&arena, root, &[0.0], &[]), [0.0]);
     }
 
     #[test]
@@ -746,6 +769,8 @@ mod tests {
                 let root = arena.alloc(node);
                 let got = forward_gradient(&arena, root, &[0.5], &[]);
                 assert_eq!(got, [1.0], "{label}, state first: {state_first}");
+                let got = reverse_gradient(&arena, root, &[0.5], &[]);
+                assert_eq!(got, [1.0], "{label} reverse, state first: {state_first}");
             }
         }
 
@@ -777,6 +802,8 @@ mod tests {
             let root = arena.alloc(op(y0, sqrt_y1));
             let got = forward_gradient(&arena, root, &y, &[]);
             assert_eq!(got, expected, "{label} at {y:?}");
+            let got = reverse_gradient(&arena, root, &y, &[]);
+            assert_eq!(got, expected, "{label} reverse at {y:?}");
         }
     }
 
@@ -1272,6 +1299,17 @@ mod tests {
             assert!(
                 (got - expected).abs() <= 1e-15 * expected,
                 "{label} at {y:?}: expected {expected}, got {got}"
+            );
+            // Only the seeded columns, as an unseeded one may rightly overflow.
+            let got: f64 = reverse_gradient(&arena, root, &y, &[])
+                .iter()
+                .zip(dy)
+                .filter(|&(_, seed)| seed != 0.0)
+                .map(|(gradient, seed)| gradient * seed)
+                .sum();
+            assert!(
+                (got - expected).abs() <= 1e-15 * expected,
+                "{label} reverse at {y:?}: expected {expected}, got {got}"
             );
         }
     }
