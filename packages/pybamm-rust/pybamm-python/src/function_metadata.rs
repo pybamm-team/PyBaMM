@@ -8,7 +8,7 @@ use pybamm_core::ParamRegistry;
 /// What a compiled function takes and returns, used to check and pack each call's arguments.
 #[derive(Debug, Clone)]
 pub struct FunctionMetadata {
-    /// The graph's input registry: names, registration indices and packed slots.
+    /// The graph's input registry when compiled: names, registration indices and packed slots.
     pub params: ParamRegistry,
     pub n_states: usize,
     pub uses_y_dot: bool,

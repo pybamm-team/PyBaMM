@@ -288,6 +288,7 @@ class CompiledFunction:
         root: int,
         name: str | None,
         n_states: int | None,
+        n_inputs: int,
         output_names: list[str] | None = None,
         output_lens: list[int] | None = None,
     ) -> CompiledFunction: ...
@@ -300,6 +301,7 @@ class CompiledFunction:
             int,
             str | None,
             int | None,
+            int,
             list[str] | None,
             list[int] | None,
         ],

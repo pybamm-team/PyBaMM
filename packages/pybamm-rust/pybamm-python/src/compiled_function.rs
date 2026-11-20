@@ -16,8 +16,8 @@ use pyo3::sync::PyOnceLock;
 use pyo3::types::PyDict;
 
 use pybamm_core::{
-    CompiledExpr, Dag, DagRef, Node, NodeId, ReadExtents, TangentInputs, dce, infer_sizes,
-    simplify_pipeline, tangent_wrt_params, tangent_wrt_states,
+    CompiledExpr, Dag, DagRef, Node, NodeId, ParamRegistry, ReadExtents, TangentInputs, dce,
+    infer_sizes, simplify_pipeline, tangent_wrt_params, tangent_wrt_states,
 };
 
 use crate::expr::ExprGraph;
@@ -40,6 +40,7 @@ type RebuildArgs = (
     u32,
     Option<String>,
     Option<usize>,
+    usize,
     Option<Vec<String>>,
     Option<Vec<usize>>,
 );
@@ -791,30 +792,35 @@ impl CompiledFunction {
 
     /// Rebuild from the retained `(graph, root)` (pickle protocol).
     ///
-    /// `n_states` is re-pinned exactly so a user-widened system round-trips.
+    /// `n_states` is re-pinned exactly so a user-widened system round-trips, and the inputs
+    /// are cut back to the `n_inputs` registration indices the function was compiled with.
     #[staticmethod]
     #[pyo3(
         name = "_rebuild",
-        signature = (graph, root, name, n_states, output_names = None, output_lens = None)
+        signature = (graph, root, name, n_states, n_inputs, output_names = None, output_lens = None)
     )]
+    #[allow(clippy::too_many_arguments)]
     fn rebuild(
         py: Python<'_>,
         graph: Py<ExprGraph>,
         root: u32,
         name: Option<String>,
         n_states: Option<usize>,
+        n_inputs: usize,
         output_names: Option<Vec<String>>,
         output_lens: Option<Vec<usize>>,
     ) -> PyResult<Self> {
-        let root = {
+        let (root, params) = {
             let g = graph
                 .try_borrow(py)
                 .map_err(|_| PyValueError::new_err("_rebuild: graph borrow conflict"))?;
             let root = g.checked_root(root)?;
             crate::expr::check_supported(g.arena(), [root])?;
-            root
+            (root, registry_at(&g, root, n_inputs)?)
         };
         let mut this = Self::build(py, graph, root, name, n_states)?;
+        // The restored graph also holds inputs registered after this function was compiled.
+        this.metadata.params = params;
         this.layout = match (output_names, output_lens) {
             (Some(names), Some(lens)) => {
                 Some(OutputLayout::new(names, lens, this.metadata.output_len)?)
@@ -846,6 +852,7 @@ impl CompiledFunction {
                 this.root.raw(),
                 this.name(),
                 Some(this.n_states()),
+                this.n_inputs(),
                 output_names,
                 output_lens,
             ),
@@ -903,6 +910,32 @@ fn locate_interval(ts: &[f64], x: f64) -> usize {
         return 0;
     }
     ts[1..ts.len() - 1].partition_point(|&t| t <= x)
+}
+
+/// `graph`'s registry cut back to `n_inputs` indices, refusing a cut that drops an input
+/// `root` reads.
+fn registry_at(graph: &ExprGraph, root: NodeId, n_inputs: usize) -> PyResult<ParamRegistry> {
+    let registry = graph.params();
+    let params = registry.truncated(n_inputs).ok_or_else(|| {
+        PyValueError::new_err(format!(
+            "_rebuild: n_inputs={n_inputs} exceeds the graph's {} input indices",
+            registry.index_extent()
+        ))
+    })?;
+    let arena = graph.arena();
+    let dropped = arena
+        .topological_order(root)
+        .into_iter()
+        .find_map(|id| match &arena[id] {
+            Node::InputParameter { name, index, .. } if *index >= n_inputs => Some(name.as_str()),
+            _ => None,
+        });
+    if let Some(name) = dropped {
+        return Err(PyValueError::new_err(format!(
+            "_rebuild: the expression reads input '{name}', which n_inputs={n_inputs} excludes"
+        )));
+    }
+    Ok(params)
 }
 
 /// Resolve an `n_states` override against the scanned extent; a smaller one would

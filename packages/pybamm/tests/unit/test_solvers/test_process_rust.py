@@ -174,7 +174,7 @@ class TestPickle:
         graph = ExprGraph()
         graph.state_vector(0, 2)
         with pytest.raises(ValueError, match=r"out of range"):
-            CompiledFunction._rebuild(graph, 2**31, None, None)
+            CompiledFunction._rebuild(graph, 2**31, None, None, 0)
 
     def test_rebuild_rejects_unsupported_root(self):
         from pybamm.rust import CompiledFunction, ExprGraph
@@ -183,4 +183,20 @@ class TestPickle:
         # _rebuild must apply the same check_supported gate as graph.compile.
         mm = graph.matmul(graph.state_vector(0, 2), graph.state_vector(0, 2))
         with pytest.raises(NotImplementedError, match=r"MatMul left operand"):
-            CompiledFunction._rebuild(graph, mm.id, None, None)
+            CompiledFunction._rebuild(graph, mm.id, None, None, 0)
+
+    def test_rebuild_rejects_more_inputs_than_the_graph_registered(self):
+        from pybamm.rust import CompiledFunction, ExprGraph
+
+        graph = ExprGraph()
+        expr = graph.state_vector(0, 1) * graph.input_parameter("x")
+        with pytest.raises(ValueError, match=r"n_inputs=2 exceeds the graph's 1"):
+            CompiledFunction._rebuild(graph, expr.id, None, None, 2)
+
+    def test_rebuild_rejects_dropping_an_input_the_expression_reads(self):
+        from pybamm.rust import CompiledFunction, ExprGraph
+
+        graph = ExprGraph()
+        expr = graph.state_vector(0, 1) * graph.input_parameter("x")
+        with pytest.raises(ValueError, match=r"reads input 'x'.*n_inputs=0"):
+            CompiledFunction._rebuild(graph, expr.id, None, None, 0)

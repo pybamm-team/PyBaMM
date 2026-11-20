@@ -535,6 +535,34 @@ class TestNamedOutputs:
         assert fn.jacobian("y")(0.0, np.array([0.5]), np.array([2.0])).shape == (1, 1)
 
 
+class TestPickle:
+    def _setup(self):
+        """`early` compiles before `later` registers a second input on the same graph."""
+        g = ExprGraph()
+        y = g.state_vector(0, 2)
+        early = g.compile(g.mul(y, g.input_parameter("x", 2)), name="early")
+        later = g.compile(g.add(y, g.input_parameter("p", 2)), name="later")
+        return early, later
+
+    def test_keeps_the_inputs_registered_at_compile(self):
+        early, _ = self._setup()
+        restored = pickle.loads(pickle.dumps(early))
+        assert restored.input_names == early.input_names == ("x",)
+        # Width-2 inputs keep the index extent (1) apart from the packed width (2).
+        assert restored.n_inputs == early.n_inputs == 1
+
+        y, x = np.array([2.0, 5.0]), np.array([3.0, 4.0])
+        expected = early(0.0, y, {"x": x})
+        np.testing.assert_array_equal(restored(0.0, y, {"x": x}), expected)
+        np.testing.assert_array_equal(restored(0.0, y, x), expected)
+
+    def test_functions_sharing_a_graph_keep_their_own_inputs(self):
+        early, later = self._setup()
+        restored_early, restored_later = pickle.loads(pickle.dumps((early, later)))
+        assert restored_early.input_names == ("x",)
+        assert restored_later.input_names == ("x", "p")
+
+
 class TestInstructionCounts:
     def test_n_instructions_excludes_conditional_branch_blocks(self):
         # `n_instructions` is the common tape plus one dispatch, like CasADi's Switch.
