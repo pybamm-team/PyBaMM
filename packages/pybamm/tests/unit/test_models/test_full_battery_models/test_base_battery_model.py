@@ -674,7 +674,8 @@ class TestLegacyDependentDefaults:
                 "lithium plating": (("partially reversible", "none"), "none"),
             }
         )
-        assert options.negative["SEI"] == "constant"
+        assert options.negative.primary["SEI"] == "constant"
+        assert options.negative.secondary["SEI"] == "none"
         assert options.positive["SEI"] == "none"
         options = BatteryModelOptions(
             {"working electrode": "positive", "lithium plating": "partially reversible"}

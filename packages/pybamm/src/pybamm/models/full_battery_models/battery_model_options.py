@@ -385,13 +385,13 @@ def _apply_legacy_defaults(options: pybamm.FuzzyDict, supplied: set[str]) -> Non
     # derived from the SEI supplied, before plating adds its own "constant" SEI
     if any(sei != "none" for leaves in electrode_leaves("SEI") for sei in leaves):
         set_default("SEI film resistance", "distributed")
-    set_per_electrode_default(
-        "SEI",
-        [
-            "constant" if "partially reversible" in leaves else "none"
-            for leaves in electrode_leaves("lithium plating")
-        ],
-    )
+    sei = []
+    for leaves in electrode_leaves("lithium plating"):
+        defaults = tuple(
+            "constant" if leaf == "partially reversible" else "none" for leaf in leaves
+        )
+        sei.append(defaults[0] if len(set(defaults)) == 1 else defaults)
+    set_per_electrode_default("SEI", sei)
     mechanics = []
     for cracks, lam in zip(
         electrode_leaves("SEI on cracks"),
