@@ -119,12 +119,27 @@ public:
     } catch (py::error_already_set& e) {
       if (e.matches(PyExc_KeyboardInterrupt)) throw;
       e.discard_as_unraisable(context);
-    } catch (...) {
+    } catch (const std::exception& e) {
       // A diagnostics failure must never propagate into the solve
+      write_unraisable(e.what(), context);
+    } catch (...) {
+      write_unraisable("unknown C++ exception", context);
     }
   }
 
 private:
+  /**
+   * @brief Report a C++ failure through sys.unraisablehook (GIL held)
+   *
+   * The C API is used directly because it cannot throw.
+   */
+  static void write_unraisable(const char* what, const char* context) noexcept {
+    PyObject* where = PyUnicode_FromString(context);
+    PyErr_SetString(PyExc_RuntimeError, what);
+    PyErr_WriteUnraisable(where);
+    Py_XDECREF(where);
+  }
+
   void append(std::string msg) {
     if (on_gil_thread()) {
       emit(msg);

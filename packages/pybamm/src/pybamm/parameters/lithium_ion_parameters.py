@@ -520,7 +520,18 @@ class ParticleLithiumIonParameters(BaseParameters):
             {"Through-cell distance (x) [m]": x},
         )
 
-        if self.options["open-circuit potential"] != "MSMR":
+        phase_ocp_option = getattr(self.options, self.phase)["open-circuit potential"]
+        if phase_ocp_option in (
+            "one-state hysteresis",
+            "one-state differential capacity hysteresis",
+        ):
+            # Start on the OCP the hysteresis model uses, not the equilibrium OCP,
+            # which may be inconsistent with the branches
+            h_init_av = pybamm.xyz_average(self.h_init)
+            U_lith = self.U(self.sto_init_av, main.T_init, "lithiation")
+            U_delith = self.U(self.sto_init_av, main.T_init, "delithiation")
+            self.U_init = (1 + h_init_av) / 2 * U_delith + (1 - h_init_av) / 2 * U_lith
+        elif self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
 
         # Electrode loading and capacity
@@ -659,6 +670,16 @@ class ParticleLithiumIonParameters(BaseParameters):
             "exchange-current density [A.m-2]",
             inputs,
             post_processor=regulariser,
+        )
+
+    def k0_coupled_ion_electron_transfer(self, T: pybamm.Symbol) -> pybamm.Symbol:
+        """Coupled ion-electron transfer rate constant [A.m-2]"""
+        Domain = self.domain.capitalize()
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode coupled ion-electron "
+            "transfer rate constant [A.m-2]",
+            inputs,
         )
 
     def j0_stripping(self, c_e, c_Li, T):

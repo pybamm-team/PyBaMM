@@ -9,7 +9,6 @@ import warnings
 
 import casadi
 import numpy as np
-import pandas as pd
 import pytest
 
 import pybamm
@@ -823,7 +822,7 @@ class TestParameterValues:
         filename, name = pybamm.parameters.process_parameter_data._process_name(
             name, path, ".csv"
         )
-        raw_df = pd.read_csv(filename)
+        raw_data = np.loadtxt(filename, delimiter=",", skiprows=1)
 
         # It's also helpful to check the casadi conversion here aswell
         # We check elsewhere but this helps catch additional bugs
@@ -832,7 +831,7 @@ class TestParameterValues:
         casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
 
         # check that passing the input columns give the correct output
-        for values in raw_df.values:
+        for values in raw_data:
             y = np.array([values[0], values[1], values[2]])
             f = values[3]
             casadi_sol = casadi_f(y)
@@ -869,10 +868,10 @@ class TestParameterValues:
         filename, name = pybamm.parameters.process_parameter_data._process_name(
             name, path, ".csv"
         )
-        raw_df = pd.read_csv(filename)
+        raw_data = np.loadtxt(filename, delimiter=",", skiprows=1)
 
         # check that passing the input columns give the correct output
-        for values in raw_df.values:
+        for values in raw_data:
             y = np.array([values[0], values[1]])
             f = values[2]
 
@@ -1246,6 +1245,26 @@ class TestParameterValues:
 
         # Verify result is a symbol
         assert isinstance(result, pybamm.Symbol)
+
+    @pytest.mark.parametrize("expression_function", [False, True])
+    def test_process_function_parameter_constant_derivative_keeps_shape(
+        self, expression_function
+    ):
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # f(x) does not depend on time, so its time derivative is 0 over x
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        value = (
+            ExpressionFunctionParameter("f", 2 * x, "f", ["x"])
+            if expression_function
+            else (lambda x: 2 * x)
+        )
+        derivative = pybamm.FunctionParameter("f", {"x": x}).diff(pybamm.t)
+        result = pybamm.ParameterValues({"f": value}).process_symbol(derivative)
+        assert result.domains == x.domains
+        assert result.shape_for_testing == x.shape_for_testing
 
     def test_expression_function_parameter_rebinds_metadata_leaf_domains(self):
         from pybamm.expression_tree.operations.serialise import (

@@ -254,6 +254,11 @@ def _coupled_variable_strategy() -> st.SearchStrategy[pybamm.CoupledVariable]:
     )
 
 
+def _coupled_variable_dot_strategy() -> st.SearchStrategy[pybamm.CoupledVariableDot]:
+    """The time derivative of a coupled variable."""
+    return _coupled_variable_strategy().map(lambda variable: variable.diff(pybamm.t))
+
+
 def _spatial_variable_strategy() -> st.SearchStrategy[pybamm.SpatialVariable]:
     """Spatial variable — requires a non-empty domain and a compatible name.
 
@@ -889,6 +894,7 @@ _STRATEGIES.update(
         # additional leaf strategies
         pybamm.Constant: lambda _children: _constant_strategy(),
         pybamm.CoupledVariable: lambda _children: _coupled_variable_strategy(),
+        pybamm.CoupledVariableDot: lambda _children: _coupled_variable_dot_strategy(),
         pybamm.SpatialVariable: lambda _children: _spatial_variable_strategy(),
         pybamm.FunctionParameter: lambda _children: _function_parameter_strategy(),
         # simple unary operators
@@ -1037,6 +1043,7 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
         pybamm.StateVectorBase,  # abstract base; StateVector + StateVectorDot cover it
         pybamm.Function,  # to_json() raises NotImplementedError — only SpecificFunction subclasses round-trip
         pybamm.SpecificFunction,  # base for named funcs; direct instantiation not useful
+        pybamm.expression_tree.functions._ScalarReduction,  # base for Max/Min, both covered
         pybamm.Broadcast,  # abstract base; PrimaryBroadcast/Secondary/Full covered
         pybamm.Integral,  # base for domain-constrained integrals; heavyweight constructor
         pybamm.IndependentVariable,  # abstract base; Time + SpatialVariable covered

@@ -1,6 +1,7 @@
 #
 # Test the experiment steps
 #
+import warnings
 from datetime import datetime
 
 import numpy as np
@@ -267,6 +268,35 @@ class TestExperimentSteps:
             pybamm.step.string("Discharge at 1 B for 2 hours")
         with pytest.raises(ValueError, match=r"time units must be"):
             pybamm.step.string("Discharge at 1 A for 2 years")
+        # used to fail with "not enough values to unpack"
+        with pytest.raises(ValueError, match=r"Instruction must be"):
+            pybamm.step.string("Charge 1 A for 2 hours")
+        with pytest.raises(ValueError, match=r"Instruction must be"):
+            pybamm.step.string("rest for 2 hours")
+        # used to fail with "too many values to unpack"
+        with pytest.raises(ValueError, match=r"'until' once"):
+            pybamm.step.string("Charge at 1 C until 4.1 V or until 1 hour")
+        with pytest.raises(ValueError, match=r"'for' once"):
+            pybamm.step.string("Discharge at 1 A for 1 hour for 2 hours")
+        # used to complain about the units
+        with pytest.raises(ValueError, match=r"duration must come before 'until'"):
+            pybamm.step.string("Charge at 1 C until 4.2 V for 1 hour")
+
+    @pytest.mark.parametrize(
+        ("text", "value"),
+        [
+            ("Discharge at 1 A for 1 hour  ", 1),
+            ("  Discharge at 1 A for 1 hour", 1),
+            ("Discharge at 1 A  for 1 hour", 1),
+            ("Discharge at 1 A for 1 hour\n", 1),
+            ("  Rest for 1 hour", 0),
+        ],
+    )
+    def test_step_string_extra_whitespace(self, text, value):
+        step = pybamm.step.string(text)
+        assert step.value == value
+        assert step.duration == 3600
+        assert step.description == text
 
     def test_start_times(self):
         # Test start_times
@@ -368,6 +398,41 @@ class TestExperimentSteps:
         termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
         assert termination_lt_4_1_oo == termination_lt_4_1
         assert termination_gt_4_1_oo == termination_gt_4_1
+
+    def test_voltage_termination_without_direction_warns(self):
+        variables = {"Battery voltage [V]": 4.0}
+
+        # Rest and voltage-controlled steps have no charge or discharge direction, so
+        # a voltage termination without an operator gives no event
+        for step_string in [
+            "Rest for 1 hour or until 3.5 V",
+            "Hold at 4.1 V until 4.2 V",
+        ]:
+            with pytest.warns(UserWarning, match=r"voltage termination at .* ignored"):
+                step = pybamm.step.string(step_string)
+            assert step.get_termination_events(variables) == []
+
+        # The warning points at the caller, not at PyBaMM's step classes
+        with pytest.warns(UserWarning, match=r"voltage termination") as record:
+            step = pybamm.step.rest(3600, termination="3.5V")
+        assert record[0].filename == __file__
+
+        # Copying the step for an experiment does not warn a second time
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pybamm.Experiment([step])
+
+        # An operator, or a charge or discharge direction, gives the event its sign
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for step in [
+                pybamm.step.string("Rest for 1 hour or until > 3.5 V"),
+                pybamm.step.string("Hold at 4.1 V until < 4.2 V"),
+                pybamm.step.string("Discharge at 1 A until 3 V"),
+                pybamm.step.string("Charge at 1 A until 4.2 V"),
+                pybamm.step.voltage(4.1, termination="4.2V", direction="charge"),
+            ]:
+                assert len(step.get_termination_events(variables)) == 1
 
     def test_symbolic_termination_expression_helpers(self):
         single_termination_step = pybamm.step.current(

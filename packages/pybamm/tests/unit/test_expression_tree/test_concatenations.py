@@ -29,8 +29,9 @@ class TestConcatenations:
         e = pybamm.Vector([1], domain="test b")
         f = pybamm.Vector([3], domain="test c")
         conc2 = pybamm.concatenation(d, e, f)
-        with pytest.raises(TypeError):
+        with pytest.raises(NotImplementedError, match=r"until it is discretised"):
             conc2.evaluate()
+        assert conc2.evaluate_ignoring_errors() is None
 
         # trying to concatenate non-pybamm symbols
         with pytest.raises(TypeError):
@@ -154,6 +155,14 @@ class TestConcatenations:
         assert b.id != id_old
         conc = pybamm.concatenation(a, b)
         assert conc.bounds == (0, 1)
+
+    def test_concatenation_variable_time_derivative(self):
+        # the derivatives are not variables, so they make a plain concatenation
+        a = pybamm.Variable("a", domain="negative electrode")
+        b = pybamm.Variable("b", domain="separator")
+        derivative = pybamm.ConcatenationVariable(a, b).diff(pybamm.t)
+        assert not isinstance(derivative, pybamm.ConcatenationVariable)
+        assert derivative == pybamm.concatenation(a.diff(pybamm.t), b.diff(pybamm.t))
 
     def test_concatenation_simplify(self):
         # Primary broadcast
