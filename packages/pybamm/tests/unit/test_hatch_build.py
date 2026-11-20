@@ -1,4 +1,4 @@
-"""Unit tests for the maturin build hook, using synthetic wheels (no Rust toolchain)."""
+"""Unit tests for the Rust build hook, using synthetic wheels (no Rust toolchain)."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import importlib.util
 import sys
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -45,17 +46,17 @@ class TestWheelTag:
         ("name", "expected"),
         [
             (
-                "pybamm_rust-0.1.0-cp310-abi3-macosx_11_0_arm64.whl",
-                "cp310-abi3-macosx_11_0_arm64",
+                "pybamm_python-0.1.0-cp311-abi3-macosx_11_0_arm64.whl",
+                "cp311-abi3-macosx_11_0_arm64",
             ),
             (
-                "pybamm_rust-0.1.0-cp314-cp314-linux_x86_64.whl",
+                "pybamm_python-0.1.0-cp314-cp314-linux_x86_64.whl",
                 "cp314-cp314-linux_x86_64",
             ),
-            ("pybamm-26.7.1.1-cp310-abi3-win_amd64.whl", "cp310-abi3-win_amd64"),
+            ("pybamm-26.7.1.1-cp311-abi3-win_amd64.whl", "cp311-abi3-win_amd64"),
         ],
     )
-    def test_extracts_the_trailing_three_components(self, name, expected):
+    def test_returns_the_single_tag(self, name, expected):
         module = load_hook_module()
         assert module.wheel_tag(name) == expected
 
@@ -159,31 +160,89 @@ class TestBuildInvocation:
         with pytest.raises(RuntimeError, match=r"requires a Rust toolchain"):
             hook._build_extension(tmp_path)
 
-    def test_maturin_is_invoked_through_the_interpreter_with_locked(
-        self, tmp_path, monkeypatch
-    ):
+    def _build(self, tmp_path, monkeypatch, platform, wheel_names):
         module, hook = make_hook(tmp_path)
         monkeypatch.setattr(module.shutil, "which", lambda _: "/usr/bin/cargo")
+        monkeypatch.setattr(
+            module, "sys", SimpleNamespace(platform=platform, executable=sys.executable)
+        )
         recorded = {}
 
         def fake_run(command, cwd, check):
             recorded["command"] = command
             recorded["cwd"] = cwd
             out = Path(command[command.index("--out") + 1])
-            make_wheel(
-                out / "pybamm_rust-0.1.0-cp310-abi3-linux_x86_64.whl",
-                ["_core/_core.abi3.so"],
-            )
+            for name in wheel_names:
+                make_wheel(out / name, ["_core/_core.abi3.so"])
 
         monkeypatch.setattr(module.subprocess, "run", fake_run)
         artifact, tag = hook._build_extension(tmp_path)
+        return recorded, artifact, tag
+
+    def test_runs_a_locked_release_build_through_the_interpreter(
+        self, tmp_path, monkeypatch
+    ):
+        recorded, artifact, tag = self._build(
+            tmp_path,
+            monkeypatch,
+            "linux",
+            ["pybamm_python-0.1.0-cp311-abi3-linux_x86_64.whl"],
+        )
 
         assert recorded["command"][:4] == [sys.executable, "-m", "maturin", "build"]
         assert "--locked" in recorded["command"]
         assert "--release" in recorded["command"]
         assert recorded["cwd"] == tmp_path
-        assert tag == "cp310-abi3-linux_x86_64"
+        assert tag == "cp311-abi3-linux_x86_64"
         assert artifact.name == "_core.abi3.so"
+
+    @pytest.mark.parametrize("platform", ["linux", "darwin", "win32"])
+    def test_builds_the_abi3_py311_feature(self, tmp_path, monkeypatch, platform):
+        recorded, _, _ = self._build(
+            tmp_path,
+            monkeypatch,
+            platform,
+            ["pybamm_python-0.1.0-cp311-abi3-linux_x86_64.whl"],
+        )
+        command = recorded["command"]
+        features = command[command.index("--features") + 1].split(",")
+        assert "pyo3/abi3-py311" in features
+
+    def test_linux_build_targets_plain_linux(self, tmp_path, monkeypatch):
+        recorded, _, _ = self._build(
+            tmp_path,
+            monkeypatch,
+            "linux",
+            ["pybamm_python-0.1.0-cp311-abi3-linux_x86_64.whl"],
+        )
+        command = recorded["command"]
+        assert command[command.index("--compatibility") + 1] == "linux"
+        assert command[command.index("--auditwheel") + 1] == "skip"
+
+    @pytest.mark.parametrize("platform", ["darwin", "win32"])
+    def test_other_platforms_pass_no_linux_flags(self, tmp_path, monkeypatch, platform):
+        recorded, _, _ = self._build(
+            tmp_path,
+            monkeypatch,
+            platform,
+            ["pybamm_python-0.1.0-cp311-abi3-macosx_11_0_arm64.whl"],
+        )
+        assert "--compatibility" not in recorded["command"]
+        assert "--auditwheel" not in recorded["command"]
+
+    @pytest.mark.parametrize(
+        "wheel_names",
+        [
+            [],
+            [
+                "pybamm_python-0.1.0-cp311-abi3-linux_x86_64.whl",
+                "pybamm_python-0.1.0-cp314-cp314-linux_x86_64.whl",
+            ],
+        ],
+    )
+    def test_rejects_anything_but_one_wheel(self, tmp_path, monkeypatch, wheel_names):
+        with pytest.raises(RuntimeError, match=r"exactly one wheel"):
+            self._build(tmp_path, monkeypatch, "linux", wheel_names)
 
 
 class TestBuildDataWiring:
@@ -193,7 +252,7 @@ class TestBuildDataWiring:
         monkeypatch.setattr(
             hook,
             "_build_extension",
-            lambda _: (Path("_core.abi3.so"), "cp310-abi3-linux_x86_64"),
+            lambda _: (Path("_core.abi3.so"), "cp311-abi3-linux_x86_64"),
         )
         build_data = {
             "artifacts": [],
@@ -206,7 +265,7 @@ class TestBuildDataWiring:
 
     def test_standard_build_sets_the_tag_and_artifact(self, tmp_path, monkeypatch):
         build_data = self._initialize(tmp_path, monkeypatch, "standard")
-        assert build_data["tag"] == "cp310-abi3-linux_x86_64"
+        assert build_data["tag"] == "cp311-abi3-linux_x86_64"
         assert build_data["pure_python"] is False
         assert build_data["artifacts"] == ["/src/pybamm/rust/_core.abi3.so"]
 

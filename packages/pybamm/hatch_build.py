@@ -71,9 +71,6 @@ def extract_extension(wheel: Path, destination: Path) -> Path:
 class RustBuildHook(BuildHookInterface):
     """Build the Rust extension into ``pybamm/rust/`` and tag the wheel for the platform."""
 
-    # Matches what hatchling's `custom` plugin sets on the instance anyway.
-    PLUGIN_NAME = "custom"
-
     def initialize(self, version: str, build_data: dict) -> None:
         """Build the extension and register it with the wheel being assembled."""
         artifact, tag = self._build_extension(self._crate_root())
@@ -97,6 +94,26 @@ class RustBuildHook(BuildHookInterface):
         )
 
     def _build_extension(self, crate_root: Path) -> tuple[Path, str]:
+        """Compile the extension with maturin and copy it into ``pybamm/rust/``.
+
+        Parameters
+        ----------
+        crate_root : pathlib.Path
+            The Cargo workspace holding the ``pybamm-python`` crate.
+
+        Returns
+        -------
+        tuple[pathlib.Path, str]
+            The copied extension and the tag of the wheel maturin built.
+
+        Raises
+        ------
+        RuntimeError
+            If cargo is not on PATH, or maturin does not build exactly one wheel
+            holding one ``_core`` extension under a single tag.
+        subprocess.CalledProcessError
+            If maturin fails.
+        """
         if shutil.which("cargo") is None:
             raise RuntimeError(CARGO_MISSING)
 
@@ -119,7 +136,13 @@ class RustBuildHook(BuildHookInterface):
         with tempfile.TemporaryDirectory() as staging:
             # CRATE_MANIFEST is relative to the Cargo workspace root.
             subprocess.run([*command, "--out", staging], cwd=crate_root, check=True)
-            wheel = next(Path(staging).glob("*.whl"))
+            wheels = sorted(Path(staging).glob("*.whl"))
+            if len(wheels) != 1:
+                raise RuntimeError(
+                    f"Expected maturin to build exactly one wheel, found "
+                    f"{[path.name for path in wheels]}"
+                )
+            wheel = wheels[0]
             return (
                 extract_extension(wheel, Path(self.root) / DESTINATION),
                 wheel_tag(wheel.name),

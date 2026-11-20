@@ -38,7 +38,8 @@ build:
       # Exit code 183 cancels a pull request build that changes nothing the docs render or include.
       - |
         if [ "$READTHEDOCS_VERSION_TYPE" = external ] && git diff --quiet origin/main...HEAD -- \
-            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml packages/pybamm-rust/ packages/pybamm-model-zoo/ \
+            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml packages/pybamm/hatch_build.py \
+            packages/pybamm-rust/ packages/pybamm-model-zoo/ \
             CONTRIBUTING.md RELEASE.md pyproject.toml uv.lock .readthedocs.yaml; then
           exit 183
         fi

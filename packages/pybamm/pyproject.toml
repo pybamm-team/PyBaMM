@@ -161,7 +161,7 @@ Yang2017 = "pybamm.models.full_battery_models.lithium_ion.Yang2017:Yang2017"
 [tool.hatch]
 version.source = "vcs"
 version.fallback-version = "0.0.0"
-build.targets.sdist.include = ["src/pybamm", "CITATION.cff", "hatch_build.py"]
+build.targets.sdist.include = ["src/pybamm", "CITATION.cff"]
 build.hooks.vcs.version-file = "src/pybamm/_version.py"
 
 # Force-included directories ignore `exclude`: never point an entry at ../pybamm-rust.
@@ -175,9 +175,8 @@ build.hooks.vcs.version-file = "src/pybamm/_version.py"
 "../pybamm-rust/pybamm-python/Cargo.toml" = "pybamm-rust/pybamm-python/Cargo.toml"
 "../pybamm-rust/pybamm-python/src" = "pybamm-rust/pybamm-python/src"
 
-# `editable` is a version of the wheel target, so this also covers editable builds.
+# Runs hatch_build.py; `editable` is a version of the wheel target, so this covers it too.
 [tool.hatch.build.targets.wheel.hooks.custom]
-path = "hatch_build.py"
 
 # Replaces uv's default, so list every build input; keep globs out of Cargo's target/.
 [tool.uv]
