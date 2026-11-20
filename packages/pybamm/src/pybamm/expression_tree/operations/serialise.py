@@ -1798,6 +1798,8 @@ class Serialise:
             ``CustomStepExplicit``, ``CustomStepImplicit``); these have no
             JSON representation.
         """
+        from pybamm.expression_tree.operations.serialise_kernel import encode
+
         step_type_map = {
             "Current": "current",
             "Rest": "rest",
@@ -1811,6 +1813,7 @@ class Serialise:
             "CurrentTermination": "current",
             "CrateTermination": "c-rate",
             "CRateTermination": "c-rate",
+            "SymbolicTermination": "symbolic",
         }
 
         # Top-level defaults; per-step values are emitted only when they differ.
@@ -1840,7 +1843,10 @@ class Serialise:
 
             step_config: dict = {"type": step_type}
             # Use ``input_duration`` so ``uses_default_duration`` round-trips.
-            if step.input_duration is not None:
+            if isinstance(step.input_duration, pybamm.Symbol):
+                # A symbolic duration is an expression tree, not a time string
+                step_config["duration"] = encode(step.input_duration)
+            elif step.input_duration is not None:
                 step_config["duration"] = step.input_duration
 
             if step_type != "rest":
@@ -1862,24 +1868,24 @@ class Serialise:
                 terminations = []
                 for term in step.termination:
                     term_class_name = term.__class__.__name__
-                    if term_class_name == "CustomTermination":
-                        raise NotImplementedError(
-                            "CustomTermination cannot be serialised: it "
-                            "carries a user-supplied Python callable "
-                            "(``event_function``) that has no JSON "
-                            "representation."
-                        )
                     if term_class_name not in termination_type_map:
                         raise NotImplementedError(
                             f"Cannot serialise termination of type "
                             f"{term_class_name!r}: only the built-in "
                             f"termination classes "
                             f"({sorted(termination_type_map)!r}) are "
-                            f"supported."
+                            f"supported. A CustomTermination carries a Python "
+                            "callable; use a SymbolicTermination instead."
                         )
-                    term_type = termination_type_map[term_class_name]
-                    term_config = {"type": term_type, "value": term.value}
-                    if hasattr(term, "operator") and term.operator:
+                    # A symbolic threshold or event is an expression tree
+                    value = term.value
+                    if isinstance(value, pybamm.Symbol):
+                        value = encode(value)
+                    term_config = {
+                        "type": termination_type_map[term_class_name],
+                        "value": value,
+                    }
+                    if term.operator:
                         term_config["operator"] = term.operator
                     terminations.append(term_config)
                 step_config["terminations"] = terminations
@@ -1891,7 +1897,9 @@ class Serialise:
             for field, default in field_defaults.items():
                 value = getattr(step, field, None)
                 if value is not None and value != default:
-                    step_config[field] = value
+                    step_config[field] = (
+                        encode(value) if isinstance(value, pybamm.Symbol) else value
+                    )
             tags = getattr(step, "tags", None)
             if tags:
                 step_config["tags"] = tags
@@ -1947,6 +1955,8 @@ class Serialise:
         -------
         :class:`pybamm.Experiment`
         """
+        from pybamm.expression_tree.operations.serialise_kernel import decode
+
         step_func_map = _experiment_step_factories()
         term_class_map = {
             "voltage": pybamm.step.VoltageTermination,
@@ -1956,14 +1966,16 @@ class Serialise:
 
         def _parse_termination(term_dict):
             term_type = term_dict.get("type")
+            value = term_dict["value"]
+            value = decode(value) if isinstance(value, dict) else float(value)
+            if term_type == "symbolic":
+                return pybamm.step.SymbolicTermination(value)
             if term_type not in term_class_map:
                 raise ValueError(
                     f"Unknown termination type: {term_type!r}. "
-                    f"Expected one of {list(term_class_map)!r}."
+                    f"Expected one of {['symbolic', *term_class_map]!r}."
                 )
-            value = float(term_dict["value"])
-            operator = term_dict.get("operator")
-            return term_class_map[term_type](value, operator=operator)
+            return term_class_map[term_type](value, operator=term_dict.get("operator"))
 
         def _parse_step(step_dict):
             step_type = step_dict.get("type")
@@ -1995,7 +2007,10 @@ class Serialise:
             # ``uses_default_duration`` (used by infeasibility handling).
             duration_kwargs = {}
             if "duration" in step_dict and step_dict["duration"] is not None:
-                duration_kwargs["duration"] = step_dict["duration"]
+                duration = step_dict["duration"]
+                if isinstance(duration, dict):
+                    duration = decode(duration)
+                duration_kwargs["duration"] = duration
             terminations = None
             if step_dict.get("terminations"):
                 terminations = [
@@ -2011,7 +2026,12 @@ class Serialise:
                 "direction",
             ):
                 if step_dict.get(field) is not None:
-                    extra_kwargs[field] = step_dict[field]
+                    field_value = step_dict[field]
+                    extra_kwargs[field] = (
+                        decode(field_value)
+                        if isinstance(field_value, dict)
+                        else field_value
+                    )
             if step_dict.get("start_time") is not None:
                 extra_kwargs["start_time"] = datetime.fromisoformat(
                     step_dict["start_time"]

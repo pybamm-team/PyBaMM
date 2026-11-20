@@ -536,46 +536,9 @@ class BaseModel:
                 f"Cannot process variable '{name}' without a `symbol_processor`."
             )
 
-        symbol = self._resolve_coupled_variables(symbol)
+        symbol = SymbolProcessor.resolve(symbol, self.variables)
         value = self.symbol_processor(name=name, symbol=symbol)
         self._variables_processed[name] = value
-
-    def _resolve_coupled_variables(
-        self,
-        symbol: pybamm.Symbol,
-        cache: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
-    ) -> pybamm.Symbol:
-        """
-        Resolve CoupledVariables by looking up their targets in self._variables.
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            The expression to resolve.
-        cache : dict, optional
-            Memo of ``{original node: resolved node}``. Pass the same dict across
-            calls to resolve shared subtrees only once.
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            The resolved expression.
-        """
-        if cache is None:
-            cache = {}
-
-        def resolve(node, new_leaves):
-            if not isinstance(node, pybamm.CoupledVariable):
-                return pybamm.rebuild(node, new_leaves)
-            if isinstance(node, pybamm.CoupledVariableDot):
-                return resolve(node.get_coupled_variable(), new_leaves).diff(pybamm.t)
-            if node.name not in self._variables:
-                raise ValueError(
-                    f"CoupledVariable '{node.name}' not found in model.variables"
-                )
-            return self._resolve_coupled_variables(self._variables[node.name], cache)
-
-        return pybamm.tree_map(resolve, symbol, cache=cache)
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """

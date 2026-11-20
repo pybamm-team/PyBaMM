@@ -334,7 +334,7 @@ class Discretisation:
         cache = {}
 
         def resolve(expr):
-            return model._resolve_coupled_variables(expr, cache)
+            return pybamm.SymbolProcessor.resolve(expr, model.variables, cache)
 
         rhs = {var: resolve(expr) for var, expr in model.rhs.items()}
         algebraic = {var: resolve(expr) for var, expr in model.algebraic.items()}
