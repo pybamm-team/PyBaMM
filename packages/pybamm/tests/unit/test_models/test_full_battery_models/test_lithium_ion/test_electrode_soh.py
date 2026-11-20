@@ -9,6 +9,7 @@ import pytest
 
 import pybamm
 from pybamm.models.full_battery_models.lithium_ion.util import (
+    _default_initial_hysteresis_states,
     get_lithiation_delithiation,
 )
 
@@ -1363,7 +1364,10 @@ class TestElectrodeSOHCompositeHardCases:
     @staticmethod
     def _setup(scales):
         options = pybamm.BatteryModelOptions(TestElectrodeSOHCompositeHardCases.OPTIONS)
-        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        # the model starts a hysteresis phase on the OCP at its initial state
+        parameter_values = _default_initial_hysteresis_states(
+            pybamm.ParameterValues("Chen2020_composite"), options
+        )
         param = pybamm.LithiumIonParameters(options)
         scale_n1, scale_n2, scale_p1, scale_li = scales
         capacities = {
