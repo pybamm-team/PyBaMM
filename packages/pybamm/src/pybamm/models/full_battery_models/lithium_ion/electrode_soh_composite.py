@@ -395,10 +395,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             def states(U_n, suffix):
                 return (
                     [invert(U, U_n, T_ref, f"{n} {suffix}") for U, n in neg],
-                    [
-                        invert(U, U_n + V_target, T_ref, f"{n} {suffix}")
-                        for U, n in pos
-                    ],
+                    [invert(U, U_n + V_target, T_ref, f"{n} {suffix}") for U, n in pos],
                 )
 
             U_n = pybamm._BrentUnknown(f"negative potential {soc}")
@@ -436,9 +433,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             ]
             if initialization_method == "voltage":
                 U_p = U_n + pybamm.InputParameter("V_init")
-                return x, [
-                    invert(U, U_p, T_init, f"{n} {suffix}") for U, n in pos_init
-                ]
+                return x, [invert(U, U_p, T_init, f"{n} {suffix}") for U, n in pos_init]
             # No cell-voltage relation: lithium conservation fixes the positive side.
             remaining = Q_Li - sum(q * s for q, s in zip(Q_n, x, strict=True))
             if not pos_composite:
@@ -457,8 +452,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 max_iter=_MAX_ITER,
             )
             return x, [
-                invert(U, solved, T_init, f"{n} {suffix} solved")
-                for U, n in pos_init
+                invert(U, solved, T_init, f"{n} {suffix} solved") for U, n in pos_init
             ]
 
         unknown = pybamm._BrentUnknown("x_init_1")
