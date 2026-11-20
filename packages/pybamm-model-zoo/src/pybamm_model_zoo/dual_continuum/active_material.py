@@ -20,10 +20,10 @@ class ConstantFromImage(pybamm.active_material.Constant):
     is also provided.
     """
 
-    def get_fundamental_variables(self):
+    def build(self):
+        super().build()
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        variables = super().get_fundamental_variables()
 
         x = pybamm.SpatialVariable(
             f"x_{domain[0]}",
@@ -47,18 +47,17 @@ class ConstantFromImage(pybamm.active_material.Constant):
 
         a = a_electrolyte + porosity_cbd * a_cbd + porosity_separator * a_separator
         a.print_name = f"a_{domain[0]}"
-        eps_s = variables[
+        eps_s = self.variables[
             f"{Domain} electrode {phase_name}active material volume fraction"
         ]
-        variables.update(
+        self.variables.update(
             {
                 f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]": a,
                 f"X-averaged {domain} electrode {phase_name}"
                 "surface area to volume ratio [m-1]": pybamm.x_average(a),
             }
         )
-        variables.update(effective_radius_variables(domain, phase_name, eps_s, a))
-        return variables
+        self.variables.update(effective_radius_variables(domain, phase_name, eps_s, a))
 
 
 def effective_radius_variables(domain, phase_name, eps_s, a):
@@ -75,15 +74,16 @@ def effective_radius_variables(domain, phase_name, eps_s, a):
 class ConstantSpherical(pybamm.active_material.Constant):
     """PyBaMM's constant active material (a = 3 eps_s / R) plus R_eff = R."""
 
-    def get_fundamental_variables(self):
+    def build(self):
+        super().build()
         Domain = self.domain.capitalize()
         phase_name = self.phase_name
-        variables = super().get_fundamental_variables()
-        eps_s = variables[
+        eps_s = self.variables[
             f"{Domain} electrode {phase_name}active material volume fraction"
         ]
-        a = variables[
+        a = self.variables[
             f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
         ]
-        variables.update(effective_radius_variables(self.domain, phase_name, eps_s, a))
-        return variables
+        self.variables.update(
+            effective_radius_variables(self.domain, phase_name, eps_s, a)
+        )

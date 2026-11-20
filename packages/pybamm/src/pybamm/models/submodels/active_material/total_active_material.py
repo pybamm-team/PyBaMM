@@ -20,52 +20,54 @@ class Total(pybamm.BaseSubModel):
     def __init__(self, param, domain, options):
         super().__init__(param, domain, options=options)
 
-    def get_coupled_variables(self, variables):
-        # Creates "total" active material volume fraction and capacity variables
-        # by summing up all the phases
+    def build(self):
         domain, Domain = self.domain_Domain
-
         phases = self.options.phases[domain]
-        # For each of the variables, the variable name without the phase name
-        # is constructed by summing all of the variable names with the phases
-        for variable_template in [
-            f"{Domain} electrode {{}}active material volume fraction",
-            f"X-averaged {domain} electrode {{}}active material volume fraction",
-            f"{Domain} electrode {{}}active material volume fraction change [s-1]",
-            (
-                f"X-averaged {domain} electrode {{}}active material "
-                "volume fraction change [s-1]"
-            ),
-            f"Loss of lithium due to loss of {{}}active material in {domain} electrode [mol]",
-        ]:
-            sumvar = sum(
-                variables[variable_template.format(phase + " ")] for phase in phases
-            )
-            variables[variable_template.format("")] = sumvar
+        electrode_domains = {
+            "primary": f"{domain} electrode",
+            "secondary": "current collector",
+        }
+        current_collector = {"primary": "current collector"}
 
-        if self.options["particle shape"] != "no particles":
-            # capacity doesn't fit the template so needs to be done separately
-            C = sum(
-                variables[f"{Domain} electrode {phase} phase capacity [A.h]"]
+        def sum_over_phases(template, domains):
+            return sum(
+                self.coupled_variable(template.format(phase + " "), domains=domains)
                 for phase in phases
             )
-            variables.update({f"{Domain} electrode capacity [A.h]": C})
+
+        # Each total is named by the template without a phase name
+        volume_fraction = "{}active material volume fraction"
+        lithium_loss = (
+            f"Loss of lithium due to loss of {{}}active material in {domain} "
+            "electrode [mol]"
+        )
+        for template, domains in [
+            (f"{Domain} electrode {volume_fraction}", electrode_domains),
+            (f"X-averaged {domain} electrode {volume_fraction}", current_collector),
+            (f"{Domain} electrode {volume_fraction} change [s-1]", electrode_domains),
+            (
+                f"X-averaged {domain} electrode {volume_fraction} change [s-1]",
+                current_collector,
+            ),
+            (lithium_loss, {}),
+        ]:
+            self.variables[template.format("")] = sum_over_phases(template, domains)
+
+        if self.options["particle shape"] != "no particles":
+            self.variables[f"{Domain} electrode capacity [A.h]"] = sum_over_phases(
+                f"{Domain} electrode {{}}phase capacity [A.h]", {}
+            )
 
         if self.options["particle shape"] == "spherical":
             # every phase's particle surface lies in the same electrode volume
-            total_surface_area_to_volume_ratio = sum(
-                variables[
-                    f"{Domain} electrode {phase} surface area to volume ratio [m-1]"
-                ]
-                for phase in phases
+            a = sum_over_phases(
+                f"{Domain} electrode {{}}surface area to volume ratio [m-1]",
+                electrode_domains,
             )
-            variables.update(
+            self.variables.update(
                 {
-                    f"{Domain} electrode surface area to volume ratio [m-1]": total_surface_area_to_volume_ratio,
-                    f"X-averaged {domain} electrode surface area to volume ratio [m-1]": pybamm.x_average(
-                        total_surface_area_to_volume_ratio
-                    ),
+                    f"{Domain} electrode surface area to volume ratio [m-1]": a,
+                    f"X-averaged {domain} electrode surface area "
+                    "to volume ratio [m-1]": pybamm.x_average(a),
                 }
             )
-
-        return variables
