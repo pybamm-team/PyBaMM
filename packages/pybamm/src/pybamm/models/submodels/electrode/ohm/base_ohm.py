@@ -61,18 +61,9 @@ class BaseModel(BaseElectrode):
 
     def _get_x_averaged_surface_potential_difference(self):
         """X-averaged surface potential difference, for x-averaged electrode models."""
-        domain, Domain = self.domain_Domain
-        if self.options["surface form"] != "false":
-            return self._coupled_current_collector_variable(
-                f"X-averaged {domain} electrode surface potential difference [V]"
-            )
-        # With inverse kinetics the explicit surface form redefines the surface
-        # potential difference from this potential, so rebuild it from the kinetics
-        coupled = self._coupled_electrode_variable
-        eta_r = coupled(f"{Domain} electrode reaction overpotential [V]")
-        ocp = coupled(f"{Domain} electrode open-circuit potential [V]")
-        eta_sei = coupled(f"{Domain} electrode SEI film overpotential [V]")
-        return pybamm.x_average(eta_r + ocp - eta_sei)
+        return self._coupled_current_collector_variable(
+            f"X-averaged {self.domain} electrode surface potential difference [V]"
+        )
 
     def _set_porous_boundary_conditions(self, phi_s, sigma_eff):
         """
