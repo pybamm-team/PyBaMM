@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import gc
 import importlib.metadata
 import importlib.util
 import numbers
@@ -8,6 +9,7 @@ import os
 import pathlib
 import pickle
 import timeit
+import weakref
 from warnings import warn
 
 import pybamm
@@ -37,7 +39,7 @@ class FuzzyDict(dict):
 
                 if old_term == "electrode":
                     warn(
-                        f"The parameter '{alternative_key}' has been renamed to '{key}' and will be removed in a future release. Using '{key}'",
+                        f"The parameter '{key}' has been renamed to '{alternative_key}' and will be removed in a future release. Using '{alternative_key}'",
                         DeprecationWarning,
                         stacklevel=2,
                     )
@@ -156,7 +158,7 @@ class FuzzyDict(dict):
             if not keys.strip():
                 msg = "The search term cannot be an empty or whitespace-only string"
                 raise ValueError(msg)
-            original_keys = [keys]
+            original_keys = [keys.strip()]
             search_keys = [keys.strip().lower()]
 
         elif isinstance(keys, list):
@@ -164,8 +166,8 @@ class FuzzyDict(dict):
                 msg = "The 'keys' list cannot contain only empty or whitespace strings"
                 raise ValueError(msg)
 
-            original_keys = keys
-            search_keys = [k.strip().lower() for k in keys if k.strip()]
+            original_keys = [k.strip() for k in keys if k.strip()]
+            search_keys = [k.lower() for k in original_keys]
 
         known_keys = list(self.keys())
         # Check for exact matches where all search keys appear together in a key
@@ -187,16 +189,14 @@ class FuzzyDict(dict):
                     exact_matches.append(key)
 
         if exact_matches:
-            print(
-                f"Results for '{' '.join(k for k in original_keys if k.strip())}': {exact_matches}"
-            )
+            print(f"Results for '{' '.join(original_keys)}': {exact_matches}")
             if print_values:
                 for match in exact_matches:
                     print(f"{match} -> {self[match]}")
             return
 
         # If no exact matches, iterate over search keys individually
-        for original_key, search_key in zip(original_keys, search_keys, strict=False):
+        for original_key, search_key in zip(original_keys, search_keys, strict=True):
             exact_key_matches, partial_matches = self._find_matches(
                 search_key, known_keys, min_similarity
             )
@@ -330,10 +330,97 @@ class TimerTime:
 
 
 def load(filename):
-    """Load a saved object. Only load files you trust: unpickling can run code."""
+    """
+    Load a saved object. Only load files you trust: unpickling can run code.
+
+    Parameters
+    ----------
+    filename : str or path-like
+        The file to load.
+
+    Returns
+    -------
+    object
+        The loaded object.
+
+    Raises
+    ------
+    ImportError
+        If a module the object needs cannot be imported. An xarray or pandas
+        object that loading discards is not needed.
+    """
     with open(filename, "rb") as f:
-        obj = pickle.load(f)  # noqa: S301 - documented trust requirement above
+        unpickler = _Unpickler(f)
+        obj = unpickler.load()
+    stand_ins = [weakref.ref(cls) for cls in unpickler.stand_ins.values()]
+    # Its memo holds every stand-in until it is gone
+    del unpickler
+    if stand_ins:
+        # Classes are in reference cycles, so only a collection frees them
+        gc.collect()
+        kept = sorted(cls.origin for ref in stand_ins if (cls := ref()) is not None)
+        if kept:
+            packages = sorted({origin.partition(".")[0] for origin in kept})
+            raise ImportError(
+                f"The loaded object holds {', '.join(kept)}, which could not be "
+                f"imported. Install a version of {' and '.join(packages)} that "
+                "provides them."
+            )
     return obj
+
+
+class _Unpickler(pickle.Unpickler):
+    """
+    Unpickler that loads an xarray or pandas object it cannot import as an empty
+    :class:`_DroppedObject`, made from a stand-in class kept in ``stand_ins``.
+    """
+
+    def __init__(self, file):
+        super().__init__(file)
+        self.stand_ins: dict[str, type[_DroppedObject]] = {}
+
+    def find_class(self, module, name):
+        try:
+            return super().find_class(module, name)
+        except (ImportError, AttributeError):
+            # Their versions also rename or remove classes
+            if module.partition(".")[0] not in ("xarray", "pandas"):
+                raise
+        origin = f"{module}.{name}"
+        if origin not in self.stand_ins:
+            self.stand_ins[origin] = type(
+                "_DroppedObject", (_DroppedObject,), {"origin": origin}
+            )
+        return self.stand_ins[origin]
+
+
+class _DroppedObject:
+    """
+    Stands in for an object that could not be imported, holding nothing.
+
+    Attributes
+    ----------
+    origin : str or None
+        The full name of the class or function it stands in for.
+    """
+
+    origin: str | None = None
+
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(cls)
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __setstate__(self, state):
+        pass
+
+    def __setitem__(self, key, value):
+        pass
+
+    # Unpickling fills a list subclass through extend whenever it exists
+    def extend(self, items):
+        pass
 
 
 def get_parameters_filepath(path):
@@ -416,3 +503,15 @@ def import_optional_dependency(module_name, attribute=None):
     except ModuleNotFoundError as error:
         # Raise an ModuleNotFoundError if the module or attribute is not available
         raise ModuleNotFoundError(err_msg) from error
+
+
+def _is_flux_boundary_condition(bc_type):
+    """
+    Check if a boundary condition is a flux boundary condition.
+    Returns True if bc_type is a tuple of the form ("Flux", pybamm.Symbol), False otherwise.
+    """
+    return (
+        isinstance(bc_type, tuple)
+        and bc_type[0] == "Flux"
+        and isinstance(bc_type[1], pybamm.Symbol)
+    )

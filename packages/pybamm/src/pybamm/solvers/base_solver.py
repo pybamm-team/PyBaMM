@@ -5,6 +5,7 @@ import itertools
 import multiprocessing as mp
 import numbers
 import platform
+import re
 import warnings
 from typing import cast
 
@@ -18,6 +19,9 @@ from pybamm.expression_tree.array import to_casadi_dm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
+
+# CasADi function names allow only letters, digits and single underscores
+_NOT_IDENTIFIER_CHARS = re.compile(r"[^a-z0-9]+")
 
 
 class BaseSolver:
@@ -66,6 +70,8 @@ class BaseSolver:
 
     #: Whether the solver uses the jacobian of the rhs on its own
     uses_rhs_jacobian = True
+    #: Whether termination events can use the state derivatives, `y_dot`
+    supports_state_derivative_events = False
 
     def __init__(
         self,
@@ -377,6 +383,7 @@ class BaseSolver:
         self.computed_dvar_dy_fcns = {}
         self.computed_dvar_dp_fcns = {}
         self._time_integral_vars = {}
+        function_names = BaseSolver._wrangle_names(self.output_variables)
         for key in self.output_variables:
             # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
             processed_time_integral = (
@@ -401,7 +408,7 @@ class BaseSolver:
                 _,
             ) = process(
                 var,
-                BaseSolver._wrangle_name(key),
+                function_names[key],
                 vars_for_processing,
                 use_jacobian=True,
                 return_jacp_stacked=True,
@@ -450,24 +457,56 @@ class BaseSolver:
     @classmethod
     def _wrangle_name(cls, name: str) -> str:
         """
-        Wrangle a function name to replace special characters
+        Convert a variable name into a valid CasADi function name.
+
+        Parameters
+        ----------
+        name : str
+            The variable name.
+
+        Returns
+        -------
+        str
+            ``"v_"`` followed by the lower-cased name, with "%" spelled "prc" and
+            each run of other characters outside ``[a-z0-9]`` replaced by one "_".
         """
-        replacements = [
-            (" ", "_"),
-            ("[", ""),
-            ("]", ""),
-            (".", "_"),
-            ("-", "_"),
-            ("(", ""),
-            (")", ""),
-            ("%", "prc"),
-            (",", ""),
-            (".", ""),
-        ]
-        name = "v_" + name.casefold()
-        for string, replacement in replacements:
-            name = name.replace(string, replacement)
-        return name
+        body = _NOT_IDENTIFIER_CHARS.sub("_", name.casefold().replace("%", "prc"))
+        body = body.strip("_")
+        return f"v_{body}" if body else "v"
+
+    @classmethod
+    def _wrangle_names(cls, names: list[str]) -> dict[str, str]:
+        """
+        Map variable names to distinct, valid CasADi function names.
+
+        Parameters
+        ----------
+        names : list of str
+            The variable names.
+
+        Returns
+        -------
+        dict
+            The function name for each variable name. Names that would collide,
+            including with the ``_jac``, ``_jac_action`` and ``d..._dp``
+            functions derived from them, get a numbered suffix.
+        """
+
+        def derived(base):
+            return {base, f"{base}_jac", f"{base}_jac_action", f"d{base}_dp"}
+
+        # Names must be distinct: the `compile` option links them into one library
+        used = set()
+        wrangled = {}
+        for name in names:
+            base = candidate = cls._wrangle_name(name)
+            suffix = 0
+            while derived(candidate) & used:
+                suffix += 1
+                candidate = f"{base}_{suffix}"
+            used |= derived(candidate)
+            wrangled[name] = candidate
+        return wrangled
 
     def _check_and_prepare_model_inplace(self, model):
         """
@@ -540,6 +579,7 @@ class BaseSolver:
             y_diff = casadi.MX.sym("y_diff", model.len_rhs)
             y_alg = casadi.MX.sym("y_alg", model.len_alg)
             y_casadi = casadi.vertcat(y_diff, y_alg)
+            y_dot_casadi = casadi.MX.sym("y_dot", model.len_rhs_and_alg)
             p_casadi = {}
             for name, value in inputs.items():
                 if isinstance(value, numbers.Number):
@@ -553,6 +593,7 @@ class BaseSolver:
                     "y_diff": y_diff,
                     "y_alg": y_alg,
                     "y_casadi": y_casadi,
+                    "y_dot_casadi": y_dot_casadi,
                     "p_casadi": p_casadi,
                     "p_casadi_stacked": p_casadi_stacked,
                 }
@@ -680,18 +721,25 @@ class BaseSolver:
                 )[0]
                 # use the actual casadi object as this will go into the rhs
                 casadi_switch_events.append(event_casadi)
-            else:
-                # use the function call
-                event_call = process(
-                    event.expression,
-                    f"event_{n}",
-                    vars_for_processing,
-                    use_jacobian=False,
-                )[0]
-                if event.event_type == pybamm.EventType.TERMINATION:
-                    terminate_events.append(event_call)
-                elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                    interpolant_extrapolation_events.append(event_call)
+            elif event.event_type == pybamm.EventType.TERMINATION:
+                terminate_events.append(
+                    process(
+                        event.expression,
+                        f"event_{n}",
+                        vars_for_processing,
+                        use_jacobian=False,
+                        use_state_derivatives=self.supports_state_derivative_events,
+                    )[0]
+                )
+            elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                interpolant_extrapolation_events.append(
+                    process(
+                        event.expression,
+                        f"event_{n}",
+                        vars_for_processing,
+                        use_jacobian=False,
+                    )[0]
+                )
 
         return (
             casadi_switch_events,
@@ -802,8 +850,36 @@ class BaseSolver:
 
     @staticmethod
     def _solve_process_calculate_sensitivities_arg(
-        inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
-    ):
+        inputs: dict,
+        model: pybamm.BaseModel,
+        calculate_sensitivities: list[str] | bool,
+    ) -> tuple[list[str], bool]:
+        """
+        Resolve ``calculate_sensitivities`` into sorted input names and store them
+        on the model.
+
+        Parameters
+        ----------
+        inputs : dict
+            The model's input values, one per input parameter of the model.
+        model : :class:`pybamm.BaseModel`
+            The model being solved.
+        calculate_sensitivities : list of str or bool
+            ``True`` for every input of the model, ``False`` for none, or a list of
+            input names.
+
+        Returns
+        -------
+        list of str
+            The sorted names of the inputs to differentiate with respect to.
+        bool
+            Whether these names differ from the model's previous ones.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If a name is not an input parameter of the model, or is vector-valued.
+        """
         excluded_sensitivity_inputs = {pybamm.Simulation._STEP_INDEX_INPUT}
 
         # get a list-only version of calculate_sensitivities
@@ -820,6 +896,24 @@ class BaseSolver:
                 for p in calculate_sensitivities
                 if p not in excluded_sensitivity_inputs
             ]
+            unknown_inputs = [
+                p for p in calculate_sensitivities_list if p not in inputs
+            ]
+            if unknown_inputs:
+                model_inputs = sorted(set(inputs) - excluded_sensitivity_inputs)
+                raise pybamm.SolverError(
+                    f"Cannot calculate sensitivities with respect to {unknown_inputs}: "
+                    f"the input parameters of model '{model.name}' are {model_inputs}."
+                )
+
+        vector_inputs = [
+            p for p in calculate_sensitivities_list if np.size(inputs[p]) > 1
+        ]
+        if vector_inputs:
+            raise pybamm.SolverError(
+                "Cannot calculate sensitivities with respect to vector-valued "
+                f"input(s) {vector_inputs}; only scalar inputs are supported."
+            )
 
         calculate_sensitivities_list.sort()
         if not hasattr(model, "calculate_sensitivities"):
@@ -835,6 +929,39 @@ class BaseSolver:
         model.calculate_sensitivities = calculate_sensitivities_list
 
         return calculate_sensitivities_list, sensitivities_have_changed
+
+    @staticmethod
+    def _log_unused_sensitivity_inputs(
+        model: pybamm.BaseModel,
+        inputs: dict,
+        supplied_inputs: dict | None,
+        calculate_sensitivities: list[str] | bool,
+    ) -> None:
+        """
+        Log the supplied inputs that ``calculate_sensitivities=True`` skips because
+        they are not input parameters of the model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model being solved.
+        inputs : dict
+            The model's input values, one per input parameter of the model.
+        supplied_inputs : dict or None
+            The inputs as given by the caller.
+        calculate_sensitivities : list of str or bool
+            The ``calculate_sensitivities`` argument.
+        """
+        if calculate_sensitivities is not True or not supplied_inputs:
+            return
+        unused_inputs = sorted(
+            set(supplied_inputs) - set(inputs) - {pybamm.Simulation._STEP_INDEX_INPUT}
+        )
+        if unused_inputs:
+            pybamm.logger.warning(
+                f"Inputs {unused_inputs} are not input parameters of model "
+                f"'{model.name}', so no sensitivities are calculated for them."
+            )
 
     def _check_single_model(self, model: pybamm.BaseModel) -> None:
         """Raise a ``RuntimeError`` if this solver is set up for a different model."""
@@ -946,6 +1073,9 @@ class BaseSolver:
             parameters. Defaults to value returned by "os.cpu_count()".
         calculate_sensitivities : list of str or bool, optional
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
+            True means every input parameter of the model, skipping supplied inputs
+            the model does not use. Only scalar inputs are supported, and the columns
+            of ``sensitivities["all"]`` follow the sorted ``Solution.sensitivity_names``.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
             so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
@@ -1045,6 +1175,10 @@ class BaseSolver:
             self.set_up(model, model_inputs_list, t_eval)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
+            # Once per set-up, not on every repeated solve
+            BaseSolver._log_unused_sensitivity_inputs(
+                model, model_inputs_list[0], inputs_list[0], calculate_sensitivities
             )
         elif (
             self._model_set_up[model]["initial conditions"]
@@ -1406,15 +1540,19 @@ class BaseSolver:
             events_eval[idx] = event_eval
 
         if events_eval.min() <= 0:
-            # find the events that were triggered by initial conditions
-            termination_events = [
-                x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
-            ]
-            idxs = np.where(events_eval <= 0)[0]
-            event_names = [termination_events[idx].name for idx in idxs]
-            raise pybamm.SolverError(
-                f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
+            self._raise_events_at_initial_conditions(
+                model, events_eval <= 0, inputs_dict
             )
+
+    @staticmethod
+    def _raise_events_at_initial_conditions(model, fired, inputs_dict):
+        termination_events = [
+            x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
+        ]
+        event_names = [termination_events[idx].name for idx in np.flatnonzero(fired)]
+        raise pybamm.SolverError(
+            f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
+        )
 
     @staticmethod
     def _overlay_options(
@@ -1719,6 +1857,9 @@ class BaseSolver:
             Save solution with all previous timesteps. Defaults to True.
         calculate_sensitivities : list of str or bool, optional
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
+            True means every input parameter of the model, skipping supplied inputs
+            the model does not use. Only scalar inputs are supported, and the columns
+            of ``sensitivities["all"]`` follow the sorted ``Solution.sensitivity_names``.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names. **Limitations**: sensitivities are not calculated up to numerical tolerances
             so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
@@ -1848,6 +1989,9 @@ class BaseSolver:
             self.set_up(model, model_inputs)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
+            BaseSolver._log_unused_sensitivity_inputs(
+                model, model_inputs, inputs, calculate_sensitivities
             )
 
         if (
@@ -2273,7 +2417,12 @@ def stack_inputs(inputs_dict: dict) -> casadi.DM:
 
 
 def process(
-    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+    symbol,
+    name,
+    vars_for_processing,
+    use_jacobian=None,
+    return_jacp_stacked=None,
+    use_state_derivatives=False,
 ):
     """
     Parameters
@@ -2289,6 +2438,9 @@ def process(
     return_jacp_stacked: bool, optional
         returns Jacobian function wrt the stacked sensitivity parameters instead
         of jacp
+    use_state_derivatives: bool, optional
+        whether the CasADi functions take the state derivatives, `y_dot`, as a
+        fourth input. Default is False
 
     Returns
     -------
@@ -2381,7 +2533,12 @@ def process(
 
         # Process with CasADi
         report(f"Converting {name} to CasADi")
-        casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+        args = [t_casadi, y_casadi, p_casadi_stacked]
+        y_dot_casadi = None
+        if use_state_derivatives:
+            y_dot_casadi = vars_for_processing["y_dot_casadi"]
+            args.append(y_dot_casadi)
+        casadi_expression = symbol.to_casadi(t_casadi, y_casadi, y_dot_casadi, p_casadi)
         # Add sensitivity vectors to the rhs and algebraic equations
         jacp = None
 
@@ -2398,7 +2555,7 @@ def process(
                 )
                 jacp = casadi.Function(
                     f"d{name}_dp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
+                    args,
                     [casadi.jacobian(casadi_expression, sensitivity_inputs_stacked)],
                 )
             else:
@@ -2407,7 +2564,7 @@ def process(
                 # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
                 jacp = casadi.Function(
                     name + "_jacp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
+                    args,
                     [
                         casadi.densify(
                             casadi.jacobian(casadi_expression, p_casadi[pname])
@@ -2443,8 +2600,6 @@ def process(
             jac = None
             jac_action = None
 
-        func = casadi.Function(
-            name, [t_casadi, y_casadi, p_casadi_stacked], [casadi_expression]
-        )
+        func = casadi.Function(name, args, [casadi_expression])
 
     return func, jac, jacp, jac_action

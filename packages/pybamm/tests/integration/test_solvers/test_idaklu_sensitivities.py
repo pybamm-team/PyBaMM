@@ -511,3 +511,28 @@ class TestIDAKLUSensitivities:
                         atol=1e-12 * np.abs(expected).max(),
                         err_msg=f"d[{output}]/d[{name}] at {inputs}",
                     )
+
+
+@pytest.mark.parametrize("newton_mode", ["auto", "full"])
+def test_sensitivities_converge_at_tight_tolerances(newton_mode):
+    # Regression test for https://github.com/pybamm-team/PyBaMM/issues/5999, where
+    # IDAS's simultaneous corrector failed on some of these short solves
+    parameter_values = pybamm.ParameterValues("Chen2020")
+    parameter_values.update({"Current function [A]": "[input]"})
+    simulation = pybamm.Simulation(
+        lithium_ion.DFN({"contact resistance": "true"}),
+        parameter_values=parameter_values,
+        var_pts=COARSE_MESH,
+    )
+    simulation.build()
+    solver = _solver(options={"newton_mode": newton_mode})
+    t_eval = np.linspace(0, 1, 50)
+    for current in [4.5, 4.875, 5.0, 5.125, 5.375, 5.5]:
+        solution = solver.solve(
+            simulation.built_model,
+            t_eval,
+            inputs={"Current function [A]": current},
+            calculate_sensitivities=True,
+        )
+        sensitivity = _sensitivity(solution, "Voltage [V]", "Current function [A]")
+        assert np.isfinite(sensitivity).all(), f"current={current}"
