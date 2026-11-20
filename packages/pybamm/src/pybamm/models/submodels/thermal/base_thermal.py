@@ -475,8 +475,8 @@ class BaseThermal(pybamm.BaseSubModel):
         only balances if both heat sources share that reference.
         """
         phase_options = getattr(getattr(self.options, domain), phase_param.phase)
-        if phase_options["particle"] == "uniform profile":
-            # no concentration gradient, so nothing to mix
+        if phase_options["particle"] in ["uniform profile", "MSMR"]:
+            # uniform: no concentration gradient to mix; MSMR: not implemented
             return pybamm.FullBroadcast(0, [f"{domain} electrode"], "current collector")
         Domain = domain.capitalize()
         F = pybamm.constants.F.value
