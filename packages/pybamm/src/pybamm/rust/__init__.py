@@ -1,5 +1,7 @@
 """Access point for the compiled Rust extension; import from here, not ``_core``."""
 
+from __future__ import annotations
+
 import contextlib
 import os
 import sys
