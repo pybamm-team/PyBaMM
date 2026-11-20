@@ -81,6 +81,8 @@ jobs:
           CIBW_BUILD: "cp311-* cp315-*"
           CIBW_SKIP: "*musllinux*"
           CIBW_ARCHS: ${{ matrix.arch }}
+          # pybammsolvers' aarch64 wheels need glibc 2.34, so the tests must run there.
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
           # manylinux containers have no rustup; the crate graph needs cargo >= 1.89.
           CIBW_BEFORE_ALL_LINUX: >
