@@ -35,10 +35,8 @@ def check_fragment(path: Path) -> list[str]:
         One message per problem, empty if the fragment is valid.
     """
     if not NAME.match(path.name):
-        return [
-            f"{path.name}: name it <PR number>.<type>.md, with <type> one of "
-            f"{', '.join(TYPES)}"
-        ]
+        types = ", ".join(TYPES)
+        return [f"{path.name}: name it <PR number>.<type>.md, <type> one of {types}"]
     text = path.read_text().strip()
     if not text:
         return [f"{path.name}: the fragment is empty"]

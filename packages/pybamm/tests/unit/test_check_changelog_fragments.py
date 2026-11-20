@@ -45,9 +45,7 @@ class TestCheckChangelogFragments:
             ),
         ],
     )
-    def test_reports_invalid_fragments(
-        self, fragment_dir, capsys, name, text, message
-    ):
+    def test_reports_invalid_fragments(self, fragment_dir, capsys, name, text, message):
         (fragment_dir / name).write_text(text)
 
         assert check_changelog_fragments.main([]) == 1
@@ -75,8 +73,6 @@ class TestCheckChangelogFragments:
 
     def test_exempts_prs_that_edit_the_changelog(self, fragment_dir, monkeypatch):
         (fragment_dir / "1233.feature.md").write_text("Added a thing.\n")
-        set_changes(
-            monkeypatch, "A\tchangelog.d/1233.feature.md", "M\tCHANGELOG.md"
-        )
+        set_changes(monkeypatch, "A\tchangelog.d/1233.feature.md", "M\tCHANGELOG.md")
 
         assert check_changelog_fragments.main(["--pr", "1234"]) == 0

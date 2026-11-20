@@ -52,6 +52,7 @@ def update_version(release_version):
         check=True,
     )
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Update version numbers for a PyBaMM release"
