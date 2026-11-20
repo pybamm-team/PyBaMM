@@ -25,6 +25,7 @@
 
 ## Features
 
+- A processed variable whose spatial variable is not named `x`, `r`, `y`, `z` or `R` can be evaluated at that coordinate by its name, e.g. `solution["u"](t=0, s=0.5)`. Before, this raised a `TypeError`. ([#6053](https://github.com/pybamm-team/PyBaMM/pull/6053))
 - Added `Solution.save_vtu`, which exports variables on unstructured finite-volume meshes to ParaView as one `.vtu` per output time plus a `.pvd` time index. Requires `vtk`. ([#5853](https://github.com/pybamm-team/PyBaMM/pull/5853))
 - Added flux boundary conditions for 1D finite volume method. This is an alternative way to apply Neumann boundary conditions without specifying them as an explicit expression for the gradient. ([#5524](https://github.com/pybamm-team/PyBaMM/pull/5524))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
