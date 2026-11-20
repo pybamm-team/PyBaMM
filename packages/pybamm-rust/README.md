@@ -32,8 +32,8 @@ uv sync --extra all --group dev
 ```
 
 The pybamm package declares `cache-keys` over both crates' sources and manifests, so
-`uv sync` and `uv run` rebuild the extension whenever Rust code changes. Reaching for
-maturin by hand produces a wheel the Python side will not pick up.
+`uv sync --extra all --group dev` and `uv run` rebuild the extension whenever Rust code
+changes. Reaching for maturin by hand produces a wheel the Python side will not pick up.
 
 For work that stays inside Rust, the usual cargo commands apply from this directory:
 

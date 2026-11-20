@@ -21,13 +21,14 @@ no side-by-side clones or environment variables to configure.
 
 - **Rust 1.89+**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 - **uv**: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- **CMake 3.20+** and a C++17 compiler
+- **CMake 3.22+** (the bundled SuiteSparse's floor) and a C++17 compiler
+- **BLAS and a Fortran compiler** for SuiteSparse, e.g. `libopenblas-dev gfortran`
 - **macOS only**: Homebrew with `libomp` (`brew install libomp`)
 
 ## Quick start
 
-One sync builds everything — the maturin hook compiles `pybamm.rust._core` in
-release mode, and pybammsolvers builds SUNDIALS/SuiteSparse from its bundled
+One sync builds everything — the hatch build hook compiles `pybamm.rust._core`
+in release mode, and pybammsolvers builds SUNDIALS/SuiteSparse from its bundled
 submodules on first build:
 
 ```bash
@@ -48,8 +49,8 @@ print('Rust bindings:', ExprGraph)
 
 ## Rebuilding after changes
 
-`uv`'s cache keys cover the Rust sources, so a plain `uv sync` rebuilds
-`pybamm.rust._core` whenever a `.rs` file changes.
+`uv`'s cache keys cover the Rust sources, so `uv sync --extra all --group dev`
+or `uv run` rebuilds `pybamm.rust._core` whenever a `.rs` file changes.
 
 ## Running tests
 
@@ -61,9 +62,8 @@ cd packages/pybamm-rust && cargo test --workspace
 ## Running benchmarks
 
 ```bash
-# Rust micro-benchmarks (Criterion)
-cd packages/pybamm-rust/pybamm-core
-cargo bench
+# Rust micro-benchmarks (Criterion); --all-features runs those that need `serialize`
+cd packages/pybamm-rust && cargo bench -p pybamm-core --all-features
 ```
 
 ## Troubleshooting
