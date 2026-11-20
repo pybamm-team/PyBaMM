@@ -49,6 +49,22 @@ class BaseInterface(pybamm.BaseSubModel):
         domain_options = getattr(self.options, domain)
         self.size_distribution = domain_options["particle size"] == "distribution"
 
+    def _get_initial_surface_area(self):
+        """
+        Initial surface area to volume ratio of the phase [m-1].
+
+        Returns
+        -------
+        a_init : :class:`pybamm.Symbol`
+            The initial surface area to volume ratio.
+        """
+        phase_param = self.phase_param
+        if self.size_distribution:
+            R = phase_param.R_dist_mean
+        else:
+            R = phase_param.R
+        return 3 * phase_param.epsilon_s / R
+
     def _get_intercalation_concentrations(self, variables):
         """
         Get the electrolyte concentration, particle surface concentration and

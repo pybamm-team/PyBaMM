@@ -42,6 +42,8 @@
 
 ## Bug fixes
 
+- SEI and lithium plating thicknesses now use the initial local surface area, so without `"x-average side reactions"` the SEI starts at `"Initial SEI thickness [m]"` when particle size or active material fraction varies. ([#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
+- The DFN with a particle-size distribution now builds with `"SEI porosity change"` or `"lithium plating porosity change"`; the SEI concentration is now always size-averaged. SPM and MPM raise an `OptionError` for this combination. ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417), [#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
 - `FiniteVolume` now averages a node-valued divisor of a gradient, as in `grad(u) / w`, onto faces as a series resistance, matching `grad(u) * (1 / w)`, and a term added to a gradient arithmetically; both took the harmonic mean. ([#5863](https://github.com/pybamm-team/PyBaMM/issues/5863), [#5940](https://github.com/pybamm-team/PyBaMM/pull/5940))
 - Experiments run on models without summary variables, such as a `pybamm.BaseModel`, and `Simulation` raises a `ModelError` when the model reads neither `"Current function [A]"` nor, for steps with a temperature, `"Ambient temperature [K]"`, rather than ignoring the steps. ([#6013](https://github.com/pybamm-team/PyBaMM/issues/6013), [#6014](https://github.com/pybamm-team/PyBaMM/pull/6014))
 - `IDAKLUSolver` solves forward sensitivities with IDAS's staggered corrector instead of the simultaneous one, so sensitivity solves at tight tolerances no longer fail with `IDA_CONV_FAIL`. ([#6045](https://github.com/pybamm-team/PyBaMM/pull/6045))

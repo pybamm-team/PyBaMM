@@ -222,5 +222,5 @@ class TestMPMWithSEI:
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
         }
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(pybamm.OptionError, match=r"distributions"):
             pybamm.lithium_ion.MPM(options)

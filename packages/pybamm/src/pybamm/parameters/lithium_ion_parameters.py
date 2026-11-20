@@ -542,6 +542,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.Q_Li_init = self.n_Li_init * main.F / 3600
         self.Q_init = self.elec_loading * main.A_cc
 
+        # Area-weighted mean radius of a particle-size distribution
+        suffix = {"": "", "primary ": "_prim", "secondary ": "_sec"}[phase_name]
+        R_dist = getattr(pybamm.standard_spatial_vars, f"R_{domain[0]}{suffix}")
+        self.R_dist_mean = pybamm.size_average(R_dist)
+
         if self.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
 
