@@ -57,7 +57,7 @@ impl Op for ObservableOp<'_> {
 impl NonLinearOp for ObservableOp<'_> {
     fn call_inplace(&self, x: &FaerVec<f64>, t: f64, y: &mut FaerVec<f64>) {
         let mut ws = self.ws.borrow_mut();
-        // diffsol's root function is given no y_dot
+        // diffsol gives no y_dot; PreparedSolver::new refuses events that read it
         self.compiled
             .eval_observables(&mut ws, KIND, t, lane(x), &[], self.inputs, lane_mut(y));
     }

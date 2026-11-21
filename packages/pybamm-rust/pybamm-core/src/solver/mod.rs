@@ -119,9 +119,11 @@ mod tests {
     };
     use super::*;
     use crate::arena::Arena;
+    use crate::error::CoreError;
     use crate::model::test_fixtures::{compile, identity_mass_matrix};
     use crate::model::{CompiledModel, Workspace};
     use crate::node::{CsrData, Node, Shape};
+    use crate::observable::ObservableKind;
     use crate::params::ParamBinding;
     use crate::test_support::bits;
     use diffsol::vector::faer_serial::FaerVec;
@@ -220,6 +222,24 @@ mod tests {
         assert_eq!(sparsity.col_ptr(), [0, 2, 3, 5]);
         assert_eq!(sparsity.row_idx(), [0, 2, 1, 0, 1]);
         assert_eq!(values, [1.0, 5.0, 4.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn an_event_reading_y_dot_is_refused() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let rhs = arena.alloc(Node::Neg(y));
+        let y_dot = arena.alloc(Node::StateVectorDot { start: 0, end: 1 });
+        let mut model = compile(&arena, rhs, identity_mass_matrix(1), 1, 0);
+        model
+            .set_observables(ObservableKind::Events, &arena, &[y_dot])
+            .expect("a compiled model's events may read y_dot");
+        let err = PreparedSolver::new(model, 1e-8, &[1e-10])
+            .expect_err("diffsol's root function takes no y_dot");
+        assert!(
+            matches!(err, CoreError::EventStateDotRead),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]

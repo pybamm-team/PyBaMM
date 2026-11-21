@@ -231,6 +231,10 @@ pub enum CoreError {
     #[error("the solver panicked: {0}")]
     SolverPanic(String),
 
+    /// An event read `y_dot`, which diffsol's root function is not given.
+    #[error("an event reads y_dot (a StateVectorDot), which the diffsol solver does not supply")]
+    EventStateDotRead,
+
     #[error("invalid CSR matrix: {0}")]
     Csr(String),
 

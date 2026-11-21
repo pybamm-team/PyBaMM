@@ -259,6 +259,9 @@ impl PreparedSolver {
             });
         }
         validate_tolerances(rtol, atol)?;
+        if compiled.events_read_y_dot().contains(&true) {
+            return Err(CoreError::EventStateDotRead);
+        }
 
         let mass = compiled.mass_matrix();
         let (mass_sparsity, mass_csc_values) = csr_mass_to_faer_csc(mass);
