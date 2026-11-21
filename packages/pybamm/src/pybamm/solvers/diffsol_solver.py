@@ -288,8 +288,10 @@ class DiffsolSolver(pybamm.BaseSolver):
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         """Set up the solver, building the Rust compiled model."""
         if model.convert_to_format != "rust":
-            pybamm.logger.info(
-                f"Converting {model.name} to Rust for solving with DiffsolSolver"
+            # Rust is the default, so another format was asked for and is overridden
+            pybamm.logger.warning(
+                f"DiffsolSolver solves Rust models only, so it converts {model.name} "
+                f"from convert_to_format={model.convert_to_format!r} to 'rust'"
             )
             model.convert_to_format = "rust"
 
