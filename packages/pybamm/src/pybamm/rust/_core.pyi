@@ -658,7 +658,7 @@ class PreparedSolver:
     def __new__(
         cls,
         model: CompiledModel,
-        rtol: float = 1e-6,
+        rtol: float = 1e-4,
         atol: float | _FloatArray = ...,
         sens_atol_factor: float = 1.0,
         options: _SolverOptions | None = None,

@@ -73,7 +73,8 @@ class DiffsolSolver(pybamm.BaseSolver):
     Parameters
     ----------
     rtol : float, optional
-        The relative tolerance for the solver (default is 1e-6).
+        The relative tolerance for the solver (default is 1e-4, as in
+        :class:`IDAKLUSolver`).
     atol : float or :class:`numpy.ndarray`, optional
         The absolute tolerance, one value or one per state (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
@@ -154,7 +155,7 @@ class DiffsolSolver(pybamm.BaseSolver):
 
     def __init__(
         self,
-        rtol=1e-6,
+        rtol=1e-4,
         atol=1e-6,
         *,
         root_method=None,

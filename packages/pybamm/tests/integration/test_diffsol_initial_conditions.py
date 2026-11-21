@@ -27,10 +27,11 @@ def _chen2020(c_rate):
 
 
 def _solve(calc_ic, parameter_values=None, model=None, var_pts=None, **solve_kwargs):
+    # The native solve converges to these, the root solve to root_tol, so match them.
     simulation = pybamm.Simulation(
         model or pybamm.lithium_ion.DFN(),
         parameter_values=parameter_values,
-        solver=pybamm.DiffsolSolver(calc_ic=calc_ic),
+        solver=pybamm.DiffsolSolver(rtol=1e-6, atol=1e-6, calc_ic=calc_ic),
         var_pts=var_pts,
     )
     return simulation.solve(**solve_kwargs)
@@ -101,7 +102,9 @@ class TestDiffsolInitialConditions:
         name = "Local ECM resistance [Ohm]"
         outputs = pybamm.Simulation(
             pybamm.lithium_ion.DFN(),
-            solver=pybamm.DiffsolSolver(output_variables=["Voltage [V]"]),
+            solver=pybamm.DiffsolSolver(
+                rtol=1e-6, atol=1e-6, output_variables=["Voltage [V]"]
+            ),
         ).solve([0, 60])
         full = _solve(True, t_eval=[0, 60])
         np.testing.assert_allclose(

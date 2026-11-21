@@ -349,7 +349,7 @@ impl PreparedSolver {
     #[new]
     // Keep `sens_atol_factor` equal to `core_solve::DEFAULT_SENS_ATOL_FACTOR`; a
     // path default renders as `...` in `__text_signature__`, which stubtest rejects.
-    #[pyo3(signature = (model, rtol=1e-6, atol=PyAtol::Uniform(1e-6), sens_atol_factor=1.0, options=None, store_yp=false, *, sensitivity_error_control=false))]
+    #[pyo3(signature = (model, rtol=1e-4, atol=PyAtol::Uniform(1e-6), sens_atol_factor=1.0, options=None, store_yp=false, *, sensitivity_error_control=false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         py: Python<'_>,
