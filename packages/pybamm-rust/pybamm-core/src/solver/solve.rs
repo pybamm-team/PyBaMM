@@ -1426,7 +1426,8 @@ fn drive_segments<'a, S: OdeSolverMethod<'a, Equations>>(
                 }
             }
         }
-        // Whatever is left lies within diffsol's stop round-off, past where the state stopped.
+        // Left only by a stop already reached on entry: diffsol lands a stepped segment on its
+        // stop exactly, so these lie within round-off of where the state stopped.
         for &t in &t_eval[col..=last] {
             recorder.record(solver, ColumnSource::CurrentState(t))?;
         }

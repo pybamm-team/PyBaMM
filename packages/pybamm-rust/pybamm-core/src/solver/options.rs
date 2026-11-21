@@ -1,16 +1,15 @@
 //! Integrator tuning: the diffsol `OdeSolverOptions` knobs a solve exposes.
 //!
-//! Defaults are read from diffsol, except [`SolverOptions::max_nonlinear_solver_failures`].
+//! Defaults are read from diffsol, except [`SolverOptions::max_number_timesteps`].
 
 use diffsol::{OdeEquations, OdeSolverOptions, OdeSolverProblem};
 
 use crate::error::CoreError;
 
-/// Our replacement for diffsol's whole-solve nonlinear-failure budget.
+/// Our replacement for diffsol's step budget, matching IDAKLU's `max_num_steps`.
 ///
-/// The counter is cumulative over a solve, so it bounds solve length, not divergence;
-/// `min_timestep` catches divergence.
-const MAX_NONLINEAR_SOLVER_FAILURES: usize = 100_000;
+/// diffsol's 5000 spans every segment of a solve, which a long drive cycle can exceed.
+const MAX_NUMBER_TIMESTEPS: usize = 100_000;
 
 /// Call `$callback!` with every option, each as `$(#[doc])* name: Type,`.
 ///
@@ -21,9 +20,11 @@ macro_rules! for_each_solver_option {
         $callback! {
             /// Newton iterations allowed per nonlinear solve.
             max_nonlinear_solver_iterations: usize,
+            /// Completed steps allowed over the whole solve.
+            max_number_timesteps: usize,
             /// Consecutive step rejections allowed before the solve aborts.
             max_error_test_failures: usize,
-            /// Nonlinear-solver convergence failures allowed over the whole solve.
+            /// Nonlinear-solver convergence failures allowed within one step.
             max_nonlinear_solver_failures: usize,
             /// Newton convergence-test scaling factor.
             nonlinear_solver_tolerance: f64,
@@ -63,7 +64,7 @@ macro_rules! define_solver_options {
         }
 
         impl SolverOptions {
-            /// diffsol's own defaults, including the failure budget we otherwise raise.
+            /// diffsol's own defaults, including the step budget we otherwise raise.
             #[must_use]
             pub fn diffsol_defaults() -> Self {
                 let defaults = OdeSolverOptions::<f64>::default();
@@ -88,7 +89,7 @@ for_each_solver_option!(define_solver_options);
 impl Default for SolverOptions {
     fn default() -> Self {
         Self {
-            max_nonlinear_solver_failures: MAX_NONLINEAR_SOLVER_FAILURES,
+            max_number_timesteps: MAX_NUMBER_TIMESTEPS,
             ..Self::diffsol_defaults()
         }
     }
@@ -148,19 +149,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_defaults_are_valid_and_depart_from_diffsol_only_in_the_failure_budget() {
+    fn the_defaults_are_valid_and_depart_from_diffsol_only_in_the_step_budget() {
         let ours = SolverOptions::default();
         ours.validate().expect("defaults invalid");
-        // The raised budget clears the measured worst case.
-        assert!(ours.max_nonlinear_solver_failures > 10_000);
+        assert_eq!(ours.max_number_timesteps, 100_000, "IDAKLU's max_num_steps");
         let theirs = SolverOptions::diffsol_defaults();
-        assert_ne!(
-            ours.max_nonlinear_solver_failures,
-            theirs.max_nonlinear_solver_failures
-        );
+        assert_ne!(ours.max_number_timesteps, theirs.max_number_timesteps);
         assert_eq!(
             SolverOptions {
-                max_nonlinear_solver_failures: theirs.max_nonlinear_solver_failures,
+                max_number_timesteps: theirs.max_number_timesteps,
                 ..ours
             },
             theirs,
