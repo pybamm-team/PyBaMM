@@ -26,8 +26,7 @@ _PARAMS = [
 _T_MAX = 4000.0
 
 
-def _build_and_discretise(model_class, parameters):
-    model = model_class()
+def _build_and_discretise(model, parameters):
     geometry = model.default_geometry
 
     # load parameter values and process model and geometry
@@ -64,9 +63,9 @@ def _assert_compiled(caplog):
     assert not failures, failures[0].getMessage()
 
 
-def _benchmark_warm_solve(benchmark, model_class, parameters):
+def _benchmark_warm_solve(benchmark, model, parameters):
     solver = pybamm.IDAKLUSolver()
-    model = _build_and_discretise(model_class, parameters)
+    model = _build_and_discretise(model, parameters)
     t_eval = np.array([0.0, _T_MAX])
     solver.solve(model, t_eval=t_eval)
     solution = benchmark(solver.solve, model, t_eval=t_eval)
@@ -75,17 +74,37 @@ def _benchmark_warm_solve(benchmark, model_class, parameters):
 
 @pytest.mark.parametrize("parameters", _PARAMS)
 def test_solve_spm(benchmark, parameters):
-    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.SPM, parameters)
+    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.SPM(), parameters)
 
 
 @pytest.mark.parametrize("parameters", _PARAMS)
 def test_solve_spme(benchmark, parameters):
-    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.SPMe, parameters)
+    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.SPMe(), parameters)
 
 
 @pytest.mark.parametrize("parameters", _PARAMS)
 def test_solve_dfn(benchmark, parameters):
-    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.DFN, parameters)
+    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.DFN(), parameters)
+
+
+@pytest.mark.parametrize(
+    "parameters, options",
+    [
+        pytest.param("Chen2020", {"thermal": "lumped"}, id="lumped-Chen2020"),
+        pytest.param("Marquis2019", {"thermal": "lumped"}, id="lumped-Marquis2019"),
+        pytest.param(
+            "Marquis2019", {"SEI": "solvent-diffusion limited"}, id="sei-Marquis2019"
+        ),
+        pytest.param(
+            "OKane2022",
+            {"lithium plating": "partially reversible"},
+            id="plating-OKane2022",
+        ),
+    ],
+)
+def test_solve_dfn_options(benchmark, parameters, options):
+    model = pybamm.lithium_ion.DFN(options=options)
+    _benchmark_warm_solve(benchmark, model, parameters)
 
 
 # ---------------------------------------------------------------------------

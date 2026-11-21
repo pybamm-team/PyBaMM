@@ -21,9 +21,9 @@ _MODELS = [
 ]
 
 
-def _setup_sim(experiment, parameters, model_class):
+def _setup_sim(experiment, parameters, model_class, options=None):
     param = pybamm.ParameterValues(parameters)
-    model = model_class()
+    model = model_class(options=options)
     exp = pybamm.Experiment(_EXPERIMENT_DESCRIPTIONS[experiment])
     return pybamm.Simulation(model, parameter_values=param, experiment=exp)
 
@@ -67,3 +67,10 @@ def test_simulation_solve(benchmark, experiment, parameters, model_class):
     sim = _setup_sim(experiment, parameters, model_class)
     solution = benchmark(sim.solve)
     _assert_completed(solution, experiment)
+
+
+def test_cccv_lumped_dfn(benchmark):
+    sim = _setup_sim("CCCV", "Chen2020", pybamm.lithium_ion.DFN, {"thermal": "lumped"})
+    sim.solve()
+    solution = benchmark(sim.solve)
+    _assert_completed(solution, "CCCV")

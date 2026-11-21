@@ -68,6 +68,10 @@ hardware](https://bencher.dev/docs/explanation/bare-metal/). CI builds self-cont
 
 Bencher's free plan caps each job at 5 minutes; the core suite takes about 3.5.
 
+The core suite also times DFN solves with lumped thermal (Chen2020 and Marquis2019),
+solvent-diffusion-limited SEI (Marquis2019), and partially reversible lithium plating
+(OKane2022), plus a CCCV experiment with lumped thermal (Chen2020).
+
 - **`benchmarks_main.yml`** — on push to `main`, builds, pushes, and runs the core suite
   to record the baseline every PR is compared against. On a weekday schedule it runs the
   `slow_bench` sweeps instead.
