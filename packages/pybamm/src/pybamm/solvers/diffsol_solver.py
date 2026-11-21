@@ -331,7 +331,7 @@ class DiffsolSolver(pybamm.BaseSolver):
             self._prepared_solver = PreparedSolver(
                 self._rust_model,
                 float(self.rtol),
-                self._check_atol_type(self.atol, model),
+                self._check_atol_type(getattr(model, "atol", self.atol), model),
                 self._sens_atol_factor,
                 self._integrator_options(),
                 # Outputs-only solves store no state trajectory to Hermite between.

@@ -909,6 +909,16 @@ class TestPerStateAtol:
         assert self._steps(solver_class, np.array([1e-12, 1e-1])) > loose
         assert self._steps(solver_class, np.array([1e-1, 1e-12])) > loose
 
+    def test_a_per_state_model_atol_wins_over_the_solvers(self, solver_class):
+        model = _two_scale_model()
+        model.atol = np.full(2, 1e-1)
+        solution = solver_class(rtol=1e-6, atol=1e-12).solve(
+            model, np.linspace(0, 1, 5)
+        )
+        loose = self._steps(solver_class, 1e-1)
+        assert solution.solver_statistics.number_of_steps == loose
+        assert loose < self._steps(solver_class, 1e-12)
+
     def test_a_per_state_atol_survives_a_dae_solve(self, solver_class):
         # The initial-condition root solver takes a scalar tolerance, not the array.
         model = pybamm.BaseModel()
