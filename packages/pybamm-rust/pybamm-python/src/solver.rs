@@ -199,7 +199,7 @@ impl SolveOutcome {
             .map(|blocks| sens_blocks(blocks, py))
     }
 
-    /// Full state where the trajectory ends, never an outputs row.
+    /// Full state at a root, or at the end of an outputs solve; else `None`.
     #[getter]
     fn y_event<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyArray1<f64>>> {
         self.y_event_vec
@@ -387,7 +387,7 @@ impl PreparedSolver {
 
     /// Solve the model over the given time span.
     ///
-    /// Every `t_stop` restart time must also appear in `t_eval`; `y0_sens` is the
+    /// A `t_stop` not also in `t_eval` is integrated through; `y0_sens` is the
     /// flattened, column-major `dy0/dp` seed. `num_threads` workers factorise the LU.
     #[pyo3(signature = (t_eval, t_stop, y0, inputs, *, outputs=false, sensitivities=false, y0_sens=None, num_threads=1))]
     #[allow(clippy::too_many_arguments)]

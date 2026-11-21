@@ -637,7 +637,7 @@ class SolveOutcome:
 
     @property
     def y_event(self) -> _FloatArray | None:
-        """The full state where the trajectory ends, never an outputs row."""
+        """The full state at a root, or the end of an outputs solve, else ``None``."""
 
     @property
     def y_start(self) -> _FloatArray:
@@ -678,7 +678,7 @@ class PreparedSolver:
         y0_sens: _FloatArray | None = None,
         num_threads: int = 1,
     ) -> SolveOutcome:
-        """Integrate over ``t_eval``, landing exactly on each ``t_stop``.
+        """Integrate over ``t_eval``, restarting at each ``t_stop`` also in it.
 
         ``num_threads`` workers of the shared pool factorise the sparse LU.
         """
@@ -698,7 +698,7 @@ class PreparedSolver:
         """Solve one row per set; a failed set yields its exception, unraised."""
 
 def default_solver_options() -> _SolverOptions:
-    """Diffsol's integrator defaults, with a larger nonlinear-failure budget."""
+    """diffsol's integrator defaults, with IDAKLU's step budget for diffsol's 5000."""
 
 def _pool_ids() -> dict[int, int]:
     """Cached rayon pools as ``{thread_count: pool identity}`` (test introspection)."""
