@@ -94,7 +94,7 @@ impl Default for SolverOptions {
 }
 
 impl SolverOptions {
-    /// Reject values diffsol would take at face value and then misbehave on.
+    /// Reject non-finite values, and non-positive ones where diffsol needs a positive value.
     pub fn validate(&self) -> Result<(), CoreError> {
         // `(name, value, must be positive)`; an absent optional bound is not checked.
         let checks = [

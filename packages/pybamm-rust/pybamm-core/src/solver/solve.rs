@@ -144,7 +144,7 @@ impl<'a> SolveRequest<'a> {
         }
     }
 
-    /// Land on, and restart from, each of `t_stop`.
+    /// Land on, and restart from, each `t_stop` also in `t_eval`; the rest are integrated through.
     pub const fn with_stop_times(mut self, t_stop: &'a [f64]) -> Self {
         self.t_stop = t_stop;
         self
@@ -2509,7 +2509,7 @@ mod tests {
 
     #[test]
     fn output_points_within_round_off_of_a_segment_end_are_all_reported() {
-        // One step spans each short span, so diffsol can stop an ULP short of tstop.
+        // Points a few ULPs below the end each still get a column of their own.
         let prepared = build_decay_param_output_event();
         for i in 0..100 {
             let t_end = 1e-6 * (0.2 + 0.0123 * f64::from(i));
