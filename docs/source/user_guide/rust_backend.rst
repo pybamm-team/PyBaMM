@@ -15,9 +15,12 @@ Two solvers use it:
 - :class:`pybamm.DiffsolSolver` integrates with the pure-Rust BDF
   implementation from the `diffsol <https://github.com/martinjrobins/diffsol>`_
   crate, with no CasADi or SUNDIALS involvement. It supports forward
-  sensitivities under solver error control, ``output_variables``-only solves,
+  sensitivities (under error control with the ``sensitivity_error_control``
+  option, as for :class:`pybamm.IDAKLUSolver`), ``output_variables``-only solves,
   events, and ``t_interp``. Its events cannot read state time derivatives, as
-  in ``x.diff(pybamm.t)``, which need :class:`pybamm.IDAKLUSolver`.
+  in ``x.diff(pybamm.t)``, which need :class:`pybamm.IDAKLUSolver`. It returns
+  no partial solution, so an integration failure always raises and
+  ``on_failure`` must be ``"error"``.
 
 Selecting the backend
 ---------------------
@@ -43,8 +46,8 @@ instead:
     model = pybamm.lithium_ion.SPM()
     model.convert_to_format = "casadi"
 
-:class:`pybamm.DiffsolSolver` always uses the Rust backend and converts the
-model itself:
+:class:`pybamm.DiffsolSolver` always uses the Rust backend, converting the
+model itself with a warning if another format was set:
 
 .. code-block:: python
 
@@ -76,13 +79,14 @@ uniform over the span. Pass ``t_interp`` to choose the output times exactly;
 they are then ``t_interp`` merged with ``t_eval`` and any discontinuity times.
 
 Off-grid reads — ``sol["Voltage [V]"](t)`` at a ``t`` between output points —
-interpolate with cubic Hermite, as they do for ``IDAKLUSolver``: the solver
-stores the state time derivatives alongside the solution by default. Pass
-``hermite_interpolation=False`` to drop them and halve trajectory memory, at
-the cost of off-grid reads falling back to linear interpolation. IDAKLU's
-Hermite knots are its internal steps, while diffsol's are its output times, so
-on a coarse ``t_interp`` IDAKLU's off-grid reads remain the more accurate of
-the two.
+interpolate with cubic Hermite: diffsol stores the state time derivatives at
+every output time by default, though not with ``output_variables`` or above
+4096 output times. Pass ``hermite_interpolation=False`` to drop them and halve
+trajectory memory, at the cost of off-grid reads falling back to linear
+interpolation. Without ``t_interp``, IDAKLU's Hermite knots are its internal
+steps, finer than diffsol's output grid. With ``t_interp``, IDAKLU drops its
+Hermite data and reads linearly between output times, where diffsol still
+interpolates cubically.
 
 Supported expression types
 --------------------------
