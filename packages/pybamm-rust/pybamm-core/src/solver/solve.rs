@@ -212,7 +212,9 @@ pub struct PreparedSolver {
     compiled: Arc<CompiledModel>,
     rtol: f64,
     atol: Vec<f64>,
-    /// Multiplier applied to `atol` on differential states only.
+    /// Puts the sensitivities under error control; off, they do not shape the steps.
+    sens_error_control: bool,
+    /// Multiplier applied to `atol` on differential states only, under sensitivity error control.
     sens_atol_factor: f64,
     options: SolverOptions,
     store_yp: bool,
@@ -274,6 +276,7 @@ impl PreparedSolver {
             compiled,
             rtol,
             atol: atol.to_vec(),
+            sens_error_control: false,
             sens_atol_factor: DEFAULT_SENS_ATOL_FACTOR,
             options: SolverOptions::default(),
             store_yp: false,
@@ -317,7 +320,8 @@ impl PreparedSolver {
 
     /// One solve's diffsol problem, owning its workspace, over `binding`'s parameter vector.
     ///
-    /// With `sensitivities`, the sensitivities are under error control, scaled by `|p_j|`.
+    /// With `sensitivities` and [`Self::with_sens_error_control`], the sensitivities are under
+    /// error control, scaled by `|p_j|`.
     fn build_problem(
         &self,
         set: InputSet<'_>,
@@ -333,7 +337,7 @@ impl PreparedSolver {
         let mut builder = OdeBuilder::<FaerSparseMat<f64>>::new()
             .rtol(self.rtol)
             .atol(self.atol.clone());
-        if sensitivities {
+        if sensitivities && self.sens_error_control {
             // param_scales plays the role of IDAS's pbar.
             builder = builder
                 .sens_rtol(self.rtol)
@@ -343,7 +347,18 @@ impl PreparedSolver {
         Ok(self.options.apply(builder.t0(t0).p(p).build_from_eqn(eqn)?))
     }
 
+    /// Put the sensitivities under error control, as IDAS's `IDASetSensErrCon` does.
+    ///
+    /// Off by default, as in diffsol and IDAKLU: the steps then follow the states alone.
+    #[must_use]
+    pub const fn with_sens_error_control(mut self, on: bool) -> Self {
+        self.sens_error_control = on;
+        self
+    }
+
     /// Set the multiplier on differential-state `atol` for the sensitivity tolerance floor.
+    ///
+    /// Only a solve under [`Self::with_sens_error_control`] reads it.
     pub fn with_sens_atol_factor(mut self, factor: f64) -> Result<Self, CoreError> {
         if !factor.is_finite() || factor <= 0.0 {
             return Err(CoreError::SensAtolFactor { got: factor });
@@ -2808,10 +2823,12 @@ mod tests {
         }
     }
 
-    /// The shared decay fixture, prepared at tolerances tight enough for analytic checks.
+    /// The shared decay fixture, its sensitivities too held to tolerances tight enough for
+    /// analytic checks.
     fn build_decay_param_output_event() -> PreparedSolver {
         PreparedSolver::new(decay_with_output_and_event(), 1e-10, &[1e-10])
             .expect("PreparedSolver failed")
+            .with_sens_error_control(true)
     }
 
     /// Two states, three outputs, one sensitivity parameter and an event: row spaces differ.
@@ -3419,7 +3436,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sensitivity_error_control_cannot_resolve_fails_the_solve() {
+    fn a_sensitivity_error_control_cannot_resolve_fails_the_solve_only_under_it() {
         let t_eval: Vec<f64> = (0..=10).map(|i| f64::from(i) * 0.1).collect();
         let set = InputSet::new(&[1.0], &[0.0]);
         let request = SolveRequest::new(&t_eval);
@@ -3432,6 +3449,7 @@ mod tests {
             PreparedSolver::new(build_decay_with_a_switched_sensitivity(k), 1e-8, &[1e-8])
                 .and_then(|prepared| prepared.with_options(options.clone()))
                 .expect("prepare")
+                .with_sens_error_control(true)
         };
         prepare(1.0)
             .solve(request.with_sensitivities(), set)
@@ -3445,6 +3463,19 @@ mod tests {
             .solve(request.with_sensitivities(), set)
             .expect_err("a sensitivity error control cannot resolve must fail the solve");
         assert!(matches!(err, CoreError::Diffsol(_)), "{err:?}");
+
+        // Out of error control, the steps follow the state, so the same solve finishes, its
+        // sensitivity integrated though not resolved across the jump.
+        let uncontrolled = sharp
+            .with_sens_error_control(false)
+            .solve(request.with_sensitivities(), set)
+            .expect("the steps follow the state alone");
+        let s_end = blocks(&uncontrolled)[0][t_eval.len() - 1];
+        let exact = 1e6 * (1.0 - (-0.5f64).exp());
+        assert!(
+            (s_end - exact).abs() < 0.1 * exact,
+            "s(1) = {s_end}, exact {exact}"
+        );
     }
 
     #[test]
