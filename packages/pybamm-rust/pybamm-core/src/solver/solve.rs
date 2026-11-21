@@ -3436,7 +3436,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sensitivity_error_control_cannot_resolve_fails_the_solve_only_under_it() {
+    fn a_sensitivity_error_control_cannot_resolve_fails_the_solve() {
         let t_eval: Vec<f64> = (0..=10).map(|i| f64::from(i) * 0.1).collect();
         let set = InputSet::new(&[1.0], &[0.0]);
         let request = SolveRequest::new(&t_eval);
@@ -3463,18 +3463,37 @@ mod tests {
             .solve(request.with_sensitivities(), set)
             .expect_err("a sensitivity error control cannot resolve must fail the solve");
         assert!(matches!(err, CoreError::Diffsol(_)), "{err:?}");
+    }
 
-        // Out of error control, the steps follow the state, so the same solve finishes, its
-        // sensitivity integrated though not resolved across the jump.
-        let uncontrolled = sharp
-            .with_sens_error_control(false)
-            .solve(request.with_sensitivities(), set)
-            .expect("the steps follow the state alone");
-        let s_end = blocks(&uncontrolled)[0][t_eval.len() - 1];
-        let exact = 1e6 * (1.0 - (-0.5f64).exp());
+    #[test]
+    fn a_jump_only_the_sensitivity_sees_needs_a_stop_time_or_error_control() {
+        // PyBaMM brackets `t > 0.5` with 0.5 and the time one ULP above it.
+        let above = f64::from_bits(0.5f64.to_bits() + 1);
+        let t_eval = [0.0, 0.25, 0.5, above, 0.75, 1.0];
+        let set = InputSet::new(&[1.0], &[0.0]);
+        let request = SolveRequest::new(&t_eval).with_sensitivities();
+        let exact = 1.0 - (-0.5f64).exp();
+        let prepare = || {
+            PreparedSolver::new(build_decay_with_a_switched_sensitivity(1.0), 1e-8, &[1e-8])
+                .expect("prepare")
+        };
+        let error = |prepared: &PreparedSolver, request: SolveRequest<'_>| {
+            let outcome = prepared.solve(request, set).expect("solve");
+            (blocks(&outcome)[0][t_eval.len() - 1] - exact).abs() / exact
+        };
+
+        // Uncontrolled, the steps follow the state, which never sees the jump.
+        let hidden = error(&prepare(), request);
+        let stopped = error(&prepare(), request.with_stop_times(&[0.5, above]));
+        let controlled = error(&prepare().with_sens_error_control(true), request);
+        assert!(stopped < 1e-6, "a stop time resolves it: {stopped:e}");
         assert!(
-            (s_end - exact).abs() < 0.1 * exact,
-            "s(1) = {s_end}, exact {exact}"
+            controlled < 1e-6,
+            "error control resolves it: {controlled:e}"
+        );
+        assert!(
+            hidden > 1e3 * stopped,
+            "a hidden jump must go unresolved, else the test proves nothing: {hidden:e}"
         );
     }
 
