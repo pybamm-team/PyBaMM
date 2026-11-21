@@ -22,6 +22,7 @@ import numpy.typing as npt
 
 import pybamm
 from pybamm.solvers.base_processed_variable import BaseProcessedVariable
+from pybamm.solvers.rust_lowering import reject_y_dot
 from pybamm.solvers.variable_observer import (
     CasadiObserver,
     NativeObserver,
@@ -114,6 +115,8 @@ class ObserverCache:
             leaf = graph.compile(
                 integrand.to_rust(graph), name=name, n_states=self._rust_model.n_states
             )
+            # Observation gives no y_dot, as for a CasADi leaf
+            reject_y_dot(leaf)
             entry = (leaf, integrand, time_integral)
             self._native_leaves[name] = entry
         return entry
@@ -135,6 +138,7 @@ class ObserverCache:
                 },
                 n_states=self._rust_model.n_states,
             )
+            reject_y_dot(function)
             self._native_sets[key] = function
         return function
 

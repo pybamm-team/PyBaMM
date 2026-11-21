@@ -1,6 +1,7 @@
 """Unit tests for native (Rust) observation: accessor, producer, compile-once."""
 
 import numpy as np
+import pytest
 
 from pybamm.rust import ExprGraph
 from pybamm.solvers.observation import ObserverCache
@@ -94,6 +95,19 @@ class TestSingleVariableNative:
         assert cache._native_leaves["Terminal voltage [V]"][0] is leaf
         sol.update("Terminal voltage [V]")
         assert sol["Terminal voltage [V]"]._observer.leaves[0] is leaf
+
+    def test_a_time_derivative_needs_y_dot(self):
+        import pybamm
+
+        model = pybamm.lithium_ion.SPM()
+        voltage = model.variables["Voltage [V]"]
+        model.variables["dV/dt [V.s-1]"] = voltage.diff(pybamm.t)
+        sol = _native_idaklu_sim(model).solve([0, 600])
+        # Like a CasADi leaf, a native one is given no y_dot, alone or in a set
+        with pytest.raises(pybamm.ModelError, match=r"Must provide a 'y_dot'"):
+            sol.observe(voltage.diff(pybamm.t))
+        with pytest.raises(pybamm.ModelError, match=r"Must provide a 'y_dot'"):
+            sol.update(["Voltage [V]", "dV/dt [V.s-1]"])
 
 
 def _make_var_fn():
