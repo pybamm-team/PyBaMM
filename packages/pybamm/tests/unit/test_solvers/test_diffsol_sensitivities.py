@@ -21,7 +21,12 @@ _SPATIAL_SOLVER_TOL = 1e-12
 
 class TestDiffsolSensitivities:
     def _solve_both(
-        self, output_name, calc, extra_inputs=None, solver_tol=_SCALAR_SOLVER_TOL
+        self,
+        output_name,
+        calc,
+        extra_inputs=None,
+        solver_tol=_SCALAR_SOLVER_TOL,
+        error_control=False,
     ):
         params = pybamm.ParameterValues("Chen2020")
         params["Current function [A]"] = pybamm.InputParameter("I")
@@ -38,7 +43,11 @@ class TestDiffsolSensitivities:
         sol_n = pybamm.Simulation(
             m_native,
             parameter_values=params,
-            solver=pybamm.DiffsolSolver(rtol=solver_tol, atol=solver_tol),
+            solver=pybamm.DiffsolSolver(
+                rtol=solver_tol,
+                atol=solver_tol,
+                options={"sensitivity_error_control": error_control},
+            ),
         ).solve(t_eval, inputs=inputs, calculate_sensitivities=calc, t_interp=t_eval)
 
         m_casadi = pybamm.lithium_ion.SPM()
@@ -48,7 +57,11 @@ class TestDiffsolSensitivities:
         sol_c = pybamm.Simulation(
             m_casadi,
             parameter_values=params,
-            solver=pybamm.IDAKLUSolver(rtol=solver_tol, atol=solver_tol),
+            solver=pybamm.IDAKLUSolver(
+                rtol=solver_tol,
+                atol=solver_tol,
+                options={"sensitivity_error_control": error_control},
+            ),
         ).solve(t_eval, inputs=inputs, calculate_sensitivities=calc, t_interp=t_eval)
         return sol_n[output_name], sol_c[output_name]
 
@@ -64,7 +77,10 @@ class TestDiffsolSensitivities:
 
     def test_sensitivities_match_casadi_spatial(self):
         name = "Negative particle concentration [mol.m-3]"
-        var_n, var_c = self._solve_both(name, ["I"], solver_tol=_SPATIAL_SOLVER_TOL)
+        # Uncontrolled, each solver's spatial gradients drift by its own steps.
+        var_n, var_c = self._solve_both(
+            name, ["I"], solver_tol=_SPATIAL_SOLVER_TOL, error_control=True
+        )
         assert var_c.entries.shape[0] > 1
         sens_n, sens_c = var_n.sensitivities, var_c.sensitivities
         assert set(sens_n) == set(sens_c)
@@ -649,8 +665,14 @@ class TestDiffsolSensitivities:
         model = pybamm.lithium_ion.SPM()
         model.events = []
         model.convert_to_format = fmt
+        # A sensitivity floor acts only under error control, so setting one turns it on.
         extra = (
-            {} if sens_atol_factor is None else {"sens_atol_factor": sens_atol_factor}
+            {}
+            if sens_atol_factor is None
+            else {
+                "sens_atol_factor": sens_atol_factor,
+                "options": {"sensitivity_error_control": True},
+            }
         )
         solver = (
             pybamm.DiffsolSolver(rtol=tol, atol=tol, **extra)
@@ -791,7 +813,7 @@ class TestDiffsolSensitivities:
         np.testing.assert_allclose(got, ref, rtol=_PARITY_RTOL, atol=_PARITY_ATOL)
 
     @staticmethod
-    def _solve_dfn(parameter_set, sens_atol_factor=1.0):
+    def _solve_dfn(parameter_set, sens_atol_factor=1.0, error_control=False):
         model = pybamm.lithium_ion.DFN()
         params = (
             model.default_parameter_values.copy()
@@ -813,7 +835,10 @@ class TestDiffsolSensitivities:
             model,
             parameter_values=params,
             solver=pybamm.DiffsolSolver(
-                rtol=1e-6, atol=1e-6, sens_atol_factor=sens_atol_factor
+                rtol=1e-6,
+                atol=1e-6,
+                sens_atol_factor=sens_atol_factor,
+                options={"sensitivity_error_control": error_control},
             ),
         ).solve(
             [float(grid[0]), float(grid[-1])],
@@ -831,10 +856,20 @@ class TestDiffsolSensitivities:
             assert np.all(np.isfinite(block))
             assert np.any(block != 0)
 
-    def test_a_sensitivity_floor_no_step_can_meet_is_a_solver_error(self):
-        # Error control is never relaxed, so no uncontrolled gradients come back.
+    def test_error_control_puts_the_gradients_in_the_error_test(self):
+        uncontrolled = self._solve_dfn("default")
+        controlled = self._solve_dfn("default", error_control=True)
+        assert (
+            controlled.solver_statistics.number_of_steps
+            > uncontrolled.solver_statistics.number_of_steps
+        )
+
+    def test_a_sensitivity_floor_no_step_can_meet_fails_only_under_error_control(self):
         with pytest.raises(pybamm.SolverError, match=r"diffsol error"):
-            self._solve_dfn("default", sens_atol_factor=1e-30)
+            self._solve_dfn("default", sens_atol_factor=1e-30, error_control=True)
+        # Out of error control the floor is never read, as in IDAKLUSolver.
+        solution = self._solve_dfn("default", sens_atol_factor=1e-30)
+        assert solution.t[-1] == pytest.approx(600.0)
 
     def test_dfn_sensitivities_hold_error_control_at_a_tighter_floor(self):
         model = pybamm.lithium_ion.DFN()
@@ -853,7 +888,12 @@ class TestDiffsolSensitivities:
         solution = pybamm.Simulation(
             model,
             parameter_values=params,
-            solver=pybamm.DiffsolSolver(rtol=1e-6, atol=1e-6, sens_atol_factor=1e-2),
+            solver=pybamm.DiffsolSolver(
+                rtol=1e-6,
+                atol=1e-6,
+                sens_atol_factor=1e-2,
+                options={"sensitivity_error_control": True},
+            ),
         ).solve(
             [float(grid[0]), float(grid[-1])],
             t_interp=grid,
@@ -922,15 +962,18 @@ class TestDiffsolSensAtolFactor:
                 m,
                 parameter_values=params,
                 solver=pybamm.DiffsolSolver(
-                    rtol=1e-9, atol=1e-9, sens_atol_factor=sens_atol_factor
+                    rtol=1e-9,
+                    atol=1e-9,
+                    sens_atol_factor=sens_atol_factor,
+                    options={"sensitivity_error_control": True},
                 ),
             ).solve(t_eval, inputs=inputs, calculate_sensitivities=["I"])
 
-        sol_default = solve(1e-3)
-        sol_relaxed = solve(1.0)
+        sol_tight = solve(1e-3)
+        sol_default = solve(1.0)
         assert (
-            sol_default.solver_statistics.number_of_steps
-            > sol_relaxed.solver_statistics.number_of_steps
+            sol_tight.solver_statistics.number_of_steps
+            > sol_default.solver_statistics.number_of_steps
         )
 
 

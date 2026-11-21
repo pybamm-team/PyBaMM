@@ -134,7 +134,10 @@ class TestDiffsolPulseTrain:
         for k in range(6):
             inputs = {**INPUT_VALUES, "eps_n": INPUT_VALUES["eps_n"] * (1 + k * 1e-9)}
             solution = _solve(
-                "diffsol", calculate_sensitivities=sorted(inputs), inputs=inputs
+                "diffsol",
+                calculate_sensitivities=sorted(inputs),
+                inputs=inputs,
+                options={"sensitivity_error_control": True},
             )
             assert solution.t[-1] == pytest.approx(DURATION_S)
 

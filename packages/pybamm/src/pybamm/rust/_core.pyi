@@ -663,6 +663,8 @@ class PreparedSolver:
         sens_atol_factor: float = 1.0,
         options: _SolverOptions | None = None,
         store_yp: bool = False,
+        *,
+        sensitivity_error_control: bool = False,
     ) -> PreparedSolver: ...
     def solve(
         self,

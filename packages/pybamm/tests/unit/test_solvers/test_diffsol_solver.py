@@ -590,6 +590,12 @@ class TestDiffsolSolverOptions:
         with pytest.raises(pybamm.SolverError, match=r"Unknown diffsol solver option"):
             pybamm.DiffsolSolver(options={"max_error_test_failure": 7})
 
+    def test_sensitivity_error_control_is_an_off_by_default_bool(self):
+        options = pybamm.DiffsolSolver.DEFAULT_OPTIONS
+        assert options["sensitivity_error_control"] is False
+        with pytest.raises(pybamm.SolverError, match=r"must be a bool"):
+            pybamm.DiffsolSolver(options={"sensitivity_error_control": 1})
+
     def test_the_step_budget_default_is_idaklus_not_diffsols(self):
         # diffsol's own 5000 would fail a long drive cycle that IDAKLU solves.
         assert pybamm.DiffsolSolver.DEFAULT_OPTIONS["max_number_timesteps"] == 100000

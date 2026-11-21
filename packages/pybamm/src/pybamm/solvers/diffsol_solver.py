@@ -97,15 +97,23 @@ class DiffsolSolver(pybamm.BaseSolver):
         If True (default), store state derivatives for cubic Hermite off-grid reads.
         Ignored with ``output_variables`` or more than 4096 output points.
     sens_atol_factor : float, optional
-        Multiplier on ``atol`` for the differential states' sensitivity tolerance
-        (default 1.0, matching :class:`IDAKLUSolver`); lower it for tighter gradients.
+        Multiplier on ``atol`` for the differential states' sensitivity tolerance under
+        ``sensitivity_error_control`` (default 1.0, the floor :class:`IDAKLUSolver`
+        uses); lower it for tighter gradients.
     options : dict, optional
-        diffsol ``OdeSolverOptions`` overrides plus ``num_threads``: input sets solved
-        concurrently, or the threads a single set's sparse LU uses (worthwhile from
-        ~50k states). ``max_number_timesteps`` bounds the steps between consecutive
-        breakpoints, and ``max_nonlinear_solver_failures`` the failures within one step.
-        Defaults are in :attr:`DEFAULT_OPTIONS`; unknown keys and values of the wrong
-        type raise :class:`pybamm.SolverError`.
+        diffsol ``OdeSolverOptions`` overrides, plus:
+
+        - ``num_threads``: input sets solved concurrently, or the threads a single
+          set's sparse LU uses (worthwhile from ~50k states).
+        - ``sensitivity_error_control``: put the forward sensitivities in the local
+          error test, as :class:`IDAKLUSolver`'s option of that name does. Off by
+          default, so the steps follow the states alone.
+
+        ``max_number_timesteps`` bounds the steps between consecutive breakpoints,
+        ``max_nonlinear_solver_failures`` the failures within one step, and
+        ``min_timestep`` defaults to machine epsilon, as in diffsol. Defaults are in
+        :attr:`DEFAULT_OPTIONS`; unknown keys and values of the wrong type raise
+        :class:`pybamm.SolverError`.
     """
 
     _integrates_via_compiled_model = True
@@ -133,8 +141,11 @@ class DiffsolSolver(pybamm.BaseSolver):
         "pi_control_integral": 0.5,
     }
 
-    #: The integrator knobs plus ``num_threads``, which never reaches diffsol.
-    DEFAULT_OPTIONS = _INTEGRATOR_DEFAULTS | {"num_threads": 1}
+    #: The integrator knobs plus two that configure the solve rather than diffsol.
+    DEFAULT_OPTIONS = _INTEGRATOR_DEFAULTS | {
+        "num_threads": 1,
+        "sensitivity_error_control": False,
+    }
 
     def __init__(
         self,
@@ -209,6 +220,11 @@ class DiffsolSolver(pybamm.BaseSolver):
             options[name] = cls._checked_option(name, options[name], default)
         options["num_threads"] = cls._checked_count(
             "num_threads", options["num_threads"], minimum=1
+        )
+        if not isinstance(options["sensitivity_error_control"], bool | np.bool_):
+            raise pybamm.SolverError("sensitivity_error_control must be a bool")
+        options["sensitivity_error_control"] = bool(
+            options["sensitivity_error_control"]
         )
         return options
 
@@ -320,6 +336,7 @@ class DiffsolSolver(pybamm.BaseSolver):
                 self._integrator_options(),
                 # Outputs-only solves store no state trajectory to Hermite between.
                 self._hermite_interpolation and not self.output_variables,
+                sensitivity_error_control=self._options["sensitivity_error_control"],
             )
         except ValueError as error:
             # The binding rejects an invalid tolerance or option, or an event reading

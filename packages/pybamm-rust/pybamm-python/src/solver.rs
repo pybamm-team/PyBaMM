@@ -344,11 +344,13 @@ pub struct PreparedSolver {
 impl PreparedSolver {
     /// Prepare a solver for repeated use with the given model and tolerances.
     ///
-    /// `store_yp` also stores the state time derivatives (`result.yp`) for Hermite interpolation.
+    /// `store_yp` also stores the state time derivatives (`result.yp`) for Hermite interpolation,
+    /// and `sensitivity_error_control` puts the sensitivities under error control.
     #[new]
     // Keep `sens_atol_factor` equal to `core_solve::DEFAULT_SENS_ATOL_FACTOR`; a
     // path default renders as `...` in `__text_signature__`, which stubtest rejects.
-    #[pyo3(signature = (model, rtol=1e-6, atol=PyAtol::Uniform(1e-6), sens_atol_factor=1.0, options=None, store_yp=false))]
+    #[pyo3(signature = (model, rtol=1e-6, atol=PyAtol::Uniform(1e-6), sens_atol_factor=1.0, options=None, store_yp=false, *, sensitivity_error_control=false))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         py: Python<'_>,
         model: &CompiledModel,
@@ -357,6 +359,7 @@ impl PreparedSolver {
         sens_atol_factor: f64,
         options: Option<PySolverOptions>,
         store_yp: bool,
+        sensitivity_error_control: bool,
     ) -> PyResult<Self> {
         let compiled = Arc::clone(&model.compiled);
         let atol_vec = atol.into_vec(compiled.n_states());
@@ -366,7 +369,8 @@ impl PreparedSolver {
             .and_then(|p| p.with_sens_atol_factor(sens_atol_factor))
             .and_then(|p| p.with_options(options))
             .map_err(core_err_to_py)?
-            .with_store_yp(store_yp);
+            .with_store_yp(store_yp)
+            .with_sens_error_control(sensitivity_error_control);
         // Only stored slopes read dF/dt, so other solves never compile it.
         if store_yp {
             let graph = model
