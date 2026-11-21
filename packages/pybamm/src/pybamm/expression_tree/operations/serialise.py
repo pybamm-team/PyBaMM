@@ -1593,9 +1593,15 @@ class Serialise:
         filename : str, optional
             If given, saves the serialized parameters to this file.
         """
-        from pybamm.parameters.parameter_values import convert_parameter_values_to_json
+        parameter_values_dict = {}
 
-        parameter_values_dict = convert_parameter_values_to_json(parameters)
+        for k, v in parameters.items():
+            if callable(v):
+                parameter_values_dict[k] = convert_symbol_to_json(
+                    convert_function_to_symbolic_expression(v, k)
+                )
+            else:
+                parameter_values_dict[k] = convert_symbol_to_json(v)
 
         if filename is not None:
             with open(filename, "w") as f:
@@ -1616,7 +1622,6 @@ class Serialise:
         with open(filename) as f:
             raw_dict = json.load(f)
 
-        reason = pybamm.ParameterValues._extract_serialized_citation_reason(raw_dict)
         deserialized = {}
         for key, val in raw_dict.items():
             if isinstance(val, dict) and ("$type" in val or "type" in val):
@@ -1633,9 +1638,7 @@ class Serialise:
                     f"Unsupported parameter format for key '{key}': {val!r}"
                 )
 
-        return pybamm.ParameterValues._from_deserialized_parameters(
-            deserialized, reason
-        )
+        return pybamm.ParameterValues(deserialized)
 
     # Helper functions
 

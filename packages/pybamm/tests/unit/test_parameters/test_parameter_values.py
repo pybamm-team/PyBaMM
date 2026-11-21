@@ -1357,6 +1357,26 @@ class TestParameterValues:
         # Verify result is a symbol
         assert isinstance(result, pybamm.Symbol)
 
+    @pytest.mark.parametrize("expression_function", [False, True])
+    def test_process_function_parameter_constant_derivative_keeps_shape(
+        self, expression_function
+    ):
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # f(x) does not depend on time, so its time derivative is 0 over x
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        value = (
+            ExpressionFunctionParameter("f", 2 * x, "f", ["x"])
+            if expression_function
+            else (lambda x: 2 * x)
+        )
+        derivative = pybamm.FunctionParameter("f", {"x": x}).diff(pybamm.t)
+        result = pybamm.ParameterValues({"f": value}).process_symbol(derivative)
+        assert result.domains == x.domains
+        assert result.shape_for_testing == x.shape_for_testing
+
     def test_expression_function_parameter_rebinds_metadata_leaf_domains(self):
         from pybamm.expression_tree.operations.serialise import (
             ExpressionFunctionParameter,

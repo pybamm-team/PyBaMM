@@ -80,11 +80,16 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // Set events
-  IDARootInit(ida_mem, number_of_events, events_eval<ExprSet>);
+  IDARootFn events = events_eval<ExprSet>;
+  if (!functions->events_read_yp.empty()) {
+    events = events_with_derivatives_eval<ExprSet>;
+  }
+  IDARootInit(ida_mem, number_of_events, events);
 
   // Set user data
   void *user_data = functions.get();
   IDASetUserData(ida_mem, user_data);
+  functions->ida_mem = ida_mem;
 
   // Specify preconditioner type
   precon_type = SUN_PREC_NONE;
@@ -108,6 +113,7 @@ void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
     yy = N_VNew_Serial(number_of_states, sunctx);
     yyp = N_VNew_Serial(number_of_states, sunctx);
     y_cache = N_VNew_Serial(number_of_states, sunctx);
+    yp_cache = N_VNew_Serial(number_of_states, sunctx);
     avtol = N_VNew_Serial(number_of_states, sunctx);
     id = N_VNew_Serial(number_of_states, sunctx);
   } else {
@@ -115,6 +121,7 @@ void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
     yy = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     yyp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     y_cache = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    yp_cache = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     avtol = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     id = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
   }
@@ -324,6 +331,7 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
   N_VDestroy(yy);
   N_VDestroy(yyp);
   N_VDestroy(y_cache);
+  N_VDestroy(yp_cache);
   N_VDestroy(id);
 
   if (sensitivity) {
@@ -375,25 +383,28 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // Check events on `yy` (= phi[0], the integrator's start state) before the
   // first step; a post-step IDAGetDky(t0) value can flip a boundary event's sign.
+  // Those reading yp are unknown until the step, so FirstStep checks them.
   event_values_.resize(number_of_events);
   rootsfound_.resize(number_of_events);
+  bool init_event_triggered = false;
   if (number_of_events > 0) {
     events_eval<ExprSet>(t0, yy, yyp, event_values_.data(), functions.get());
-    bool init_event_triggered = false;
+    const auto &reads_yp = functions->events_read_yp;
     for (int i = 0; i < number_of_events; i++) {
-      init_event_triggered |= (event_values_[i] <= 0.0);
-    }
-    if (init_event_triggered) {
-      StoreInitialPoint(t0);
-      log_.log_integration_complete(0, t0);
-      return BuildSolutionData(IDA_ROOT_RETURN);
+      bool known = reads_yp.empty() || !reads_yp[i];
+      init_event_triggered |= known && event_values_[i] <= 0.0;
     }
   }
 
   // first step
   // Progress one step before the loop to ensure IDAGetDky works at t0 for dky = 1
   int n_steps = 0;
-  int retval = Step(tf_perturbed, t_val);
+  int retval = init_event_triggered ? IDA_ROOT_RETURN : FirstStep(t0, tf_perturbed, t_val);
+  if (retval == IDA_ROOT_RETURN && t_val == t0) {
+    StoreInitialPoint(t0);
+    log_.log_integration_complete(0, t0);
+    return BuildSolutionData(retval);
+  }
   // Before IDAGetDky, which fails on a step that was never taken
   CheckErrors(retval, "IDASolve at t0");
   GetSolutionFull(t0);
@@ -446,7 +457,16 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     t_prev = t_val;
-    retval = Step(tf_perturbed, t_val);
+    // A breakpoint reinitializes IDA, so the step after it is a first step
+    retval = hit_teval ? FirstStep(t_prev, tf_perturbed, t_val) : Step(tf_perturbed, t_val);
+    // An event right at the restart fired on the state FirstStep restored, which
+    // replaces the breakpoint saved before its reinitialisation
+    if (retval == IDA_ROOT_RETURN && t_val == t_prev) {
+      // Knot reduction committed that breakpoint as its last knot
+      i_save_ = (use_knot_reduction_ ? knot_reducer->GetOutputCount() : i_save_) - 1;
+      SetStep(t_val);
+      break;
+    }
     GetSolutionStates(t_val);
     // A failed first step after a restart leaves no derivative to read back
     if (save_hermite && retval >= 0) {
@@ -478,6 +498,61 @@ int IDAKLUSolverOpenMP<ExprSet>::Step(sunrealtype tout, sunrealtype &t_val) {
   RejectNonfinite const sensitivities(functions->reject_nonfinite_sensitivities,
                                       sensitivity);
   return IDASolve(ida_mem, tout, &t_val, yy, yyp, IDA_ONE_STEP);
+}
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::FirstStep(
+  sunrealtype t_start, sunrealtype tout, sunrealtype &t_val) {
+  if (functions->events_read_yp.empty()) {
+    return Step(tout, t_val);
+  }
+  // Keep IDA's start state, which IDACalcIC corrects and the step overwrites
+  CheckErrors(IDAGetConsistentIC(ida_mem, y_cache, nullptr), "IDAGetConsistentIC");
+  int retval = Step(tout, t_val);
+  // A step that failed before IDA took any leaves no yp at t_start
+  long int number_of_steps = 0;
+  IDAGetNumSteps(ida_mem, &number_of_steps);
+  if (number_of_steps == 0) {
+    return retval;
+  }
+  // The step's flag is ignored. The events IDA skipped in it, at both of its
+  // ends, with yp at t_start from its interpolant
+  CheckErrors(IDAGetDky(ida_mem, t_start, 1, yp_cache), "IDAGetDky");
+  auto triggered = [this](sunrealtype t, N_Vector y, N_Vector yp) {
+    events_eval<ExprSet>(t, y, yp, event_values_.data(), functions.get());
+    const auto &reads_yp = functions->events_read_yp;
+    for (int i = 0; i < number_of_events; i++) {
+      if (reads_yp[i] && event_values_[i] <= 0.0) {
+        return true;
+      }
+    }
+    return false;
+  };
+  bool const at_start = triggered(t_start, y_cache, yp_cache);
+  if (!at_start && !triggered(t_val, yy, yyp)) {
+    return retval;
+  }
+  N_VScale(SUN_RCONST(1.0), y_cache, yy);
+  N_VScale(SUN_RCONST(1.0), yp_cache, yyp);
+  // IDACalcIC left the sensitivities it solved at t_start inside IDA
+  if (sensitivity) {
+    CheckErrors(IDAGetSensDky(ida_mem, t_start, 0, yyS), "IDAGetSensDky");
+    CheckErrors(IDAGetSensDky(ida_mem, t_start, 1, yypS), "IDAGetSensDky");
+  }
+  // IDA's root search finds only sign changes, so an event at t_start stops there
+  if (at_start) {
+    t_val = t_start;
+    return IDA_ROOT_RETURN;
+  }
+  // Restart at t_start with its known yp, so IDA's root search, given the
+  // true events there, returns the time of the crossing. Reinit resets IDA counters
+  SaveStats();
+  ReinitializeIntegrator(t_start);
+  CheckErrors(IDARootInit(ida_mem, number_of_events, events_eval<ExprSet>), "IDARootInit");
+  retval = Step(tout, t_val);
+  CheckErrors(IDARootInit(ida_mem, number_of_events, events_with_derivatives_eval<ExprSet>),
+              "IDARootInit");
+  return retval;
 }
 
 template <class ExprSet>
@@ -875,11 +950,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     ReorderSensitivities(yS_reordered, ypS_reordered);
   }
 
-  // Final state slice and its sensitivities (for outputs_only mode)
-  std::vector<sunrealtype> yterm_vec;
+  // Final state, and its sensitivities (for outputs_only mode)
+  std::vector<sunrealtype> yterm_vec(y_val_, y_val_ + number_of_states);
   std::vector<sunrealtype> yS_term_vec;
   if (save_outputs_only) {
-    yterm_vec.assign(y_val_, y_val_ + number_of_states);
     CopyStateSensitivities(yS_term_vec);
   }
 
@@ -893,6 +967,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     std::move(ypS_reordered),
     std::move(y_init_),
     std::move(yterm_vec),
+    std::vector<sunrealtype>(yp_val_, yp_val_ + number_of_states),
     std::move(yS_init_),
     std::move(yS_term_vec),
     arg_sens0,

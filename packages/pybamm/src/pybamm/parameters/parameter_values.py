@@ -35,10 +35,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-_PARAMETER_VALUES_METADATA_KEY = "__pybamm_metadata__"
-_PARAMETER_VALUES_METADATA_TAG = "pybamm.ParameterValuesMetadata"
-
-
 class ParameterValues:
     """
     The parameter values for a simulation.
@@ -392,51 +388,12 @@ class ParameterValues:
         else:
             raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
 
-        reason = ParameterValues._extract_serialized_citation_reason(
-            parameter_values_dict
-        )
         for key, value in parameter_values_dict.items():
             parameter_values_dict[key] = deserialize_parameter_value(value)
 
-        return ParameterValues._from_deserialized_parameters(
-            parameter_values_dict, reason
-        )
+        return ParameterValues(parameter_values_dict)
 
     from_config = from_json
-
-    @staticmethod
-    def _extract_serialized_citation_reason(values: dict[str, Any]) -> str | None:
-        metadata = values.get(_PARAMETER_VALUES_METADATA_KEY)
-        if (
-            not isinstance(metadata, dict)
-            or metadata.get("$type") != _PARAMETER_VALUES_METADATA_TAG
-        ):
-            return None
-        reason = metadata.get("citation_default_reason")
-        if not isinstance(reason, str):
-            raise ValueError(
-                "Invalid PyBaMM parameter metadata: expected a citation reason"
-            )
-        if "parameter_value" in metadata:
-            values[_PARAMETER_VALUES_METADATA_KEY] = metadata["parameter_value"]
-        else:
-            del values[_PARAMETER_VALUES_METADATA_KEY]
-        return reason
-
-    @classmethod
-    def _from_deserialized_parameters(
-        cls, values: dict[str, Any], reason: str | None
-    ) -> ParameterValues:
-        if reason is None:
-            return cls(values)
-
-        missing = object()
-        citations = values.pop("citations", missing)
-        parameters = cls(values)
-        parameters._citation_default_reason = reason
-        if citations is not missing:
-            parameters._register_citations(citations)
-        return parameters
 
     def to_json(self, filename: str | None = None) -> dict:
         """
@@ -1802,22 +1759,6 @@ def convert_parameter_values_to_json(
     parameter_values_dict = {
         k: serialize_parameter_value(k, v) for k, v in parameter_values.items()
     }
-
-    citation_default_reason = (
-        parameter_values._citation_default_reason
-        if isinstance(parameter_values, ParameterValues)
-        else None
-    )
-    if citation_default_reason is not None:
-        metadata = {
-            "$type": _PARAMETER_VALUES_METADATA_TAG,
-            "citation_default_reason": citation_default_reason,
-        }
-        if _PARAMETER_VALUES_METADATA_KEY in parameter_values_dict:
-            metadata["parameter_value"] = parameter_values_dict[
-                _PARAMETER_VALUES_METADATA_KEY
-            ]
-        parameter_values_dict[_PARAMETER_VALUES_METADATA_KEY] = metadata
 
     if filename is not None:
         with open(filename, "w") as f:
