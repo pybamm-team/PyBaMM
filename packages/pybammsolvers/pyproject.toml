@@ -47,6 +47,7 @@ wheel.packages = ["src/pybammsolvers"]
 wheel.exclude = ["pybammsolvers/idaklu.cpp", "pybammsolvers/idaklu_source/**"]
 editable.mode = "redirect"
 editable.rebuild = true
+editable.verbose = false
 
 # SUNDIALS/SuiteSparse are NOT vendored (would add ~400MB); source installs
 # need either system packages or `git submodule update --init`.
