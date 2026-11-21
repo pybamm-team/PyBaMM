@@ -293,17 +293,17 @@ class DiffsolSolver(pybamm.BaseSolver):
         if self._use_default_root_method and model.len_alg > 0:
             self.root_method = "nonlinear_solver"
 
-        base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
-
-        if ics_only:
-            return base_set_up_return
-
-        if isinstance(inputs, list):
-            inputs_dict = inputs[0]
-        else:
-            inputs_dict = inputs or {}
-
-        self._build_rust_model(model, inputs_dict)
+        try:
+            base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
+            if not ics_only:
+                inputs_dict = inputs[0] if isinstance(inputs, list) else inputs or {}
+                self._build_rust_model(model, inputs_dict)
+        except NotImplementedError as error:
+            # The lowering's advice to use a CasADi model needs a solver that takes one
+            raise NotImplementedError(
+                f"{error} DiffsolSolver solves Rust models only, so use "
+                "pybamm.IDAKLUSolver for this model."
+            ) from error
 
         return base_set_up_return
 

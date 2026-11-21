@@ -863,6 +863,23 @@ class TestDiffsolIntegrationTime:
         )
 
 
+def _python_callable(x):
+    return x
+
+
+class TestDiffsolUnsupportedModels:
+    def test_an_expression_rust_cannot_lower_points_at_idaklu(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -pybamm.Function(_python_callable, v)}
+        model.initial_conditions = {v: 1.0}
+        model.variables = {"v": v}
+        pybamm.Discretisation().process_model(model)
+
+        with pytest.raises(NotImplementedError, match=r"use pybamm\.IDAKLUSolver"):
+            pybamm.DiffsolSolver().solve(model, np.linspace(0, 1, 5))
+
+
 class TestDiffsolSensitivityConfigErrors:
     def test_unknown_sensitivity_parameter_is_a_single_clear_error(self):
         model = _decay_model(with_input=True)
