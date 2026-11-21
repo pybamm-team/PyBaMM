@@ -16,7 +16,8 @@ Two solvers use it:
   implementation from the `diffsol <https://github.com/martinjrobins/diffsol>`_
   crate, with no CasADi or SUNDIALS involvement. It supports forward
   sensitivities under solver error control, ``output_variables``-only solves,
-  events, and ``t_interp``.
+  events, and ``t_interp``. Its events cannot read state time derivatives, as
+  in ``x.diff(pybamm.t)``, which need :class:`pybamm.IDAKLUSolver`.
 
 Selecting the backend
 ---------------------
