@@ -585,6 +585,11 @@ class TestDiffsolSolverOptions:
 
         assert pybamm.DiffsolSolver._INTEGRATOR_DEFAULTS == default_solver_options()
 
+    def test_arguments_after_the_tolerances_are_keyword_only(self):
+        # IDAKLUSolver orders them differently, so a positional call would mix them up.
+        with pytest.raises(TypeError, match=r"positional argument"):
+            pybamm.DiffsolSolver(1e-6, 1e-6, None)
+
     def test_an_unknown_option_is_rejected(self):
         # A typo would otherwise be dropped silently, leaving the default.
         with pytest.raises(pybamm.SolverError, match=r"Unknown diffsol solver option"):

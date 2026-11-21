@@ -156,6 +156,7 @@ class DiffsolSolver(pybamm.BaseSolver):
         self,
         rtol=1e-6,
         atol=1e-6,
+        *,
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
