@@ -686,7 +686,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "atol": atol,
             # Same keys as the CasADi setup, for `_post_process_solution`
             "num_of_events": rust_model.n_events,
-            "events_read_yp": [False] * rust_model.n_events,
+            "events_read_yp": rust_model.events_read_y_dot,
             "upsampling": rust_model.upsampling_len > 0,
         }
 
@@ -710,6 +710,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             atol=self._setup["atol"],
             rtol=self.rtol,
             options=options,
+            events_read_yp=self._setup["events_read_yp"],
         )
 
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
@@ -1177,14 +1178,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y_event = np.asarray(y_event).reshape(-1)
         if model.convert_to_format == "rust":
             inputs = stack_inputs(inputs_dict, "rust")
+            # The solve's own event tapes, as rootfn_casadi is for CasADi
             return np.array(
                 [
-                    float(
-                        np.asarray(
-                            event(t_event, y_event, inputs, sol.yp_term)
-                        ).ravel()[0]
-                    )
-                    for event in model.terminate_events_eval
+                    event(t_event, y_event, inputs, sol.yp_term).item()
+                    for event in self._setup["rust_model"].events
                 ]
             )
         rootfn = self._setup["rootfn_casadi"]

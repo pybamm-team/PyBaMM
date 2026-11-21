@@ -167,9 +167,16 @@ impl CompiledModel {
         label: &str,
     ) -> PyResult<Vec<Py<CompiledFunction>>> {
         let exprs = self.compiled.observable_exprs(kind);
+        // Only events may read y_dot
+        let reads_y_dot = match kind {
+            ObservableKind::Events => self.compiled.events_read_y_dot(),
+            ObservableKind::Outputs | ObservableKind::Upsampling => &[],
+        };
         (exprs.zip(roots).enumerate())
             .map(|(i, (expr, &root))| {
-                self.shared_view(py, Arc::clone(expr), root, format!("{label}[{i}]"))
+                let uses_y_dot = reads_y_dot.get(i).copied().unwrap_or(false);
+                let name = format!("{label}[{i}]");
+                self.shared_view(py, Arc::clone(expr), root, name, uses_y_dot)
             })
             .collect()
     }
@@ -181,8 +188,12 @@ impl CompiledModel {
         expr: Arc<CompiledExpr>,
         root: NodeId,
         name: String,
+        uses_y_dot: bool,
     ) -> PyResult<Py<CompiledFunction>> {
-        let metadata = self.view_metadata(expr.output_len(), name);
+        let metadata = FunctionMetadata {
+            uses_y_dot,
+            ..self.view_metadata(expr.output_len(), name)
+        };
         Py::new(
             py,
             CompiledFunction::from_shared(py, expr, self.graph.clone_ref(py), root, metadata)?,
@@ -195,7 +206,7 @@ impl CompiledModel {
             params: self.compiled.params().clone(),
             input_width: self.compiled.input_width().get(),
             n_states: self.compiled.n_states(),
-            // A compiled model refuses any root that reads y_dot.
+            // Only events may read y_dot, and their views say so themselves.
             uses_y_dot: false,
             output_len,
             name: Some(name),
@@ -493,6 +504,7 @@ impl CompiledModel {
                     self.compiled.primal_expr_arc(),
                     self.rhs_root,
                     "rhs".to_string(),
+                    false,
                 )
             })
             .map(|f| f.clone_ref(py))
@@ -554,6 +566,7 @@ impl CompiledModel {
                 Arc::clone(block.residual_expr()),
                 root,
                 "algebraic_residual".to_string(),
+                false,
             )
             .map(Some)
         })?;
@@ -712,6 +725,12 @@ impl CompiledModel {
     #[getter]
     fn n_events(&self) -> usize {
         self.compiled.n_events()
+    }
+
+    /// Whether each event reads `y_dot`, in event order.
+    #[getter]
+    fn events_read_y_dot(&self) -> Vec<bool> {
+        self.compiled.events_read_y_dot().to_vec()
     }
 
     /// Length of the compiled upsampling output: 0 without one.

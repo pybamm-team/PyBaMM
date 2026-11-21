@@ -531,6 +531,10 @@ class CompiledModel:
     @property
     def n_events(self) -> int: ...
     @property
+    def events_read_y_dot(self) -> list[bool]:
+        """Whether each event reads ``y_dot``, in event order."""
+
+    @property
     def upsampling_len(self) -> int: ...
     @property
     def output_len(self) -> int: ...

@@ -2034,7 +2034,7 @@ class TestIDAKLUSolver:
             )
 
     @staticmethod
-    def _state_derivative_event_model(events):
+    def _state_derivative_event_model(events, convert_to_format="casadi"):
         # y' = -y and algebraic z = y^2, so z' = -2 y^2 by the chain rule
         model = pybamm.BaseModel()
         y = pybamm.Variable("y")
@@ -2044,6 +2044,7 @@ class TestIDAKLUSolver:
         model.initial_conditions = {y: 1, z: 1}
         model.variables = {"y": y, "z": z}
         model.events = [pybamm.Event(name, fn(y, z)) for name, fn in events.items()]
+        model.convert_to_format = convert_to_format
         pybamm.Discretisation().process_model(model)
         return model
 
@@ -2068,10 +2069,13 @@ class TestIDAKLUSolver:
     )
     # 0.2 is a breakpoint, where IDA is reinitialized
     @pytest.mark.parametrize("t_eval", [[0, 5], np.array([0, 0.2, 5])])
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     def test_state_derivative_event(
-        self, event_fn, t_event, t_eval, calc_ic, output_variables
+        self, convert_to_format, event_fn, t_event, t_eval, calc_ic, output_variables
     ):
-        model = self._state_derivative_event_model({"derivative event": event_fn})
+        model = self._state_derivative_event_model(
+            {"derivative event": event_fn}, convert_to_format=convert_to_format
+        )
         solver = pybamm.IDAKLUSolver(
             rtol=1e-8,
             atol=1e-8,
@@ -2082,14 +2086,16 @@ class TestIDAKLUSolver:
         assert solution.termination == "event: derivative event"
         np.testing.assert_allclose(solution.t[-1], t_event, rtol=1e-5)
 
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     @pytest.mark.parametrize("output_variables", [None, ["y"]])
     @pytest.mark.parametrize("calc_ic", [True, False])
     def test_state_derivative_event_violated_at_initial_conditions(
-        self, calc_ic, output_variables
+        self, convert_to_format, calc_ic, output_variables
     ):
         # z' = -2 at t = 0, so z' > -1 is violated before the first step
         model = self._state_derivative_event_model(
-            {"derivative event": lambda y, z: z.diff(pybamm.t) + 1}
+            {"derivative event": lambda y, z: z.diff(pybamm.t) + 1},
+            convert_to_format=convert_to_format,
         )
         solver = pybamm.IDAKLUSolver(
             options={"calc_ic": calc_ic}, output_variables=output_variables
@@ -2108,7 +2114,10 @@ class TestIDAKLUSolver:
             (lambda y: y - 0.5, r"IDASolve at t0"),
         ],
     )
-    def test_state_derivative_event_with_failed_first_step(self, plain_event, match):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_event_with_failed_first_step(
+        self, convert_to_format, plain_event, match
+    ):
         model = pybamm.BaseModel()
         y = pybamm.Variable("y")
         z = pybamm.Variable("z")
@@ -2120,24 +2129,30 @@ class TestIDAKLUSolver:
             pybamm.Event("plain", plain_event(y)),
             pybamm.Event("derivative", y.diff(pybamm.t) + 10),
         ]
+        model.convert_to_format = convert_to_format
         pybamm.Discretisation().process_model(model)
         with pytest.raises(pybamm.SolverError, match=match):
             pybamm.IDAKLUSolver().solve(model, [0, 5])
 
-    def test_state_derivative_event_at_t0_precedes_root_in_first_step(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_event_at_t0_precedes_root_in_first_step(
+        self, convert_to_format
+    ):
         # z' = -2 at t0 violates z' > -1 there, ahead of y's root at 1e-10
         model = self._state_derivative_event_model(
             {
                 "in step": lambda y, z: y - (1 - 1e-10),
                 "derivative event": lambda y, z: z.diff(pybamm.t) + 1,
-            }
+            },
+            convert_to_format=convert_to_format,
         )
         with pytest.raises(
             pybamm.SolverError, match=r"\['derivative event'\] are non-positive"
         ):
             pybamm.IDAKLUSolver().solve(model, [0, 5])
 
-    def test_state_derivative_event_after_step_change(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_event_after_step_change(self, convert_to_format):
         # q' = -I jumps when the algebraic current I steps from 0 to I_app at t0
         model = pybamm.BaseModel()
         q = pybamm.Variable("q")
@@ -2146,6 +2161,7 @@ class TestIDAKLUSolver:
         model.algebraic = {current: current - pybamm.InputParameter("I_app")}
         model.initial_conditions = {q: 1, current: 0}
         model.events = [pybamm.Event("dq/dt < -1", q.diff(pybamm.t) + 1)]
+        model.convert_to_format = convert_to_format
         pybamm.Discretisation().process_model(model)
         solver = pybamm.IDAKLUSolver()
         solution = solver.solve(model, [0, 1], inputs={"I_app": 0.5})
@@ -2153,29 +2169,35 @@ class TestIDAKLUSolver:
         with pytest.raises(pybamm.SolverError, match=r"non-positive at initial"):
             solver.solve(model, [0, 1], inputs={"I_app": 2})
 
-    def test_state_derivative_event_restart_keeps_stats(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_event_restart_keeps_stats(self, convert_to_format):
         # y's root at 1e-10 is crossed in the first step, retaken after a restart
         model = self._state_derivative_event_model(
-            {"in step": lambda y, z: y - (1 - 1e-10) + 1e-20 * z.diff(pybamm.t)}
+            {"in step": lambda y, z: y - (1 - 1e-10) + 1e-20 * z.diff(pybamm.t)},
+            convert_to_format=convert_to_format,
         )
         solution = pybamm.IDAKLUSolver().solve(model, [0, 5])
         # the discarded step counts too
         assert solution.solver_statistics.number_of_steps == 2
 
-    def test_state_derivative_event_not_named_before_first_step(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_event_not_named_before_first_step(
+        self, convert_to_format
+    ):
         # 'plain' stops the solve before the first step gives yp, so 'derivative',
         # which reads z' = 0 from the initial yp, is not named
         model = self._state_derivative_event_model(
             {
                 "plain": lambda y, z: y - 2,
                 "derivative": lambda y, z: -z.diff(pybamm.t) - 1,
-            }
+            },
+            convert_to_format=convert_to_format,
         )
         with pytest.raises(pybamm.SolverError, match=r"Events \['plain'\] are"):
             pybamm.IDAKLUSolver().solve(model, [0, 5])
 
     @staticmethod
-    def _current_jump_model(events, jump=1.5, strict=False):
+    def _current_jump_model(events, jump=1.5, strict=False, convert_to_format="casadi"):
         # I jumps from 0.5 to 2 at the breakpoint t = 0.2, and so does -q';
         # with strict, it jumps just after 0.2
         model = pybamm.BaseModel()
@@ -2189,17 +2211,21 @@ class TestIDAKLUSolver:
         model.events = [
             pybamm.Event(name, fn(q, current)) for name, fn in events.items()
         ]
+        model.convert_to_format = convert_to_format
         pybamm.Discretisation().process_model(model)
         return model
 
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     @pytest.mark.parametrize("with_derivative_event", [False, True])
-    def test_event_violated_after_breakpoint(self, with_derivative_event):
+    def test_event_violated_after_breakpoint(
+        self, convert_to_format, with_derivative_event
+    ):
         # IDA finds no sign change in an event already violated after a
         # breakpoint, whether or not another event reads yp
         events = {"I < 1.5": lambda q, current: 1.5 - current}
         if with_derivative_event:
             events["dq/dt > -100"] = lambda q, current: q.diff(pybamm.t) + 100
-        model = self._current_jump_model(events)
+        model = self._current_jump_model(events, convert_to_format=convert_to_format)
         solution = pybamm.IDAKLUSolver().solve(model, np.array([0, 0.2, 1]))
         assert solution.termination == "final time"
 
@@ -2233,13 +2259,15 @@ class TestIDAKLUSolver:
         assert solution.termination == "event: dq/dt > -1"
         assert solution.t[-1] == pytest.approx(0.2)
 
-    def test_event_violated_after_breakpoint_is_named(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_event_violated_after_breakpoint_is_named(self, convert_to_format):
         # q' + 1 = -1 at the restart is further from zero than the other event
         model = self._current_jump_model(
             {
                 "dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1,
                 "always positive": lambda q, current: 0.01 + 0 * q,
-            }
+            },
+            convert_to_format=convert_to_format,
         )
         solution = pybamm.IDAKLUSolver().solve(model, np.array([0, 0.2, 1]))
         assert solution.termination == "event: dq/dt > -1"
@@ -2254,12 +2282,14 @@ class TestIDAKLUSolver:
             (None, {"calc_ic": False}),
         ],
     )
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     def test_state_derivative_event_violated_after_breakpoint(
-        self, output_variables, options
+        self, convert_to_format, output_variables, options
     ):
         # q' = -2 just after the breakpoint violates q' > -1 there
         model = self._current_jump_model(
-            {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1}
+            {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1},
+            convert_to_format=convert_to_format,
         )
         solver = pybamm.IDAKLUSolver(output_variables=output_variables, options=options)
         solution = solver.solve(model, np.array([0, 0.2, 1]))
@@ -2281,14 +2311,16 @@ class TestIDAKLUSolver:
                 solution.all_yps[-1][:, -1], [-2, 0], rtol=1e-6, atol=1e-8
             )
 
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     @pytest.mark.parametrize("output_variables", [None, ["I"]])
     def test_state_derivative_event_violated_after_breakpoint_sensitivities(
-        self, output_variables
+        self, convert_to_format, output_variables
     ):
         # dI/djump is 1 once the breakpoint's reinitialisation has applied the jump
         model = self._current_jump_model(
             {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1},
             jump=pybamm.InputParameter("jump"),
+            convert_to_format=convert_to_format,
         )
         solver = pybamm.IDAKLUSolver(output_variables=output_variables)
         solution = solver.solve(
@@ -2303,13 +2335,17 @@ class TestIDAKLUSolver:
                 np.ravel(final["I"].sensitivities["jump"])[-1], 1, rtol=1e-6
             )
 
-    def test_state_derivative_event_violated_when_starting_at_a_discontinuity(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_event_violated_when_starting_at_a_discontinuity(
+        self, convert_to_format
+    ):
         # t > 0.2 adds a t_eval point a float after t0 = 0.2, where IDA restarts
         # after its first step, and q' = -2 there violates q' > -1
         model = self._current_jump_model(
             {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1},
             jump=pybamm.InputParameter("jump"),
             strict=True,
+            convert_to_format=convert_to_format,
         )
         solution = pybamm.IDAKLUSolver().solve(
             model, [0.2, 1], inputs={"jump": 1.5}, calculate_sensitivities=True
@@ -2323,7 +2359,10 @@ class TestIDAKLUSolver:
             np.ravel(solution["I"].sensitivities["jump"]), [0, 1], atol=1e-6
         )
 
-    def test_state_derivative_event_with_inputs_threads_and_sensitivities(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_event_with_inputs_threads_and_sensitivities(
+        self, convert_to_format
+    ):
         # y' = -k y < -0.5 until y = 0.5 / k, at t = ln(2 k) / k
         model = pybamm.BaseModel()
         y = pybamm.Variable("y")
@@ -2332,6 +2371,7 @@ class TestIDAKLUSolver:
         model.initial_conditions = {y: 1}
         model.variables = {"y": y}
         model.events = [pybamm.Event("dy/dt > -0.5", -0.5 - y.diff(pybamm.t))]
+        model.convert_to_format = convert_to_format
         pybamm.Discretisation().process_model(model)
         solver = pybamm.IDAKLUSolver(
             rtol=1e-8, atol=1e-8, options={"num_threads": 2, "num_solvers": 2}
@@ -2361,9 +2401,11 @@ class TestIDAKLUSolver:
         "model_class",
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
     )
-    def test_voltage_derivative_event(self, model_class):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_voltage_derivative_event(self, convert_to_format, model_class):
         # dV/dt by the chain rule through the observable's states, at 1C discharge
         model = model_class()
+        model.convert_to_format = convert_to_format
         voltage = model.variables["Voltage [V]"]
         model.events.append(
             pybamm.Event("dV/dt > -1e-4 V/s", -voltage.diff(pybamm.t) - 1e-4)
@@ -2378,7 +2420,8 @@ class TestIDAKLUSolver:
         slope = (reference(t + 0.05) - reference(t - 0.05)) / 0.1
         np.testing.assert_allclose(slope, -1e-4, rtol=1e-2)
 
-    def test_state_derivative_termination_in_experiment(self):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_state_derivative_termination_in_experiment(self, convert_to_format):
         def current_settled(threshold):
             return pybamm.step.CustomTermination(
                 f"|dI/dt| < {threshold} A/s",
@@ -2395,7 +2438,9 @@ class TestIDAKLUSolver:
                 pybamm.step.voltage(4.1, termination=current_settled(1e-5)),
             ]
         )
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=experiment)
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = convert_to_format
+        sim = pybamm.Simulation(model, experiment=experiment)
         solution = sim.solve()
 
         assert len(solution.cycles) == 2
@@ -2404,6 +2449,27 @@ class TestIDAKLUSolver:
         t = hold.t
         current = hold["Current [A]"](t)
         np.testing.assert_allclose(np.abs(np.gradient(current, t)[-1]), 1e-5, rtol=0.05)
+
+    @pytest.mark.parametrize(
+        ("output_variables", "options"),
+        [(["dy/dt"], None), (None, {"upsampling_tolerance": 1e-3})],
+    )
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_a_time_derivative_output_needs_y_dot(
+        self, convert_to_format, output_variables, options
+    ):
+        # Unlike an event, an output or the upsampling variable is given no y_dot
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -y}
+        model.initial_conditions = {y: 1}
+        model.variables = {"y": y, "dy/dt": y.diff(pybamm.t)}
+        model.upsampling_variable = "dy/dt"
+        model.convert_to_format = convert_to_format
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables, options=options)
+        with pytest.raises(pybamm.ModelError, match=r"Must provide a 'y_dot'"):
+            solver.solve(model, [0, 1])
 
     def test_pickle_roundtrip_preserves_closest_event_idx(self):
         # The pickle drops _setup; the next solve rebuilds it from the model.
