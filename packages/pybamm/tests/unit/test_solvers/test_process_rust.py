@@ -383,6 +383,33 @@ class TestProcessRustParity:
         assert vals["rust"][0] == pytest.approx(vals["casadi"][0], rel=1e-12)
         np.testing.assert_allclose(vals["rust"][1], vals["casadi"][1], rtol=1e-12)
 
+    def test_state_derivative_event_matches_casadi(self, pair):
+        from pybamm.solvers.base_solver import process
+
+        t, y, y_dot = 0.0, np.array([1.0, 2.0]), np.array([-1.5, 0.5])
+        vals = {}
+        u, v = pybamm.StateVector(slice(0, 1)), pybamm.StateVector(slice(1, 2))
+        for fmt, (_model, vars_, _) in pair.items():
+            event = process(
+                1 + u.diff(pybamm.t) * v,
+                "event_0",
+                vars_,
+                use_jacobian=False,
+                use_state_derivatives=True,
+            )[0]
+            p = self._stack(fmt, {"a": 0.5})
+            vals[fmt] = float(np.asarray(event(t, y, p, y_dot)).item())
+        assert vals["rust"] == pytest.approx(vals["casadi"], rel=1e-12)
+
+    @pytest.mark.parametrize("fmt", ["casadi", "rust"])
+    def test_state_derivative_event_needs_state_derivatives(self, pair, fmt):
+        from pybamm.solvers.base_solver import process
+
+        _model, vars_, _ = pair[fmt]
+        expression = pybamm.StateVector(slice(0, 1)).diff(pybamm.t) + 1
+        with pytest.raises(ValueError, match=r"Must provide a 'y_dot'"):
+            process(expression, "event_0", vars_, use_jacobian=False)
+
     def test_rectangular_group_jacobian_matches_casadi(self, pair):
         from pybamm.solvers.base_solver import process
 

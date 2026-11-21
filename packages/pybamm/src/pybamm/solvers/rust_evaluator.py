@@ -1,4 +1,4 @@
-"""CasADi-convention ``(t, y, stacked_inputs)`` callables over Rust tapes."""
+"""CasADi-convention ``(t, y, stacked_inputs[, v])`` callables over Rust tapes."""
 
 from __future__ import annotations
 
@@ -27,8 +27,9 @@ class RustEvaluator:
     cf : :class:`pybamm.rust.CompiledFunction`
         The compiled function to evaluate.
     role : str
-        ``"func"``, ``"jac"`` (scipy CSC), ``"jac_action"`` or ``"jacp"`` (one
-        ``df/dp_i`` column per ``sens_indices`` entry, as CasADi's ``jacp``).
+        ``"func"`` (given ``y_dot`` as a fourth argument if it reads it),
+        ``"jac"`` (scipy CSC), ``"jac_action"`` or ``"jacp"`` (one ``df/dp_i``
+        column per ``sens_indices`` entry, as CasADi's ``jacp``).
     sens_indices : list of int, optional
         Graph input indices of the sensitivity parameters, read by ``"jacp"``.
     """
@@ -73,7 +74,8 @@ class RustEvaluator:
         inputs : array-like
             The stacked input values.
         v : array-like, optional
-            The vector a ``"jac_action"`` multiplies.
+            The vector a ``"jac_action"`` multiplies, or the state derivatives
+            ``y_dot`` of a ``"func"`` that reads them.
 
         Returns
         -------
@@ -89,7 +91,8 @@ class RustEvaluator:
         """
         t, y, p = float(t), _as_1d(y), _as_1d(inputs)
         if self._role == "func":
-            return np.asarray(self._cf(t, y, p)).reshape(-1, 1)
+            y_dot = None if v is None else _as_1d(v)
+            return np.asarray(self._cf(t, y, p, y_dot)).reshape(-1, 1)
         if self._role == "jac":
             return self._jacobian("y")(t, y, p)
         if self._role == "jac_action":

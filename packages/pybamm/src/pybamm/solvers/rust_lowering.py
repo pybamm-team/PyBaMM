@@ -2,12 +2,32 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pybamm
+
+if TYPE_CHECKING:
+    from pybamm.rust import CompiledFunction
 
 
 def rust_input_parameter_widths(model: pybamm.BaseModel) -> dict[str, int]:
     """Map each input parameter name to its packed width for the Rust backend."""
     return {ip.name: ip._expected_size or 1 for ip in model.input_parameters}
+
+
+def reject_y_dot(function: CompiledFunction) -> None:
+    """Refuse a compiled function that reads the state derivatives, ``y_dot``.
+
+    Raises
+    ------
+    ValueError
+        If ``function`` reads ``y_dot``, as the CasADi conversion does without it.
+    """
+    if function.uses_y_dot:
+        raise ValueError(
+            "Must provide a 'y_dot' for converting state vectors differentiated "
+            "in time, e.g. by `symbol.diff(pybamm.t)`"
+        )
 
 
 def rust_graph_with_inputs(model: pybamm.BaseModel, input_names):
