@@ -118,13 +118,13 @@ class TestMPM:
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_reversible_plating_with_porosity_not_implemented(self):
+    def test_reversible_plating_with_porosity(self):
         options = {
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
-        with pytest.raises(pybamm.OptionError, match=r"distributions"):
-            pybamm.lithium_ion.MPM(options)
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
 
     def test_msmr(self):
         options = {
@@ -217,10 +217,10 @@ class TestMPMWithSEI:
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
-    def test_ec_reaction_limited_not_implemented(self):
+    def test_ec_reaction_limited_with_porosity(self):
         options = {
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
         }
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()

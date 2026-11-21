@@ -118,6 +118,13 @@ class BaseKinetics(BaseInterface):
 
         # Get reaction overpotential
         eta_r = delta_phi - ocp
+        # Porosity change makes j0 vary in x even when the potentials are x-averaged
+        if (
+            self.size_distribution
+            and j0.domains["secondary"] == [f"{domain} electrode"]
+            and eta_r.domains["secondary"] == ["current collector"]
+        ):
+            eta_r = pybamm.SecondaryBroadcast(eta_r, [f"{domain} electrode"])
 
         # Get average interfacial current density
         j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(

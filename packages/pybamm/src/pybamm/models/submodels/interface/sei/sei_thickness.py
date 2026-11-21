@@ -69,11 +69,7 @@ class SEIThickness(BaseModel):
 
         if self.reaction == "SEI":
             L_sei = c_sei * c_to_L  # SEI thickness
-            if self.size_distribution:
-                L_sei_sav = pybamm.size_average(L_sei)  # size-averaged SEI thickness
-                L_sei_xav = pybamm.x_average(L_sei_sav)  # x-averaged SEI thickness
-            else:
-                L_sei_xav = pybamm.x_average(L_sei)  # x-averaged SEI thickness
+            L_sei_xav = pybamm.x_average(L_sei)  # x-averaged SEI thickness
             L_sei_av = pybamm.yz_average(L_sei_xav)  # volume-averaged SEI thickness
 
             variables.update(
@@ -90,11 +86,7 @@ class SEIThickness(BaseModel):
             else:
                 roughness = variables[f"{Domain} electrode roughness ratio"]
                 L_sei = c_sei * c_to_L / (roughness - 1)  # SEI on cracks thickness
-            if self.size_distribution:
-                L_sei_sav = pybamm.size_average(L_sei)
-                L_sei_xav = pybamm.x_average(L_sei_sav)
-            else:
-                L_sei_xav = pybamm.x_average(L_sei)  # x-average SEI on cracks thickness
+            L_sei_xav = pybamm.x_average(L_sei)  # x-average SEI on cracks thickness
             L_sei_av = pybamm.yz_average(L_sei_xav)  # average SEI on cracks thickness
 
         variables.update(

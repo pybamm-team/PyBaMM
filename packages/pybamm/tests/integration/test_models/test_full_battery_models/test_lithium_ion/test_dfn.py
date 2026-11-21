@@ -294,3 +294,133 @@ class TestDFNWithSizeDistribution:
             model, parameter_values=parameter_values, var_pts=self.var_pts
         )
         modeltest.test_all(skip_output_tests=True)
+
+    @pytest.mark.parametrize(
+        ("model_class", "particle_size", "extra_options"),
+        [
+            (
+                pybamm.lithium_ion.DFN,
+                ("single", "distribution"),
+                {"SEI porosity change": "true"},
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                ("single", "distribution"),
+                {"lithium plating porosity change": "true"},
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                ("distribution", "single"),
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.SPMe,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.SPM,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.SPM,
+                ("single", "distribution"),
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.MPM,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                    "x-average side reactions": "true",
+                },
+            ),
+        ],
+    )
+    def test_reaction_driven_porosity(self, model_class, particle_size, extra_options):
+        options = {
+            "particle size": particle_size,
+            "SEI": "solvent-diffusion limited",
+            "lithium plating": "irreversible",
+            **extra_options,
+        }
+        model = model_class(options)
+        parameter_values = pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("OKane2022")
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, var_pts=self.var_pts
+        )
+        solution = sim.solve([0, 3600])
+
+        t = solution.t
+        eps_n_init = parameter_values["Negative electrode porosity"]
+        eps_n = solution["X-averaged negative electrode porosity"](t)
+        np.testing.assert_allclose(eps_n[0], eps_n_init, rtol=1e-12)
+        assert np.all(eps_n[1:] < eps_n_init)
+        np.testing.assert_allclose(
+            solution["X-averaged negative SEI thickness [m]"](0.0),
+            parameter_values["Initial SEI thickness [m]"],
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            solution["X-averaged positive electrode porosity"](t),
+            parameter_values["Positive electrode porosity"],
+            rtol=1e-12,
+        )
+
+    def test_initial_sei_thickness_with_graded_active_material(self):
+        options = {
+            "particle size": "distribution",
+            "SEI": "solvent-diffusion limited",
+            "SEI porosity change": "true",
+        }
+        parameter_values = pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("OKane2022")
+        )
+        L_n = parameter_values["Negative electrode thickness [m]"]
+        parameter_values["Negative electrode active material volume fraction"] = (
+            lambda x, y, z: 0.60 + 0.15 * x / L_n
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(options),
+            parameter_values=parameter_values,
+            var_pts=self.var_pts,
+        )
+        solution = sim.solve([0, 3600])
+
+        np.testing.assert_allclose(
+            solution["Negative SEI thickness [m]"](0.0),
+            parameter_values["Initial SEI thickness [m]"],
+            rtol=1e-12,
+        )
