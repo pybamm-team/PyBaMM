@@ -128,16 +128,14 @@ class TestDiffsolPulseTrain:
         )
 
     def test_gradients_hold_error_control_across_the_corners(self):
-        # Corners must be met with consistent sensitivity derivatives, not just states.
-        # Whether one solve this tight relaxes is down to rounding, so most must hold.
-        relaxed = []
+        # Corners must be met with consistent sensitivity derivatives, not just states,
+        # else error control fails the solve; rounding varies across these inputs.
         for k in range(6):
             inputs = {**INPUT_VALUES, "eps_n": INPUT_VALUES["eps_n"] * (1 + k * 1e-9)}
             solution = _solve(
                 "diffsol", calculate_sensitivities=sorted(inputs), inputs=inputs
             )
-            relaxed.append(solution.solver_statistics.sens_error_control_relaxed)
-        assert sum(relaxed) <= 2, relaxed
+            assert solution.t[-1] == pytest.approx(DURATION_S)
 
     def test_a_pure_ode_model_meets_the_corners_too(self):
         # With no algebraic state diffsol's `set_consistent` returns early.

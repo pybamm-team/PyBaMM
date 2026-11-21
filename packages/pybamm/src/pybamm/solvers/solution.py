@@ -219,8 +219,6 @@ class SolverStatistics:
         Seconds spent computing consistent initial conditions.
     solver_setup_time_secs : float
         Seconds spent creating the solver instance.
-    sens_error_control_relaxed : bool
-        Whether sensitivities were excluded from error control after a failure.
 
     Only :class:`pybamm.DiffsolSolver` reports the fields after
     ``number_of_error_test_failures``.
@@ -239,16 +237,12 @@ class SolverStatistics:
     problem_setup_time_secs: float = 0.0
     ic_time_secs: float = 0.0
     solver_setup_time_secs: float = 0.0
-    sens_error_control_relaxed: bool = False
 
     def __add__(self, other: SolverStatistics) -> SolverStatistics:
         if not isinstance(other, SolverStatistics):
             return NotImplemented
         return SolverStatistics(
-            *(
-                (a or b) if isinstance(a, bool) else a + b
-                for a, b in zip(astuple(self), astuple(other), strict=True)
-            )
+            *(a + b for a, b in zip(astuple(self), astuple(other), strict=True))
         )
 
 

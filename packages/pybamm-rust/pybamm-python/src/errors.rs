@@ -26,7 +26,7 @@ pub fn core_err_to_py(err: CoreError) -> PyErr {
         CoreError::Diffsol(source) => {
             pyo3::exceptions::PyRuntimeError::new_err(format!("diffsol error: {source}"))
         },
-        failure @ (CoreError::SensRetryFailed { .. } | CoreError::SolverPanic(_)) => {
+        failure @ CoreError::SolverPanic(_) => {
             pyo3::exceptions::PyRuntimeError::new_err(failure.to_string())
         },
         other => PyValueError::new_err(other.to_string()),

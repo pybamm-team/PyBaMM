@@ -71,7 +71,6 @@ pub struct SolverStatistics {
     ic_time_secs: f64,
     solver_setup_time_secs: f64,
     integration_time_secs: f64,
-    sens_error_control_relaxed: bool,
 }
 
 #[pymethods]
@@ -124,7 +123,6 @@ impl From<core_solve::SolverStatistics> for SolverStatistics {
             ic_time_secs: s.ic_time_secs,
             solver_setup_time_secs: s.solver_setup_time_secs,
             integration_time_secs: s.integration_time_secs,
-            sens_error_control_relaxed: s.sens_error_control_relaxed,
         }
     }
 }

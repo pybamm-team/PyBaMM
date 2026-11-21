@@ -399,7 +399,7 @@ class TestDiffsolFailureHandling:
         with pytest.raises(pybamm.SolverError, match=r"diffsol error"):
             pybamm.DiffsolSolver().solve(model, np.linspace(0, 2, 10))
 
-    def test_a_failed_sensitivity_retry_is_a_solver_error(self):
+    def test_a_failed_sensitivity_solve_is_a_solver_error(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
         model.rhs = {v: pybamm.InputParameter("k") * v**2}
@@ -408,9 +408,7 @@ class TestDiffsolFailureHandling:
         model.convert_to_format = "rust"
         pybamm.Discretisation().process_model(model)
 
-        with pytest.raises(
-            pybamm.SolverError, match=r"^input set 0: sensitivity solve failed"
-        ):
+        with pytest.raises(pybamm.SolverError, match=r"^input set 0: diffsol error"):
             pybamm.DiffsolSolver().solve(
                 model,
                 np.linspace(0, 2, 10),
@@ -856,15 +854,13 @@ class TestDiffsolSensitivityConfigErrors:
         with pytest.raises(
             pybamm.SolverError,
             match=r"Cannot calculate sensitivities with respect to \['not_an_input'\]",
-        ) as excinfo:
+        ):
             pybamm.DiffsolSolver().solve(
                 model,
                 np.linspace(0, 1, 5),
                 inputs={"k": 1.0},
                 calculate_sensitivities=["not_an_input"],
             )
-        # A config error must not go through the relaxed retry and be double-reported.
-        assert "retry" not in str(excinfo.value)
 
 
 def _two_scale_model():

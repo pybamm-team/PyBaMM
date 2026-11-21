@@ -790,13 +790,8 @@ class TestDiffsolSensitivities:
         assert np.any(ref != 0)
         np.testing.assert_allclose(got, ref, rtol=_PARITY_RTOL, atol=_PARITY_ATOL)
 
-    @pytest.mark.parametrize("parameter_set", ["default", "Chen2020"])
-    @pytest.mark.parametrize(
-        ("sens_atol_factor", "relaxed"),
-        [(1.0, False), (1e-30, True)],
-        ids=["controlled", "relaxed"],
-    )
-    def test_dfn_sensitivities_solve(self, parameter_set, sens_atol_factor, relaxed):
+    @staticmethod
+    def _solve_dfn(parameter_set, sens_atol_factor=1.0):
         model = pybamm.lithium_ion.DFN()
         params = (
             model.default_parameter_values.copy()
@@ -814,7 +809,7 @@ class TestDiffsolSensitivities:
         model.convert_to_format = "rust"
 
         grid = np.linspace(0.0, 600.0, 50)
-        solution = pybamm.Simulation(
+        return pybamm.Simulation(
             model,
             parameter_values=params,
             solver=pybamm.DiffsolSolver(
@@ -827,13 +822,19 @@ class TestDiffsolSensitivities:
             calculate_sensitivities=sorted(sens.values()),
         )
 
-        # No step meets a floor of 1e-30, so only the relaxed retry can finish.
-        assert solution.solver_statistics.sens_error_control_relaxed is relaxed
-        for key in sorted(sens.values()):
+    @pytest.mark.parametrize("parameter_set", ["default", "Chen2020"])
+    def test_dfn_sensitivities_solve(self, parameter_set):
+        solution = self._solve_dfn(parameter_set)
+        for key in ["I", "eps_p"]:
             block = np.asarray(solution["Voltage [V]"].sensitivities[key]).ravel()
             assert block.size > 1
             assert np.all(np.isfinite(block))
             assert np.any(block != 0)
+
+    def test_a_sensitivity_floor_no_step_can_meet_is_a_solver_error(self):
+        # Error control is never relaxed, so no uncontrolled gradients come back.
+        with pytest.raises(pybamm.SolverError, match=r"diffsol error"):
+            self._solve_dfn("default", sens_atol_factor=1e-30)
 
     def test_dfn_sensitivities_hold_error_control_at_a_tighter_floor(self):
         model = pybamm.lithium_ion.DFN()
@@ -860,7 +861,6 @@ class TestDiffsolSensitivities:
             calculate_sensitivities=sorted(sens.values()),
         )
 
-        assert solution.solver_statistics.sens_error_control_relaxed is False
         for key in sorted(sens.values()):
             block = np.asarray(solution["Voltage [V]"].sensitivities[key]).ravel()
             assert np.all(np.isfinite(block))

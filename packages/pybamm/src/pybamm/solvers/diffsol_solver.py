@@ -590,13 +590,5 @@ class DiffsolSolver(pybamm.BaseSolver):
             problem_setup_time_secs=statistics.problem_setup_time_secs,
             ic_time_secs=statistics.ic_time_secs,
             solver_setup_time_secs=statistics.solver_setup_time_secs,
-            sens_error_control_relaxed=statistics.sens_error_control_relaxed,
         )
-        if sol.solver_statistics.sens_error_control_relaxed:
-            pybamm.logger.warning(
-                "The diffsol sensitivity solve failed under error control and was "
-                "retried with sensitivities excluded from it, so their accuracy is "
-                "not controlled. The likely cause is a `sens_atol_factor` too small "
-                "for any step to meet; raise it if the gradients matter."
-            )
         return sol
