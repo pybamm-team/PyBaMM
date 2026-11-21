@@ -227,7 +227,7 @@ class TestDiffsolHermiteInterpolation:
     def test_yp_matches_the_analytic_derivative(self):
         sol = self._solve(_decay_model(), np.linspace(0, 1, 5))
         assert sol.hermite_interpolation
-        # The t0 knot stores the consistent derivative; later knots are ~1e-6 off.
+        # The t0 knot stores the consistent derivative; later ones are ~1e-9 off.
         np.testing.assert_allclose(sol.yp[0], -np.exp(-sol.t), rtol=1e-5)
         np.testing.assert_allclose(sol.yp[0][0], -1.0, rtol=1e-12)
 
