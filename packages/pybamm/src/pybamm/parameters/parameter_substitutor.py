@@ -125,7 +125,7 @@ class ParameterSubstitutor:
                 return self._process_function_parameter(symbol)
             return self._process_callable_function_parameter(symbol, new_leaves)
 
-        if isinstance(symbol, pybamm.Variable):
+        if isinstance(symbol, pybamm.VariableBase):
             n_children = len(symbol.children)
             scale, reference, *bounds = new_leaves[n_children:]
             if isinstance(reference, pybamm.Vector):
@@ -266,6 +266,9 @@ class ParameterSubstitutor:
             else:
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
             function_out = function.diff(new_diff_variable)
+            # A constant derivative keeps the function's shape, as above
+            if function_out.evaluates_to_number():
+                function_out = function_out * pybamm.ones_like(*new_children)
 
         # Process again just to be sure
         return self.process_symbol(function_out)
@@ -391,6 +394,9 @@ class ParameterSubstitutor:
             # return differentiated function
             new_diff_variable = self.process_symbol(symbol.diff_variable)
             function_out = function.diff(new_diff_variable)
+            # A constant derivative keeps the function's shape, as above
+            if function_out.evaluates_to_number():
+                function_out = function_out * pybamm.ones_like(*new_children)
 
         return function_out
 
