@@ -359,6 +359,8 @@ class ElectrodeSOHSolver:
         known_value="cyclable lithium capacity",
         options=None,
     ):
+        if not isinstance(options, pybamm.BatteryModelOptions):
+            options = pybamm.BatteryModelOptions(options)
         self.parameter_values = parameter_values
         self.param = param or pybamm.LithiumIonParameters(options)
         if known_value not in ["cell capacity", "cyclable lithium capacity"]:
@@ -366,7 +368,7 @@ class ElectrodeSOHSolver:
                 "Known value must be cell capacity or cyclable lithium capacity"
             )
         self.known_value = known_value
-        self.options = options or pybamm.BatteryModelOptions({})
+        self.options = options
 
         self.lims_ocp = self._get_lims_ocp(direction)
         self.OCV_function = None
