@@ -477,6 +477,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     // An event right at the restart fired on the state FirstStep restored, which
     // replaces the breakpoint saved before its reinitialisation
     if (retval == IDA_ROOT_RETURN && t_val == t_prev) {
+      // Evaluate the breakpoint's staged outputs now, so its replacement overwrites their row
+      FlushOutputBatch();
       // Knot reduction committed that breakpoint as its last knot
       i_save_ = (use_knot_reduction_ ? knot_reducer->GetOutputCount() : i_save_) - 1;
       SetStep(t_val);

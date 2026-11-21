@@ -344,8 +344,8 @@ fn abi_export_set_hash_is_pinned() {
         actual, expected,
         "ABI export set changed: computed hash {actual:#018x} != EXPECTED_ABI_HASH \
          {expected:#018x}. The Rust extern \"C\" surface changed. Update \
-         EXPECTED_ABI_HASH in ffi.rs to {actual:#018x} AND bump both RUST_ABI_VERSION \
-         and PYBAMM_RUST_ABI_VERSION in lockstep."
+         EXPECTED_ABI_HASH in ffi.rs to {actual:#018x} and, if a release shipped the \
+         previous ABI, bump both RUST_ABI_VERSION and PYBAMM_RUST_ABI_VERSION in lockstep."
     );
 }
 

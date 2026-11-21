@@ -43,7 +43,8 @@ pub const ERROR_NO_EVENTS: c_int = -9;
 /// Error: caller invoked an upsampling FFI on a model with no upsampling output.
 pub const ERROR_NO_UPSAMPLING: c_int = -10;
 
-/// ABI contract version, bumped with `PYBAMM_RUST_ABI_VERSION` on any exported signature change.
+/// ABI contract version, bumped with `PYBAMM_RUST_ABI_VERSION` on any exported signature change
+/// to an ABI a release has shipped.
 ///
 /// `pybamm_rust_abi_version` must keep its no-argument `-> u32` signature: it is the probe.
 pub const RUST_ABI_VERSION: u32 = 1;
@@ -55,7 +56,7 @@ pub const extern "C" fn pybamm_rust_abi_version() -> u32 {
 }
 
 /// Golden hash of the exported signatures, pinned by the `test_ffi_abi_contract` drift test.
-pub const EXPECTED_ABI_HASH: u64 = 0xc90e_a069_2afc_b96b;
+pub const EXPECTED_ABI_HASH: u64 = 0x430e_0cf9_cf99_6ce4;
 
 /// Run `body` on the model behind `user_data`, rejecting nulls and containing panics.
 ///
@@ -682,13 +683,16 @@ pub unsafe extern "C" fn pybamm_rust_total_event_len(user_data: *const c_void) -
 
 /// Evaluate all events, concatenated in order, or return `ERROR_NO_EVENTS` without any.
 ///
+/// `y_dot` may be null when no event reads it; otherwise a null `y_dot` is `ERROR_NULL_POINTER`.
+///
 /// # Safety
 ///
-/// `y` must hold `n_states` elements and `output` `total_event_len`.
+/// `y`, and a non-null `y_dot`, must hold `n_states` elements and `output` `total_event_len`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_events_eval(
     t: f64,
     y: *const f64,
+    y_dot: *const f64,
     inputs: *const f64,
     output: *mut f64,
     user_data: *mut c_void,
@@ -704,12 +708,20 @@ pub unsafe extern "C" fn pybamm_rust_events_eval(
                     return ERROR_NO_EVENTS;
                 }
                 let n_states = model.n_states();
+                let y_dot: &[f64] = if !y_dot.is_null() {
+                    borrow_slice(y_dot, n_states)
+                } else if model.events_read_y_dot().contains(&true) {
+                    return ERROR_NULL_POINTER;
+                } else {
+                    &[]
+                };
                 let total_len = model.total_event_len();
                 model.eval_observables(
                     ws,
                     ObservableKind::Events,
                     t,
                     borrow_slice(y, n_states),
+                    y_dot,
                     inputs,
                     borrow_slice_mut(output, total_len),
                 );
@@ -760,6 +772,7 @@ pub unsafe extern "C" fn pybamm_rust_upsampling_eval(
                     ObservableKind::Upsampling,
                     t,
                     borrow_slice(y, n_states),
+                    &[],
                     inputs,
                     borrow_slice_mut(output, len),
                 );
@@ -1217,6 +1230,7 @@ mod tests {
                 0.0,
                 y.as_ptr(),
                 std::ptr::null(),
+                std::ptr::null(),
                 out.as_mut_ptr(),
                 user_data,
             )
@@ -1236,6 +1250,7 @@ mod tests {
                     0.0,
                     y.as_ptr(),
                     std::ptr::null(),
+                    std::ptr::null(),
                     out.as_mut_ptr(),
                     user_data,
                 )
@@ -1247,6 +1262,38 @@ mod tests {
                 out[0]
             );
         }
+    }
+
+    #[test]
+    fn test_rust_events_eval_reads_y_dot() {
+        // g = y_dot[0] + 1, the shape of an event on `x.diff(pybamm.t)`
+        let mut model = observed_test_model(ObservableKind::Events, |arena, _| {
+            let y_dot = arena.alloc(Node::StateVectorDot { start: 0, end: 2 });
+            let y_dot0 = element(arena, y_dot, 0);
+            let one = arena.alloc(Node::Scalar(1.0));
+            arena.alloc(Node::Add(y_dot0, one))
+        });
+        assert_eq!(model.compiled.events_read_y_dot(), [true]);
+        let user_data: *mut c_void = std::ptr::from_mut(model.as_mut()).cast();
+        let (y, y_dot) = ([1.0, 2.0], [-3.0, 4.0]);
+        let mut out = [f64::NAN];
+        let eval = |y_dot: *const f64, out: &mut [f64; 1]| unsafe {
+            pybamm_rust_events_eval(
+                0.0,
+                y.as_ptr(),
+                y_dot,
+                std::ptr::null(),
+                out.as_mut_ptr(),
+                user_data,
+            )
+        };
+        assert_eq!(eval(y_dot.as_ptr(), &mut out), SUCCESS);
+        assert!((out[0] + 2.0).abs() < 1e-12, "got {}", out[0]);
+        assert_eq!(
+            eval(std::ptr::null(), &mut out),
+            ERROR_NULL_POINTER,
+            "an event reading y_dot needs it"
+        );
     }
 
     #[test]
@@ -1428,7 +1475,7 @@ mod tests {
                 pybamm_rust_total_event_len(std::ptr::null())
             }),
             ("pybamm_rust_events_eval", unsafe {
-                pybamm_rust_events_eval(0.0, input, input, output, nil_data)
+                pybamm_rust_events_eval(0.0, input, input, input, output, nil_data)
             }),
             ("pybamm_rust_upsampling_len", unsafe {
                 pybamm_rust_upsampling_len(std::ptr::null())
@@ -1561,7 +1608,7 @@ mod tests {
         assert_eq!(alg_jac(nil, ok), ERROR_NULL_POINTER, "y");
         assert_eq!(alg_jac(ok_const, nil_mut), ERROR_NULL_POINTER, "output");
 
-        let events = |y, out| unsafe { pybamm_rust_events_eval(0.0, y, nil, out, user_data) };
+        let events = |y, out| unsafe { pybamm_rust_events_eval(0.0, y, nil, nil, out, user_data) };
         assert_eq!(events(nil, ok), ERROR_NULL_POINTER, "y");
         assert_eq!(events(ok_const, nil_mut), ERROR_NULL_POINTER, "output");
     }

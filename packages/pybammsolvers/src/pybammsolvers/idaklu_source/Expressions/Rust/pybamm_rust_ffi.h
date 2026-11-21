@@ -64,7 +64,8 @@ using rust_output_eval_batch_t =
     int (*)(const double*, const double*, int, const double*, double*, void*);
 using rust_alg_res_t = int (*)(double, const double*, const double*, double*, void*);
 using rust_alg_jac_assemble_t = int (*)(double, const double*, const double*, double*, void*);
-using rust_events_eval_t = int (*)(double, const double*, const double*, double*, void*);
+using rust_events_eval_t =
+    int (*)(double, const double*, const double*, const double*, double*, void*);
 using rust_upsampling_eval_t = int (*)(double, const double*, const double*, double*, void*);
 using rust_abi_version_t = uint32_t (*)();
 

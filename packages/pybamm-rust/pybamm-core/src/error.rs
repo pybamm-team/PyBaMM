@@ -49,8 +49,10 @@ pub enum CoreError {
     #[error("n_states={declared} exceeds the largest state count a tape can index, {max}")]
     StateCountTooLarge { declared: usize, max: u32 },
 
-    /// A model expression read `y_dot`; a compiled model supplies only `t`, `y` and inputs.
-    #[error("the expression reads y_dot (a StateVectorDot), which a compiled model never supplies")]
+    /// A model expression other than an event read `y_dot`, which only events are given.
+    #[error(
+        "the expression reads y_dot (a StateVectorDot), which a compiled model gives only its events"
+    )]
     StateDotRead,
 
     /// The residual's length differed from the declared state count.

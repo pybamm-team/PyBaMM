@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::arena::{Arena, DagRef, NodeId};
+use crate::arena::{Arena, DagRef, NodeId, ReadExtents};
 use crate::eval::{CompiledExpr, SplitCompiledExpr, TangentInputs};
 use crate::jacobian::tangent_dag;
 use crate::params::ParamIdx;
@@ -15,7 +15,7 @@ use crate::tangent_batch::{self, LanePlan, unit_param_columns};
 pub enum ObservableKind {
     /// Output variables `H(t, y; p)`.
     Outputs,
-    /// Event functions `g(t, y; p)`.
+    /// Event functions `g(t, y, y_dot; p)`, the only observables that may read `y_dot`.
     Events,
     /// The scalar `u(t, y; p)` that IDAKLU adds output times to resolve, by linear interpolation.
     Upsampling,
@@ -89,6 +89,8 @@ pub struct ObservableSet {
     /// Tangent tapes of the family root, when sensitivities need them.
     tangents: Option<ObservableTangents>,
     total_len: usize,
+    /// Whether each observable's tape reads `y_dot`, in root order.
+    reads_y_dot: Vec<bool>,
 }
 
 impl ObservableSet {
@@ -107,11 +109,16 @@ impl ObservableSet {
             .iter()
             .map(|&member| Arc::new(CompiledExpr::new(DagRef::new(family.arena(), member))))
             .collect();
+        let reads_y_dot = members
+            .iter()
+            .map(|&member| ReadExtents::scan(family.arena(), member).y_dot.is_some())
+            .collect();
         Self {
             total_len: items.iter().map(|expr| expr.output_len()).sum(),
             fused: (items.len() > 1).then(|| CompiledExpr::new(family.as_ref())),
             tangents: with_tangents.then(|| ObservableTangents::compile(family.as_ref())),
             items,
+            reads_y_dot,
         }
     }
 
@@ -135,6 +142,12 @@ impl ObservableSet {
     /// Each observable's own tape, in root order.
     pub fn exprs(&self) -> impl ExactSizeIterator<Item = &Arc<CompiledExpr>> {
         self.items.iter()
+    }
+
+    /// Whether each observable's tape reads `y_dot`, in root order.
+    #[inline]
+    pub fn reads_y_dot(&self) -> &[bool] {
+        &self.reads_y_dot
     }
 
     #[cfg(test)]
@@ -182,17 +195,20 @@ impl ObservableSet {
     }
 
     /// Evaluate the whole family into `out`, in the concatenated layout.
+    ///
+    /// `y_dot` may be empty when no observable reads it.
     pub fn eval_all(
         &self,
         scratch: &mut ObservableScratch,
         t: f64,
         y: &[f64],
+        y_dot: &[f64],
         inputs: &[f64],
         out: &mut [f64],
     ) {
         let mut offset = 0;
         for (expr, len) in self.primal_tapes() {
-            let result = expr.eval(&mut scratch.tape, t, y, &[], inputs);
+            let result = expr.eval(&mut scratch.tape, t, y, y_dot, inputs);
             out[offset..offset + len].copy_from_slice(&result[..len]);
             offset += len;
         }
@@ -494,7 +510,7 @@ mod tests {
         let (y, inputs) = ([0.75, -1.5], [0.25]);
 
         let mut all = [0.0; 2];
-        set.eval_all(&mut scratch, 0.0, &y, &inputs, &mut all);
+        set.eval_all(&mut scratch, 0.0, &y, &[], &inputs, &mut all);
         assert_close(&all, &[-0.875, -2.125]);
 
         let per_item = set
@@ -537,7 +553,7 @@ mod tests {
             .collect();
         assert_eq!(per_item, [0.0, 3.0]);
         let mut fused = [f64::NAN; 2];
-        set.eval_all(&mut scratch, 0.0, &y, &[], &mut fused);
+        set.eval_all(&mut scratch, 0.0, &y, &[], &[], &mut fused);
         assert_eq!(fused, [0.0, 3.0]);
         let mut jac = [f64::NAN; 2];
         set.jac_action(&mut scratch, 0.0, &y, &[], &[1.0, 1.0], &mut jac);
@@ -578,7 +594,7 @@ mod tests {
         seed_param_tangent(&mut dp, &[ParamIdx::new(0)], &[1.0]);
         let run = |scratch: &mut ObservableScratch| {
             let (mut all, mut jac, mut sens) = ([0.0; 2], [0.0; 2], [0.0; 2]);
-            set.eval_all(scratch, 0.0, &y, &inputs, &mut all);
+            set.eval_all(scratch, 0.0, &y, &[], &inputs, &mut all);
             set.jac_action(scratch, 0.0, &y, &inputs, &v, &mut jac);
             set.sens_action(scratch, 0.0, &y, &inputs, &dp, &mut sens);
             [all, jac, sens].map(|values| values.map(f64::to_bits))
@@ -980,6 +996,7 @@ mod tests {
                 &mut scratch,
                 ts[lane],
                 &y_cols[lane * 2..(lane + 1) * 2],
+                &[],
                 &inputs,
                 &mut expected,
             );

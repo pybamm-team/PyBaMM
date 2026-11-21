@@ -167,22 +167,28 @@ public:
     }
 };
 
-/** Concatenated events; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_res[0]=output */
+/**
+ * Concatenated events; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_arg[3]=yp, m_res[0]=output.
+ * yp stays null unless an event reads it.
+ */
 class RustEventsExpression : public RustExpression {
 public:
     RustEventsExpression(void* model, int total_event_len)
-        : RustExpression(model, total_event_len) {}
+        : RustExpression(model, total_event_len, 4) {}
 
     void operator()() override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(events_eval, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_model);
+            PYBAMM_RUST_CALL(events_eval, *m_arg[0], m_arg[1], m_arg[3], m_arg[2], m_res[0],
+                             m_model);
         }
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(events_eval, *inputs[0], inputs[1], inputs[2], results[0], m_model);
+            const sunrealtype* yp = inputs.size() > 3 ? inputs[3] : nullptr;
+            PYBAMM_RUST_CALL(events_eval, *inputs[0], inputs[1], yp, inputs[2], results[0],
+                             m_model);
         }
     }
 };
@@ -406,7 +412,10 @@ public:
  */
 class RustFunctions : public ExpressionSet<RustRhsExpression> {
 public:
-    /** `colptrs`/`rowvals` are the Jacobian's CSC pattern; `alg_rowvals`/`alg_colvals` are COO. */
+    /**
+     * `colptrs`/`rowvals` are the Jacobian's CSC pattern; `alg_rowvals`/`alg_colvals` are COO.
+     * `events_read_yp` says which events read yp, one entry each, or is empty if none does.
+     */
     RustFunctions(
         void* rust_model,
         int n_states,
@@ -421,7 +430,8 @@ public:
         const std::vector<int64_t>& alg_rowvals,
         const std::vector<int64_t>& alg_colvals,
         const std::vector<int>& output_lens,
-        const SetupOptions& options
+        const SetupOptions& options,
+        const std::vector<bool>& events_read_yp_arg = {}
     ) :
         ExpressionSet<RustRhsExpression>(
             static_cast<Expression*>(&m_rhs),
@@ -479,6 +489,16 @@ public:
         if (checked_upsampling_len(rust_model) > 0) {
             m_upsampling = std::make_unique<RustUpsamplingExpression>(rust_model);
             upsampling_fcn = static_cast<Expression*>(m_upsampling.get());
+        }
+
+        if (!events_read_yp_arg.empty() &&
+            events_read_yp_arg.size() != static_cast<size_t>(n_events)) {
+            throw std::invalid_argument("events_read_yp must have one entry per event");
+        }
+        // Kept only if an event reads yp, which picks IDAKLU's derivative-aware root function
+        if (std::find(events_read_yp_arg.begin(), events_read_yp_arg.end(), true) !=
+            events_read_yp_arg.end()) {
+            events_read_yp = events_read_yp_arg;
         }
     }
 

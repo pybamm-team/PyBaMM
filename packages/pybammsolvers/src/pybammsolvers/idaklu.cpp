@@ -223,7 +223,8 @@ IDAKLUSolverGroup *create_rust_solver_group(
     const np_array &rhs_alg_id,
     const np_array &atol_np,
     double rel_tol,
-    py::dict py_opts
+    py::dict py_opts,
+    const std::vector<bool> &events_read_yp
 ) {
     auto setup_opts = SetupOptions(py_opts);
     auto solver_opts = SolverOptions(py_opts);
@@ -280,7 +281,7 @@ IDAKLUSolverGroup *create_rust_solver_group(
         auto functions = std::make_unique<RustFunctions>(
             model_ptr, number_of_states, number_of_inputs, number_of_sens_params,
             number_of_algebraic_states, number_of_events, jac_nnz, colptrs, rowvals,
-            alg_jac_nnz, alg_rowvals, alg_colvals, output_lens, setup_opts
+            alg_jac_nnz, alg_rowvals, alg_colvals, output_lens, setup_opts, events_read_yp
         );
 
         solvers.emplace_back(
@@ -380,6 +381,7 @@ PYBIND11_MODULE(idaklu, m)
       py::arg("atol"),
       py::arg("rtol"),
       py::arg("options"),
+      py::arg("events_read_yp") = std::vector<bool>{},
       py::return_value_policy::take_ownership);
 
   m.def("observe", &observe,
