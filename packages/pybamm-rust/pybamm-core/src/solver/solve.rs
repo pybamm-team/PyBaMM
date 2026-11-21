@@ -12,7 +12,7 @@ use diffsol::matrix::sparse_faer::FaerSparseMat;
 use diffsol::ode_solver::OdeSolverStatistics;
 use diffsol::vector::faer_serial::FaerVec;
 use diffsol::{
-    AugmentedOdeSolverMethod, BacktrackingLineSearch, BdfState, FaerContext, FaerSparseLU,
+    AugmentedOdeSolverMethod, BacktrackingLineSearch, FaerContext, FaerSparseLU,
     InitialConditionSolverOptions, NewtonNonlinearSolver, NoLineSearch, NonLinearOp, OdeBuilder,
     OdeEquations, OdeSolverMethod, OdeSolverProblem, OdeSolverStopReason, Op, SensEquations,
     StateRef, StateRefMut, Vector,
@@ -59,8 +59,6 @@ pub struct SolverStatistics {
     pub solver_setup_time_secs: f64,
     /// Wall-clock time for the whole solve, setup and initial conditions included.
     pub integration_time_secs: f64,
-    /// True when the sensitivity solve was retried with sensitivities out of error control.
-    pub sens_error_control_relaxed: bool,
 }
 
 /// Seconds since `mark`, moving `mark` to now.
@@ -319,13 +317,13 @@ impl PreparedSolver {
 
     /// One solve's diffsol problem, owning its workspace, over `binding`'s parameter vector.
     ///
-    /// `sens_error_control` puts the sensitivities under error control, scaled by `|p_j|`.
+    /// With `sensitivities`, the sensitivities are under error control, scaled by `|p_j|`.
     fn build_problem(
         &self,
         set: InputSet<'_>,
         t0: f64,
         binding: &ParamBinding,
-        sens_error_control: bool,
+        sensitivities: bool,
         lu_par: Par,
     ) -> Result<OdeSolverProblem<Equations>, CoreError> {
         let eqn = self.build_eqn(set, binding, lu_par);
@@ -335,7 +333,7 @@ impl PreparedSolver {
         let mut builder = OdeBuilder::<FaerSparseMat<f64>>::new()
             .rtol(self.rtol)
             .atol(self.atol.clone());
-        if sens_error_control {
+        if sensitivities {
             // param_scales plays the role of IDAS's pbar.
             builder = builder
                 .sens_rtol(self.rtol)
@@ -585,7 +583,8 @@ impl PreparedSolver {
         Ok(recorder.finish(termination, &solver.state(), statistics))
     }
 
-    /// Integrate with sensitivities, retrying once without them in error control.
+    /// Integrate with sensitivities under error control; reports output rows when
+    /// `with_output` is set.
     fn solve_sensitivities(
         &self,
         times: TimePlan<'_>,
@@ -596,11 +595,12 @@ impl PreparedSolver {
         let started = Instant::now();
         let mut mark = started;
         let mut statistics = SolverStatistics::default();
-        let mut problem = self.build_problem(set, times.t0(), &self.sens_binding, true, lu_par)?;
+        let problem = self.build_problem(set, times.t0(), &self.sens_binding, true, lu_par)?;
         statistics.problem_setup_time_secs = lap(&mut mark);
-        // Only the state tolerances shape the IC, so both attempts start from this state.
         let state = problem.bdf_state_sens::<SparseLu>()?;
         statistics.ic_time_secs = lap(&mut mark);
+        let mut solver = problem.bdf_solver_sens::<SparseLu>(state)?;
+        statistics.solver_setup_time_secs = lap(&mut mark);
 
         let run = Run {
             times,
@@ -609,45 +609,12 @@ impl PreparedSolver {
             started,
             lu_par,
         };
-        match self.integrate_sensitivities(&problem, state.clone(), run, statistics.clone()) {
-            // Only an integration failure depends on the sensitivities' error control.
-            Err(CoreError::Diffsol(controlled)) => {
-                // `SensEquations` reads these as the solver is built, so this relaxes it.
-                problem.sens_rtol = None;
-                problem.sens_atol = None;
-                let mut outcome = self
-                    .integrate_sensitivities(&problem, state, run, statistics)
-                    .map_err(|relaxed| CoreError::SensRetryFailed {
-                        controlled: controlled.to_string(),
-                        relaxed: relaxed.to_string(),
-                    })?;
-                outcome.statistics.sens_error_control_relaxed = true;
-                Ok(outcome)
-            },
-            other => other,
-        }
-    }
-
-    /// One sensitivity integration from `state`, under `problem`'s sensitivity tolerances.
-    ///
-    /// `statistics` carries the setup times the attempts share.
-    fn integrate_sensitivities(
-        &self,
-        problem: &OdeSolverProblem<Equations>,
-        state: BdfState<FaerVec<f64>>,
-        run: Run<'_>,
-        mut statistics: SolverStatistics,
-    ) -> Result<SolveOutcome, CoreError> {
-        let mut mark = Instant::now();
-        let mut solver = problem.bdf_solver_sens::<SparseLu>(state)?;
-        statistics.solver_setup_time_secs = lap(&mut mark);
         let ws = &problem.eqn.evaluator.workspace;
         let mut recorder = Recorder::new(self, run, ws, true, &solver.state());
         let mut restarter = BreakpointRestarter::new(self, &problem.ic_options);
-        let termination =
-            drive_segments(&mut solver, run.times, &mut recorder, |solver, t_next| {
-                restarter.restart_sens(solver, t_next)
-            })?;
+        let termination = drive_segments(&mut solver, times, &mut recorder, |solver, t_next| {
+            restarter.restart_sens(solver, t_next)
+        })?;
         statistics.solver = solver.get_statistics().clone();
         Ok(recorder.finish(termination, &solver.state(), statistics))
     }
@@ -1703,7 +1670,7 @@ mod tests {
         decay, decay_with_output_and_event, differential_then_algebraic_mass,
         structurally_singular_dae,
     };
-    use crate::test_support::{bits, block_bits};
+    use crate::test_support::bits;
 
     /// `dy/dt = -a * y` and `0 = y - z`, with sensitivities wrt `a`.
     fn build_small_dae_with_param() -> CompiledModel {
@@ -2723,10 +2690,9 @@ mod tests {
     fn a_sensitivity_request_matches_finite_difference_on_inputs() {
         let prepared = build_small_dae_prepared_with_sens();
         let (y0, inputs, _) = small_dae_setup();
-        let outcome = assert_matches_fd(&prepared, InputSet::new(&y0, &inputs), |h| {
+        assert_matches_fd(&prepared, InputSet::new(&y0, &inputs), |h| {
             (y0.clone(), vec![inputs[0] + h])
         });
-        assert!(!outcome.statistics.sens_error_control_relaxed);
     }
 
     #[test]
@@ -2773,7 +2739,7 @@ mod tests {
 
     #[test]
     fn a_sensitivity_request_without_sensitivity_params_is_an_error() {
-        // Reported as itself, not via the relaxed retry, and ahead of the seed and row space.
+        // Reported as itself, ahead of the seed and row space.
         let prepared = PreparedSolver::new(decay(), 1e-8, &[1e-8]).expect("prepare");
         let request = SolveRequest::new(&[0.0, 0.1]).with_sensitivities();
         let set = InputSet::new(&[1.0], &[]);
@@ -3402,114 +3368,33 @@ mod tests {
         compile_with_sens(&arena, rhs, mass, 1, 1, &[ParamIdx::new(0)])
     }
 
-    /// A sensitivity solve built without sensitivity error control, as the retry ends up.
-    fn relaxed_from_scratch(
-        prepared: &PreparedSolver,
-        t_eval: &[f64],
-        set: InputSet<'_>,
-    ) -> SolveOutcome {
-        let times = TimePlan::new(t_eval, &[]).expect("sorted grid");
-        let binding = &prepared.sens_binding;
-        let problem = prepared
-            .build_problem(set, times.t0(), binding, false, Par::Seq)
-            .expect("problem");
-        let state = problem.bdf_state_sens::<SparseLu>().expect("IC");
-        let run = Run {
-            times,
-            inputs: set.inputs,
-            with_output: false,
-            started: Instant::now(),
-            lu_par: Par::Seq,
-        };
-        prepared
-            .integrate_sensitivities(&problem, state, run, SolverStatistics::default())
-            .expect("relaxed solve")
-    }
-
     #[test]
-    // Bit-identical is the property under test.
-    fn a_sensitivity_too_sharp_for_error_control_is_retried_without_it() {
+    fn a_sensitivity_error_control_cannot_resolve_fails_the_solve() {
         let t_eval: Vec<f64> = (0..=10).map(|i| f64::from(i) * 0.1).collect();
         let set = InputSet::new(&[1.0], &[0.0]);
-        let request = SolveRequest::new(&t_eval).with_sensitivities();
+        let request = SolveRequest::new(&t_eval);
+        // Resolving a jump of 1e6 in ds/dt takes a step below this floor.
+        let options = SolverOptions {
+            min_timestep: 1e-13,
+            ..SolverOptions::default()
+        };
         let prepare = |k| {
             PreparedSolver::new(build_decay_with_a_switched_sensitivity(k), 1e-8, &[1e-8])
+                .and_then(|prepared| prepared.with_options(options.clone()))
                 .expect("prepare")
         };
-        let gentle = prepare(1.0).solve(request, set).expect("solve");
-        assert!(
-            !gentle.statistics.sens_error_control_relaxed,
-            "a small jump must solve under error control, else the fixture proves nothing"
-        );
+        prepare(1.0)
+            .solve(request.with_sensitivities(), set)
+            .expect("a small jump must solve, else the test proves nothing");
 
-        // Resolving a jump of 1e6 in ds/dt takes a step below diffsol's minimum.
-        let k = 1e6;
-        let prepared = prepare(k);
-        let outcome = prepared
+        let sharp = prepare(1e6);
+        sharp
             .solve(request, set)
-            .expect("the relaxed retry must succeed");
-        assert!(outcome.statistics.sens_error_control_relaxed);
-        for (&t, &y) in t_eval.iter().zip(&outcome.y) {
-            assert!((y - (-t).exp()).abs() < 2e-7, "y({t}) = {y}");
-        }
-        // Out of error control, the sensitivity is still integrated, not dropped.
-        let s_end = blocks(&outcome)[0][t_eval.len() - 1];
-        let exact = k * (1.0 - (-0.5f64).exp());
-        assert!(
-            (s_end - exact).abs() < 0.1 * exact,
-            "s(1) = {s_end}, exact {exact}"
-        );
-
-        // The retry starts from the failed attempt's IC, yet is a relaxed solve from scratch.
-        let relaxed = relaxed_from_scratch(&prepared, &t_eval, set);
-        assert_eq!(bits(&outcome.t), bits(&relaxed.t));
-        assert_eq!(bits(&outcome.y), bits(&relaxed.y));
-        assert_eq!(
-            outcome.sensitivities.as_deref().map(block_bits),
-            relaxed.sensitivities.as_deref().map(block_bits)
-        );
-        assert_eq!(
-            outcome.y_start_sens.as_deref().map(block_bits),
-            relaxed.y_start_sens.as_deref().map(block_bits)
-        );
-        assert_eq!(
-            outcome.statistics.solver.number_of_steps,
-            relaxed.statistics.solver.number_of_steps
-        );
-    }
-
-    #[test]
-    fn a_retry_that_fails_too_reports_both_failures() {
-        // dy/dt = a*y^2 from y = 1 blows up at t = 1/a, whatever the sensitivity tolerances.
-        let mut arena = Arena::new();
-        let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
-        let a = input(&mut arena, "a", 0, 0, 1);
-        let y_squared = arena.alloc(Node::Mul(y, y));
-        let rhs = arena.alloc(Node::Mul(a, y_squared));
-        let mass = identity_mass_matrix(1);
-        let model = compile_with_sens(&arena, rhs, mass, 1, 1, &[ParamIdx::new(0)]);
-        let prepared = PreparedSolver::new(model, 1e-8, &[1e-8]).expect("prepare");
-        let err = prepared
-            .solve(
-                SolveRequest::new(&[0.0, 2.0]).with_sensitivities(),
-                InputSet::new(&[1.0], &[1.0]),
-            )
-            .expect_err("a blow-up must fail with and without sensitivity error control");
-
-        let CoreError::SensRetryFailed {
-            controlled,
-            relaxed,
-        } = &err
-        else {
-            panic!("expected both attempts' failures, got: {err:?}");
-        };
-        let message = err.to_string();
-        for attempt in [controlled, relaxed] {
-            assert!(
-                !attempt.is_empty() && message.contains(attempt.as_str()),
-                "{message}"
-            );
-        }
+            .expect("the state never sees the switch, so only the sensitivity can fail");
+        let err = sharp
+            .solve(request.with_sensitivities(), set)
+            .expect_err("a sensitivity error control cannot resolve must fail the solve");
+        assert!(matches!(err, CoreError::Diffsol(_)), "{err:?}");
     }
 
     #[test]

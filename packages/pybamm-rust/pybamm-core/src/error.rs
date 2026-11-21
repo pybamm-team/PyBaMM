@@ -221,12 +221,6 @@ pub enum CoreError {
         got: f64,
     },
 
-    /// Both the error-controlled sensitivity solve and its relaxed retry failed.
-    #[error(
-        "sensitivity solve failed under error control ({controlled}); the retry with sensitivities excluded from error control also failed ({relaxed})"
-    )]
-    SensRetryFailed { controlled: String, relaxed: String },
-
     /// The integrator or its linear algebra panicked; the message is the panic's own.
     #[error("the solver panicked: {0}")]
     SolverPanic(String),
