@@ -14,8 +14,8 @@ use diffsol::vector::faer_serial::FaerVec;
 use diffsol::{
     AugmentedOdeSolverMethod, BacktrackingLineSearch, FaerContext, FaerSparseLU,
     InitialConditionSolverOptions, NewtonNonlinearSolver, NoLineSearch, NonLinearOp, OdeBuilder,
-    OdeEquations, OdeSolverMethod, OdeSolverProblem, OdeSolverStopReason, Op, SensEquations,
-    StateRef, StateRefMut, Vector,
+    OdeEquations, OdeSolverConfig, OdeSolverMethod, OdeSolverProblem, OdeSolverStopReason, Op,
+    SensEquations, StateRef, StateRefMut, Vector,
 };
 use faer::dyn_stack::{MemBuffer, MemStack};
 use faer::sparse::linalg::lu::{
@@ -1400,6 +1400,7 @@ fn drive_segments<'a, S: OdeSolverMethod<'a, Equations>>(
         }
         // `set_stop_time` rejects a stop diffsol already counts as reached.
         if !stop_time_reached(&solver.state(), t_eval[last]) {
+            grant_step_budget(solver);
             solver.set_stop_time(t_eval[last])?;
             loop {
                 let reason = solver.step()?;
@@ -1434,6 +1435,17 @@ fn drive_segments<'a, S: OdeSolverMethod<'a, Equations>>(
         col = last + 1;
     }
     Ok(Termination::Completed)
+}
+
+/// Give `solver` its whole step budget again, from the steps it has taken so far.
+///
+/// diffsol counts the budget over a solver's life and refreshes it this way for adjoint
+/// replay. IDAS counts `mxstep` per call instead, so each stretch between stop times gets
+/// the whole budget rather than a solve with many stops running out.
+fn grant_step_budget<'a, S: OdeSolverMethod<'a, Equations>>(solver: &mut S) {
+    let budget = solver.problem().ode_options.max_number_timesteps;
+    let taken = solver.get_statistics().number_of_steps;
+    *solver.config_mut().as_base_mut().maximum_number_timesteps = taken.saturating_add(budget);
 }
 
 /// diffsol's own test for a stop at `t_stop` being reached, round-off included.
@@ -1723,6 +1735,43 @@ mod tests {
                 .expect("a valid event");
         }
         model
+    }
+
+    #[test]
+    fn each_stretch_between_stop_times_gets_the_whole_step_budget() {
+        let t_eval: Vec<f64> = (0..=40).map(|i| f64::from(i) * 0.05).collect();
+        // Each stretch takes at most 46 steps here, and one stretch over the span 135.
+        let budget = 80;
+        let options = SolverOptions {
+            max_number_timesteps: budget,
+            ..SolverOptions::default()
+        };
+        let prepared = PreparedSolver::new(decay(), 1e-10, &[1e-10])
+            .and_then(|prepared| prepared.with_options(options))
+            .expect("prepare");
+        let set = InputSet::new(&[1.0], &[]);
+        let request = SolveRequest::new(&t_eval);
+
+        let stopped = prepared
+            .solve(request.with_stop_times(&t_eval), set)
+            .expect("no stretch between stop times spends the budget");
+        assert!(
+            stopped.statistics.solver.number_of_steps > budget,
+            "a budget over the whole solve would have failed, else the test proves nothing"
+        );
+
+        let err = prepared
+            .solve(request, set)
+            .expect_err("one stretch over the same span spends more than the budget");
+        assert!(
+            matches!(
+                err,
+                CoreError::Diffsol(diffsol::DiffsolError::OdeSolverError(
+                    diffsol::error::OdeSolverError::TooManyTimesteps { .. }
+                ))
+            ),
+            "{err:?}"
+        );
     }
 
     #[test]

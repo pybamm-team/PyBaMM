@@ -6,9 +6,7 @@ use diffsol::{OdeEquations, OdeSolverOptions, OdeSolverProblem};
 
 use crate::error::CoreError;
 
-/// Our replacement for diffsol's step budget, matching IDAKLU's `max_num_steps`.
-///
-/// diffsol's 5000 spans every segment of a solve, which a long drive cycle can exceed.
+/// Our replacement for diffsol's step budget of 5000: IDAKLU's `max_num_steps`.
 const MAX_NUMBER_TIMESTEPS: usize = 100_000;
 
 /// Call `$callback!` with every option, each as `$(#[doc])* name: Type,`.
@@ -20,7 +18,7 @@ macro_rules! for_each_solver_option {
         $callback! {
             /// Newton iterations allowed per nonlinear solve.
             max_nonlinear_solver_iterations: usize,
-            /// Completed steps allowed over the whole solve.
+            /// Completed steps allowed between consecutive stop times.
             max_number_timesteps: usize,
             /// Consecutive step rejections allowed before the solve aborts.
             max_error_test_failures: usize,
