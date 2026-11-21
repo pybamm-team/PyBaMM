@@ -43,6 +43,7 @@ class _SolverOptions(TypedDict):
     """Integrator tuning dict; every key is required (see ``default_solver_options``)."""
 
     max_nonlinear_solver_iterations: int
+    max_number_timesteps: int
     max_error_test_failures: int
     max_nonlinear_solver_failures: int
     nonlinear_solver_tolerance: float

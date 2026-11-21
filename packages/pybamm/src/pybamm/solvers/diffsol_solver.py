@@ -102,22 +102,25 @@ class DiffsolSolver(pybamm.BaseSolver):
     options : dict, optional
         diffsol ``OdeSolverOptions`` overrides plus ``num_threads``: input sets solved
         concurrently, or the threads a single set's sparse LU uses (worthwhile from
-        ~50k states). Defaults are in :attr:`DEFAULT_OPTIONS`; unknown keys and
-        values of the wrong type raise :class:`pybamm.SolverError`.
+        ~50k states). ``max_number_timesteps`` bounds the steps between consecutive
+        breakpoints, and ``max_nonlinear_solver_failures`` the failures within one step.
+        Defaults are in :attr:`DEFAULT_OPTIONS`; unknown keys and values of the wrong
+        type raise :class:`pybamm.SolverError`.
     """
 
     _integrates_via_compiled_model = True
     # By design, a variable that cannot be lowered to Rust hard-fails on read
     _observes_via_compiled_model = True
 
-    #: diffsol's defaults, bar the per-solve ``max_nonlinear_solver_failures``: 50
-    #: caps solve length, not divergence. Literal so ``import pybamm`` needs no extension.
+    #: diffsol's defaults, bar ``max_number_timesteps``, raised from 5000 to IDAKLU's
+    #: ``max_num_steps``. Literal so ``import pybamm`` needs no extension.
     _INTEGRATOR_DEFAULTS = {
         "max_nonlinear_solver_iterations": 10,
+        "max_number_timesteps": 100000,
         "max_error_test_failures": 40,
-        "max_nonlinear_solver_failures": 100000,
+        "max_nonlinear_solver_failures": 10,
         "nonlinear_solver_tolerance": 0.2,
-        "min_timestep": 1e-13,
+        "min_timestep": 2.220446049250313e-16,
         "max_timestep_growth": None,
         "min_timestep_growth": None,
         "max_timestep_shrink": None,

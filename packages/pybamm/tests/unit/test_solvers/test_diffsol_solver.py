@@ -590,12 +590,9 @@ class TestDiffsolSolverOptions:
         with pytest.raises(pybamm.SolverError, match=r"Unknown diffsol solver option"):
             pybamm.DiffsolSolver(options={"max_error_test_failure": 7})
 
-    def test_the_failure_budget_default_is_not_diffsols_own(self):
-        # diffsol counts failures cumulatively, so its own 50 caps solve length.
-        assert (
-            pybamm.DiffsolSolver.DEFAULT_OPTIONS["max_nonlinear_solver_failures"]
-            > 10000
-        )
+    def test_the_step_budget_default_is_idaklus_not_diffsols(self):
+        # diffsol's own 5000 would fail a long drive cycle that IDAKLU solves.
+        assert pybamm.DiffsolSolver.DEFAULT_OPTIONS["max_number_timesteps"] == 100000
 
     def test_options_reach_the_integrator(self):
         model = _decay_model()
@@ -606,6 +603,13 @@ class TestDiffsolSolverOptions:
             starved.solve(model, np.linspace(0, 1, 5))
 
         assert pybamm.DiffsolSolver().solve(model, np.linspace(0, 1, 5)) is not None
+
+    def test_the_step_budget_option_reaches_diffsol(self):
+        solver = pybamm.DiffsolSolver(options={"max_number_timesteps": 3})
+        with pytest.raises(
+            pybamm.SolverError, match=r"maximum number of timesteps \(3\)"
+        ):
+            solver.solve(_decay_model(), np.array([0.0, 2.0]))
 
     def test_an_out_of_range_option_is_rejected_by_the_solver(self):
         model = _decay_model()
