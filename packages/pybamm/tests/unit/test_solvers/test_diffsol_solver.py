@@ -363,6 +363,18 @@ class TestDiffsolTerminationEvent:
         assert solution.closest_event_idx == 1
         assert solution.termination == "event: v = 0.5"
 
+    def test_an_event_on_a_time_derivative_is_refused(self):
+        # diffsol's root function is given no state derivatives, unlike IDAKLU's
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -v}
+        model.initial_conditions = {v: 1.0}
+        model.events = [pybamm.Event("dv/dt > -0.5", v.diff(pybamm.t) + 0.5)]
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+        with pytest.raises(pybamm.SolverError, match=r"an event reads y_dot"):
+            pybamm.DiffsolSolver().solve(model, [0, 3])
+
 
 class TestDiffsolFailureHandling:
     @pytest.mark.parametrize("on_failure", ["warn", "ignore"])

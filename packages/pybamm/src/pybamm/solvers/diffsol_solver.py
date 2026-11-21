@@ -66,6 +66,10 @@ class DiffsolSolver(pybamm.BaseSolver):
     ``t_interp``, these are ``t_eval`` merged with a uniform 100-point grid over its
     span; an explicit ``t_interp`` (merged with ``t_eval``) sets them exactly.
 
+    Termination events cannot read the state derivatives, as in
+    ``x.diff(pybamm.t)``: diffsol's root function is given none. Use
+    :class:`IDAKLUSolver` for those.
+
     Parameters
     ----------
     rtol : float, optional
@@ -315,7 +319,8 @@ class DiffsolSolver(pybamm.BaseSolver):
                 self._hermite_interpolation and not self.output_variables,
             )
         except ValueError as error:
-            # The binding rejects an invalid tolerance or option with ValueError
+            # The binding rejects an invalid tolerance or option, or an event reading
+            # y_dot, with ValueError
             raise pybamm.SolverError(str(error)) from error
 
     def _integrate(
