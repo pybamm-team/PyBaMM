@@ -114,6 +114,11 @@ class DiffsolSolver(pybamm.BaseSolver):
         ``min_timestep`` defaults to machine epsilon, as in diffsol. Defaults are in
         :attr:`DEFAULT_OPTIONS`; unknown keys and values of the wrong type raise
         :class:`pybamm.SolverError`.
+    store_first_last : bool, optional
+        If True, only the first and last sample of each integration window are
+        stored (one experiment step in :meth:`pybamm.Simulation.solve`, or the
+        full ``[t_eval[0], t_eval[-1]]`` window in :meth:`solve`), for
+        memory-light long experiments. Default is False.
     """
 
     _integrates_via_compiled_model = True
@@ -161,6 +166,7 @@ class DiffsolSolver(pybamm.BaseSolver):
         hermite_interpolation=True,
         sens_atol_factor=1.0,
         options=None,
+        store_first_last=False,
     ):
         super().__init__(
             "problem dependent",
@@ -172,6 +178,7 @@ class DiffsolSolver(pybamm.BaseSolver):
             on_extrapolation,
             on_failure,
             output_variables,
+            store_first_last,
         )
         self.name = "diffsol solver (bdf)"
         self._calc_ic = calc_ic

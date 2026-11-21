@@ -33,9 +33,12 @@ class TestStoreFirstLast:
         solver = pybamm.IDAKLUSolver()
         assert solver.store_first_last is False
 
-    def test_plain_solve_returns_two_samples(self):
+    @pytest.mark.parametrize(
+        "solver_class", [pybamm.IDAKLUSolver, pybamm.DiffsolSolver]
+    )
+    def test_plain_solve_returns_two_samples(self, solver_class):
         model = _build_simple_dae_model()
-        solver = pybamm.IDAKLUSolver(store_first_last=True)
+        solver = solver_class(store_first_last=True)
 
         t_eval = np.linspace(0, 1, 50)
         sol = solver.solve(model, t_eval)
@@ -44,7 +47,10 @@ class TestStoreFirstLast:
         assert sol.t[0] == pytest.approx(t_eval[0])
         assert sol.t[-1] == pytest.approx(t_eval[-1])
 
-    def test_experiment_each_step_has_two_samples(self):
+    @pytest.mark.parametrize(
+        "solver_class", [pybamm.IDAKLUSolver, pybamm.DiffsolSolver]
+    )
+    def test_experiment_each_step_has_two_samples(self, solver_class):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
             [
@@ -53,7 +59,7 @@ class TestStoreFirstLast:
                 "Charge at C/10 for 30 seconds",
             ],
         )
-        solver = pybamm.IDAKLUSolver(store_first_last=True)
+        solver = solver_class(store_first_last=True)
         sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
         sol = sim.solve()
 
@@ -63,7 +69,7 @@ class TestStoreFirstLast:
 
         # Both runs stop the integrator at the same step endpoints, so the
         # end-of-step values should match to solver precision.
-        ref_solver = pybamm.IDAKLUSolver()
+        ref_solver = solver_class()
         ref_sim = pybamm.Simulation(model, experiment=experiment, solver=ref_solver)
         ref_sol = ref_sim.solve()
         for sub, ref_sub in zip(sol.sub_solutions, ref_sol.sub_solutions, strict=True):
@@ -147,6 +153,14 @@ class TestStoreFirstLast:
         assert '"store_first_last": true' in json.dumps(config)
         solver2 = pybamm.BaseSolver.from_config(config)
         assert isinstance(solver2, pybamm.IDAKLUSolver)
+        assert solver2.store_first_last is True
+
+    def test_round_trip_serialisation_diffsol(self):
+        solver = pybamm.DiffsolSolver(store_first_last=True, rtol=1e-5)
+        config = solver.to_config()
+        assert config["store_first_last"] is True
+        solver2 = pybamm.BaseSolver.from_config(config)
+        assert isinstance(solver2, pybamm.DiffsolSolver)
         assert solver2.store_first_last is True
 
     def test_round_trip_serialisation_casadi(self):
