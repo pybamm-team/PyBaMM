@@ -930,6 +930,40 @@ class TestDiffsolSensitivities:
         )
 
 
+class TestSensitivityOnlyJumps:
+    """A jump in ``ds/dt`` the state never sees, at a time PyBaMM breaks on."""
+
+    @staticmethod
+    def _model():
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        p = pybamm.InputParameter("p")
+        # At p = 0 the state stays exp(-t), but ds/dt jumps by 1 at t = 0.5
+        model.rhs = {v: -v + p * (pybamm.t > 0.5)}
+        model.initial_conditions = {v: 1.0}
+        model.variables = {"v": v}
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    @pytest.mark.parametrize(
+        "solver_class", [pybamm.DiffsolSolver, pybamm.IDAKLUSolver]
+    )
+    def test_a_breakpoint_resolves_it_without_sensitivity_error_control(
+        self, solver_class
+    ):
+        # The steps follow the state alone, so only the breakpoint lands one on it.
+        solution = solver_class(rtol=1e-8, atol=1e-8).solve(
+            self._model(),
+            [0, 1],
+            inputs={"p": 0.0},
+            calculate_sensitivities=["p"],
+            t_interp=np.linspace(0, 1, 11),
+        )
+        s_end = np.asarray(solution["v"].sensitivities["p"]).ravel()[-1]
+        np.testing.assert_allclose(s_end, 1 - np.exp(-0.5), rtol=1e-6)
+
+
 class TestDiffsolSensAtolFactor:
     def test_default_sens_atol_factor(self):
         # Factor 1.0 matches IDAS's IDASensEEtolerances (atol / pbar_i).

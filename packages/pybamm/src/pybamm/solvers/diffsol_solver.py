@@ -108,7 +108,9 @@ class DiffsolSolver(pybamm.BaseSolver):
           set's sparse LU uses (worthwhile from ~50k states).
         - ``sensitivity_error_control``: put the forward sensitivities in the local
           error test, as :class:`IDAKLUSolver`'s option of that name does. Off by
-          default, so the steps follow the states alone.
+          default, so the steps follow the states alone: a jump only the
+          sensitivities see is then resolved only at a breakpoint, which PyBaMM
+          places at each time discontinuity it finds in the model.
 
         ``max_number_timesteps`` bounds the steps between consecutive breakpoints,
         ``max_nonlinear_solver_failures`` the failures within one step, and
