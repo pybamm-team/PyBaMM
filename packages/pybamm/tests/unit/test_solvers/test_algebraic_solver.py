@@ -5,6 +5,7 @@
 import numpy as np
 import pytest
 from scipy import optimize
+from scipy.sparse import issparse
 
 import pybamm
 from tests import get_discretisation_for_testing
@@ -360,6 +361,61 @@ class TestAlgebraicSolver:
             .evaluate(t=t_eval, y=solution.all_ys[0])
             .flatten(),
             sol[1, :],
+        )
+
+    @pytest.mark.parametrize(
+        ("convert_to_format", "sparse"), [("python", True), ("casadi", False)]
+    )
+    @pytest.mark.parametrize("method", ["lm", "lsq"])
+    @pytest.mark.parametrize("use_jacobian", [True, False])
+    def test_time_varying_jacobian(
+        self, convert_to_format, sparse, method, use_jacobian, monkeypatch
+    ):
+        model = pybamm.BaseModel()
+        model.convert_to_format = convert_to_format
+        model.use_jacobian = use_jacobian
+        time = pybamm.t
+        x = pybamm.Variable("x")
+        y = pybamm.Variable("y")
+        a = 1 - 2 * time
+        b = 4 * time * (1 - time)
+        dx = x - 2 * time
+        dy = y + 3 * time
+        model.algebraic = {x: a * dx - b * dy, y: b * dx + a * dy}
+        model.initial_conditions = {x: pybamm.Scalar(0), y: pybamm.Scalar(0)}
+        model.variables = {"x": x, "y": y}
+
+        function_name = "root" if method == "lm" else "least_squares"
+        run_optimizer = getattr(optimize, function_name)
+        callbacks = []
+
+        def recording_optimizer(fun, x0, *, jac, **kwargs):
+            if callable(jac):
+                callbacks.append(np.asarray(jac(x0), dtype=float))
+            return run_optimizer(fun, x0, jac=jac, **kwargs)
+
+        monkeypatch.setattr(optimize, function_name, recording_optimizer)
+        times = np.array([0.0, 0.5, 1.0])
+        solution = pybamm.AlgebraicSolver(method=method).solve(model, times)
+
+        if use_jacobian:
+            raw_jacobian = model.jac_algebraic_eval(0, np.zeros(2), np.zeros((0, 1)))
+            assert issparse(raw_jacobian) == sparse
+            expected_matrices = [
+                [[1, 0], [0, 1]],
+                [[0, -1], [1, 0]],
+                [[-1, 0], [0, -1]],
+            ]
+            np.testing.assert_array_equal(callbacks, expected_matrices)
+        else:
+            assert model.jac_algebraic_eval is None
+            assert callbacks == []
+        np.testing.assert_array_equal(solution.all_ts[0], times)
+        np.testing.assert_allclose(
+            solution.all_ys[0],
+            np.stack((2 * times, -3 * times)),
+            rtol=0,
+            atol=1e-12,
         )
 
     def test_solve_with_input(self):
