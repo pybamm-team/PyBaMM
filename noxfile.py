@@ -237,15 +237,37 @@ def run_benchmark_memory(session):
     )
 
 
+EXAMPLES_DIR = Path("docs/source/examples")
+SMOKE_NOTEBOOKS = tuple(
+    EXAMPLES_DIR / "notebooks/getting_started" / filename
+    for filename in (
+        "tutorial-1-how-to-run-a-model.ipynb",
+        "tutorial-4-setting-parameter-values.ipynb",
+        "tutorial-5-run-experiments.ipynb",
+    )
+)
+
+
 @nox.session(name="examples", default=False)
-def run_examples(session):
+def run_examples(session: nox.Session) -> None:
     """Run the examples tests for Jupyter notebooks."""
+    _run_example_notebooks(session, EXAMPLES_DIR)
+
+
+@nox.session(name="examples-smoke", default=False)
+def run_examples_smoke(session: nox.Session) -> None:
+    """Run notebooks covering basic simulations, parameters and experiments."""
+    _run_example_notebooks(session, *SMOKE_NOTEBOOKS)
+
+
+def _run_example_notebooks(session: nox.Session, *paths: Path) -> None:
+    missing = [str(path) for path in SMOKE_NOTEBOOKS if not path.is_file()]
+    if missing:
+        session.error(f"Missing smoke notebooks: {', '.join(missing)}")
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, extras=["all", "jax"], groups=["dev"])
-    notebooks_to_test = session.posargs if session.posargs else []
-    session.run(
-        "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
-    )
+    targets = session.posargs or [str(path) for path in paths]
+    session.run("pytest", "--nbmake", *targets, external=True)
 
 
 @nox.session(name="scripts", default=False)

@@ -2,7 +2,7 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
   autoupdate_schedule: "weekly"
-  # No base ref or Rust toolchain here; the `style` CI job gates these.
+  # No base ref or Rust toolchain here; the `style` CI job and its preflight gate these.
   skip: [comment-slop, cargo-fmt, cargo-clippy]
 
 repos:
