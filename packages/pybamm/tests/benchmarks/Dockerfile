@@ -8,7 +8,7 @@
 # Kept small for Bencher's bandwidth quota, with source last to reuse cached layers.
 
 # Pinned by digest (Dependabot bumps it)
-FROM python:3.13-slim-bookworm@sha256:a1165e272e578941b84abc79e4ab38a0305cd12803a5c4247979ac7655f4d641 AS python
+FROM python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72 AS python
 
 # Flattened into one layer: Bencher's runner can't extract a layer that re-ships
 # a hard link from a lower one, as the Python layer does when it upgrades perl-base
