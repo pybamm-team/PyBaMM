@@ -127,6 +127,15 @@ class TestBaseModel:
         assert variables == model.variables
         assert model.variable_names() == list(variables.keys())
 
+    def test_summary_variables_set_get(self):
+        model = pybamm.BaseModel()
+        assert model.summary_variables == []
+        model.variables = {"var": pybamm.Scalar(1)}
+        model.summary_variables = ["var"]
+        assert model.summary_variables == ["var"]
+        with pytest.raises(KeyError, match=r"No cycling variable defined"):
+            model.summary_variables = ["bad var"]
+
     def test_jac_set_get(self):
         model = pybamm.BaseModel()
         model.jacobian = "test"

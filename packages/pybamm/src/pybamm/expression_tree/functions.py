@@ -86,8 +86,17 @@ class Function(pybamm.Symbol):
             partial_derivatives: list[pybamm.Symbol | None] = [None] * len(children)
             for i, child in enumerate(self._children):
                 # if variable appears in the function, differentiate
-                # function, and apply chain rule
-                if variable in child.pre_order():
+                # function, and apply chain rule; states depend on time
+                if variable in child.pre_order() or (
+                    variable == pybamm.t
+                    and child.has_symbol_of_classes(
+                        (
+                            pybamm.VariableBase,
+                            pybamm.StateVectorBase,
+                            pybamm.CoupledVariable,
+                        )
+                    )
+                ):
                     partial_derivatives[i] = self._function_diff(
                         children, i
                     ) * child.diff(variable)

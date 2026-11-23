@@ -1142,7 +1142,7 @@ class Symbol:
         elif any(variable == x for x in self.pre_order()) or (
             variable == pybamm.t
             and self.has_symbol_of_classes(
-                (pybamm.VariableBase, pybamm.StateVectorBase)
+                (pybamm.VariableBase, pybamm.StateVectorBase, pybamm.CoupledVariable)
             )
         ):
             return self._diff(variable)

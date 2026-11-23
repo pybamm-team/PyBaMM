@@ -60,6 +60,13 @@ class TestFunction:
         ):
             func.diff(a)
 
+        # a function of the states depends on time through them
+        derivative = pybamm.exp(a).diff(pybamm.t)
+        np.testing.assert_allclose(
+            derivative.evaluate(y=np.array([1.0]), y_dot=np.array([2.0])),
+            [[2 * np.exp(1)]],
+        )
+
     def test_exceptions(self):
         a = pybamm.Variable("a", domain="something")
         b = pybamm.Variable("b", domain="something else")
