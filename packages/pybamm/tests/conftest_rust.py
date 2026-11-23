@@ -2,108 +2,140 @@
 
 import numpy as np
 import pytest
+from scipy.sparse import issparse
 
 import pybamm
 
 
-def evaluate_with_rust(expr, t=0.0, y=None, y_dot=None, inputs=None):
-    """Evaluate a PyBaMM expression using the Rust backend."""
-    from pybamm.rust import ExprGraph
-
-    graph = ExprGraph()
-    rust_symbols = {}
-    rust_expr = expr.to_rust(graph, rust_symbols)
-
-    # Inputs are ordered as `to_rust()` registers them: first appearance in the tree.
-    if inputs is None:
-        inputs_list = []
-    else:
-        input_params = [
-            node.name
-            for node in expr.pre_order()
-            if isinstance(node, pybamm.InputParameter)
-        ]
-        seen = set()
-        unique_params = []
-        for name in input_params:
-            if name not in seen:
-                seen.add(name)
-                unique_params.append(name)
-        inputs_list = [inputs.get(name, 0.0) for name in unique_params]
-
-    y_np = (
-        np.asarray(y, dtype=np.float64).ravel()
-        if y is not None
-        else np.array([], dtype=np.float64)
-    )
-    y_dot_np = (
-        np.asarray(y_dot, dtype=np.float64).ravel()
-        if y_dot is not None
-        else np.array([], dtype=np.float64)
-    )
-
-    pybamm_result = expr.evaluate(t=t, y=y, y_dot=y_dot, inputs=inputs)
-    is_scalar = np.isscalar(pybamm_result) or (
-        hasattr(pybamm_result, "shape") and pybamm_result.size == 1
-    )
-
-    if is_scalar:
-        return graph.eval_to_float(
-            rust_expr, t, y_np.tolist(), y_dot_np.tolist(), inputs_list
-        )
-    else:
-        return np.array(graph.eval_to_array(rust_expr, t, y_np, y_dot_np, inputs_list))
+def _reads_y_dot(expr):
+    return any(isinstance(node, pybamm.StateVectorDot) for node in expr.pre_order())
 
 
-def evaluate_with_casadi(expr, t=0.0, y=None, y_dot=None, inputs=None):
-    """Evaluate a PyBaMM expression using the CasADi backend."""
+def _casadi_functions(expr, n_states, input_sizes):
+    """CasADi value, df/dy, df/dp and jvp functions of ``expr``, inputs stacked in
+    the order of ``input_sizes``."""
     import casadi
 
-    y_size = 0 if y is None else np.asarray(y).size
-    y_dot_size = 0 if y_dot is None else np.asarray(y_dot).size
-
-    t_sym = casadi.MX.sym("t")
-    y_sym = casadi.MX.sym("y", y_size) if y_size > 0 else casadi.MX.sym("y", 0)
-    y_dot_sym = (
-        casadi.MX.sym("y_dot", y_dot_size)
-        if y_dot_size > 0
-        else casadi.MX.sym("y_dot", 0)
-    )
-
-    if inputs is None:
-        inputs = {}
-    inputs_sym = {name: casadi.MX.sym(name) for name in inputs}
-
-    casadi_symbols = {"t": t_sym, "y": y_sym, "y_dot": y_dot_sym, "inputs": inputs_sym}
-
-    casadi_expr = expr.to_casadi(t_sym, y_sym, y_dot_sym, inputs_sym, casadi_symbols)
-
-    func_inputs = [t_sym, y_sym, y_dot_sym, *inputs_sym.values()]
-    func = casadi.Function("f", func_inputs, [casadi_expr])
-
-    y_val = np.array([]) if y is None else np.asarray(y).flatten()
-    y_dot_val = np.array([]) if y_dot is None else np.asarray(y_dot).flatten()
-    input_vals = [inputs[name] for name in inputs_sym]
-
-    result = func(t, y_val, y_dot_val, *input_vals)
-    return np.asarray(result).flatten()
+    t = casadi.MX.sym("t")
+    y = casadi.MX.sym("y", n_states)
+    y_dot = casadi.MX.sym("y_dot", n_states)
+    inputs = {name: casadi.MX.sym(name, size) for name, size in input_sizes.items()}
+    p = casadi.vertcat(*inputs.values()) if inputs else casadi.MX.sym("p", 0)
+    v = casadi.MX.sym("v", n_states)
+    value = expr.to_casadi(t, y, y_dot, inputs)
+    functions = {"value": casadi.Function("f", [t, y, y_dot, p], [value])}
+    if not _reads_y_dot(expr):
+        functions["jac_y"] = casadi.Function(
+            "jac_y", [t, y, p], [casadi.jacobian(value, y)]
+        )
+        functions["jac_p"] = casadi.Function(
+            "jac_p", [t, y, p], [casadi.jacobian(value, p)]
+        )
+        functions["jvp"] = casadi.Function(
+            "jvp", [t, y, p, v], [casadi.jtimes(value, y, v)]
+        )
+    return functions
 
 
 @pytest.fixture
 def dual_backend_compare():
-    """Return a callable asserting Rust and CasADi evaluations of `expr` match."""
+    """Return a callable asserting the Rust backend matches ``evaluate()`` and CasADi.
 
-    def _compare(expr, t=0.0, y=None, y_dot=None, inputs=None, rtol=1e-10, atol=1e-14):
-        rust_result = evaluate_with_rust(expr, t, y, y_dot, inputs)
-        casadi_result = evaluate_with_casadi(expr, t, y, y_dot, inputs)
+    The value is checked against both. Unless ``expr`` reads ``y_dot``, the
+    jacobian with respect to ``y`` and a jvp are checked against CasADi, and so is
+    the jacobian with respect to the inputs when every input is scalar. Pass
+    ``check_evaluate=False`` where ``evaluate()`` follows a different convention
+    from the compiled backends.
+    """
 
-        np.testing.assert_allclose(
-            rust_result,
-            casadi_result,
-            rtol=rtol,
-            atol=atol,
-            err_msg=f"Rust vs CasADi mismatch for {type(expr).__name__}",
+    def _compare(
+        expr,
+        t=0.0,
+        y=None,
+        y_dot=None,
+        inputs=None,
+        rtol=1e-10,
+        atol=1e-14,
+        check_evaluate=True,
+    ):
+        from pybamm.rust import ExprGraph
+
+        inputs = inputs or {}
+        y = np.zeros(0) if y is None else np.asarray(y, dtype=np.float64).ravel()
+        if y_dot is not None:
+            y_dot = np.asarray(y_dot, dtype=np.float64).ravel()
+            y = y if y.size else np.zeros(y_dot.size)
+        n_states = y.size
+        y_dot_value = np.zeros(n_states) if y_dot is None else y_dot
+
+        graph = ExprGraph()
+        compiled = graph.compile(expr.to_rust(graph, {}), n_states=n_states)
+        names = compiled.input_names
+        # Inputs register in order of first appearance in the tree
+        assert names == tuple(
+            dict.fromkeys(
+                node.name
+                for node in expr.pre_order()
+                if isinstance(node, pybamm.InputParameter)
+            )
         )
-        return rust_result
+        p = {name: inputs[name] for name in names}
+        p_stacked = np.concatenate(
+            [np.ravel(inputs[name]).astype(np.float64) for name in names] + [[]]
+        )
+        casadi_fns = _casadi_functions(
+            expr, n_states, {name: np.size(inputs[name]) for name in names}
+        )
+
+        rust_value = np.asarray(compiled(t, y, p, y_dot=y_dot_value)).ravel()
+        casadi_value = np.asarray(
+            casadi_fns["value"](t, y, y_dot_value, p_stacked)
+        ).ravel()
+        np.testing.assert_allclose(
+            rust_value, casadi_value, rtol=rtol, atol=atol, err_msg="value vs CasADi"
+        )
+        if check_evaluate:
+            expected = expr.evaluate(
+                t=t,
+                y=y.reshape(-1, 1) if n_states else None,
+                y_dot=None if y_dot is None else y_dot.reshape(-1, 1),
+                inputs=inputs,
+            )
+            expected = expected.toarray() if issparse(expected) else expected
+            np.testing.assert_allclose(
+                rust_value,
+                np.ravel(expected),
+                rtol=rtol,
+                atol=atol,
+                err_msg="value vs evaluate()",
+            )
+
+        if "jac_y" in casadi_fns:
+            if n_states:
+                np.testing.assert_allclose(
+                    compiled.jacobian("y")(t, y, p).toarray(),
+                    np.asarray(casadi_fns["jac_y"](t, y, p_stacked)),
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg="df/dy vs CasADi",
+                )
+                direction = np.linspace(0.5, 1.5, n_states)
+                np.testing.assert_allclose(
+                    compiled.jvp(t, y, p, direction),
+                    np.asarray(casadi_fns["jvp"](t, y, p_stacked, direction)).ravel(),
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg="jvp vs CasADi",
+                )
+            # Rust's df/dp has a column per input, CasADi's one per input entry
+            if names and all(np.size(inputs[name]) == 1 for name in names):
+                np.testing.assert_allclose(
+                    compiled.jacobian("p")(t, y, p).toarray(),
+                    np.asarray(casadi_fns["jac_p"](t, y, p_stacked)),
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg="df/dp vs CasADi",
+                )
+        return rust_value
 
     return _compare

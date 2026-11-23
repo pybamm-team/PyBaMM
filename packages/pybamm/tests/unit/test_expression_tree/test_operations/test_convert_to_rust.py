@@ -5,6 +5,8 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 from scipy.sparse import csc_matrix, csr_matrix
 
+pytest_plugins = ["tests.conftest_rust"]
+
 
 class TestRustExprGraph:
     def test_import(self):
@@ -186,33 +188,6 @@ class TestSymbolToRust:
         expected = a.evaluate()
         assert_array_almost_equal(result, expected.flatten())
 
-    def test_addition_to_rust(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        a = pybamm.Scalar(2.0)
-        b = pybamm.Scalar(3.0)
-        expr_pybamm = a + b
-        g = ExprGraph()
-        rust_symbols = {}
-        expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_float(expr, 0.0, [], [], [])
-        assert result == pytest.approx(expr_pybamm.evaluate())
-
-    def test_nested_arithmetic_to_rust(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        a = pybamm.Scalar(2.0)
-        b = pybamm.Scalar(3.0)
-        c = pybamm.Scalar(4.0)
-        expr_pybamm = (a + b) * c - pybamm.Scalar(1.0)
-        g = ExprGraph()
-        rust_symbols = {}
-        expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_float(expr, 0.0, [], [], [])
-        assert result == pytest.approx(expr_pybamm.evaluate())
-
     def test_state_vector_to_rust(self):
         import pybamm
         from pybamm.rust import ExprGraph
@@ -237,179 +212,8 @@ class TestSymbolToRust:
         expr2 = s.to_rust(g, rust_symbols)
         assert expr1.id == expr2.id
 
-    def test_negation_to_rust(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
 
-        a = pybamm.Scalar(5.0)
-        expr_pybamm = -a
-        g = ExprGraph()
-        rust_symbols = {}
-        expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_float(expr, 0.0, [], [], [])
-        assert result == pytest.approx(expr_pybamm.evaluate())
-
-    def test_abs_to_rust(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        a = pybamm.Scalar(-5.0)
-        expr_pybamm = pybamm.AbsoluteValue(a)
-        g = ExprGraph()
-        rust_symbols = {}
-        expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_float(expr, 0.0, [], [], [])
-        assert result == pytest.approx(expr_pybamm.evaluate())
-
-
-class TestSpecificFunctionToRust:
-    def _eval_scalar(self, pybamm_expr, g=None):
-        from pybamm.rust import ExprGraph
-
-        if g is None:
-            g = ExprGraph()
-        rust_symbols = {}
-        expr = pybamm_expr.to_rust(g, rust_symbols)
-        return g.eval_to_float(expr, 0.0, [], [], [])
-
-    def test_sqrt_scalar(self):
-        import pybamm
-
-        expr = pybamm.sqrt(pybamm.Scalar(9.0))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_sqrt_vector(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        v = pybamm.Vector(np.array([1.0, 4.0, 9.0, 16.0]))
-        expr_pybamm = pybamm.sqrt(v)
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_array(rust_expr, 0.0, np.array([]), np.array([]), [])
-        expected = expr_pybamm.evaluate().flatten()
-        assert_array_almost_equal(result, expected)
-
-    def test_exp_scalar(self):
-        import pybamm
-
-        expr = pybamm.exp(pybamm.Scalar(2.0))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_log_scalar(self):
-        import pybamm
-
-        expr = pybamm.log(pybamm.Scalar(np.e))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_sin_scalar(self):
-        import pybamm
-
-        expr = pybamm.sin(pybamm.Scalar(np.pi / 6))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_cos_scalar(self):
-        import pybamm
-
-        expr = pybamm.cos(pybamm.Scalar(np.pi / 3))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_tanh_scalar(self):
-        import pybamm
-
-        expr = pybamm.tanh(pybamm.Scalar(1.5))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_sinh_scalar(self):
-        import pybamm
-
-        expr = pybamm.sinh(pybamm.Scalar(1.0))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_cosh_scalar(self):
-        import pybamm
-
-        expr = pybamm.cosh(pybamm.Scalar(1.0))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_arcsinh_scalar(self):
-        import pybamm
-
-        expr = pybamm.arcsinh(pybamm.Scalar(2.0))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_arctan_scalar(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        # Use InputParameter to prevent constant folding
-        p = pybamm.InputParameter("x")
-        expr = pybamm.arctan(p)
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr.to_rust(g, rust_symbols)
-        result = g.eval_to_float(rust_expr, 0.0, [], [], [1.0])
-        expected = float(expr.evaluate(inputs={"x": 1.0}))
-        assert result == pytest.approx(expected)
-
-    def test_erf_scalar(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        p = pybamm.InputParameter("x")
-        expr = pybamm.erf(p)
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr.to_rust(g, rust_symbols)
-        result = g.eval_to_float(rust_expr, 0.0, [], [], [1.0])
-        expected = float(expr.evaluate(inputs={"x": 1.0}))
-        assert result == pytest.approx(expected)
-
-    def test_sign_positive(self):
-        import pybamm
-
-        expr = pybamm.sign(pybamm.Scalar(3.5))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_sign_negative(self):
-        import pybamm
-
-        expr = pybamm.sign(pybamm.Scalar(-7.0))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_floor_scalar(self):
-        import pybamm
-
-        expr = pybamm.Floor(pybamm.Scalar(3.7))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_ceiling_scalar(self):
-        import pybamm
-
-        expr = pybamm.Ceiling(pybamm.Scalar(3.2))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
-    def test_nested_function(self):
-        import pybamm
-
-        expr = pybamm.exp(pybamm.sqrt(pybamm.Scalar(4.0)))
-        result = self._eval_scalar(expr)
-        assert result == pytest.approx(float(expr.evaluate()))
-
+class TestRegPowerToRust:
     @pytest.mark.parametrize(
         "x_val,exponent",
         [
@@ -526,20 +330,6 @@ class TestIndexToRust:
         expected = expr_pybamm.evaluate().flatten()
         assert_array_almost_equal(result, expected)
 
-    def test_index_state_vector_slice(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        sv = pybamm.StateVector(slice(0, 6))
-        expr_pybamm = pybamm.Index(sv, slice(2, 4))
-        y = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_array(rust_expr, 0.0, y, np.array([]), [])
-        expected = expr_pybamm.evaluate(y=y.reshape(-1, 1)).flatten()
-        assert_array_almost_equal(result, expected)
-
     def test_index_negative_last_element(self):
         import pybamm
         from pybamm.rust import ExprGraph
@@ -572,188 +362,6 @@ class TestIndexToRust:
         rust_expr = expr_pybamm.to_rust(g, {})
         result = g.eval_to_array(rust_expr, 0.0, np.array([]), np.array([]), [])
         expected = expr_pybamm.evaluate().flatten()
-        assert_array_almost_equal(result, expected)
-
-
-class TestNewBinaryOperatorsToRust:
-    def _eval_scalar(self, pybamm_expr, inputs=None):
-        from pybamm.rust import ExprGraph
-
-        g = ExprGraph()
-        rust_symbols = {}
-        expr = pybamm_expr.to_rust(g, rust_symbols)
-        inputs_list = list(inputs.values()) if inputs else []
-        return g.eval_to_float(expr, 0.0, [], [], inputs_list)
-
-    def _eval_array(self, pybamm_expr, y=None, inputs=None):
-        from pybamm.rust import ExprGraph
-
-        g = ExprGraph()
-        rust_symbols = {}
-        expr = pybamm_expr.to_rust(g, rust_symbols)
-        y_arr = np.array(y) if y is not None else np.array([])
-        inputs_list = list(inputs.values()) if inputs else []
-        return g.eval_to_array(expr, 0.0, y_arr, np.array([]), inputs_list)
-
-    def test_minimum_scalars(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.minimum(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 3.0, "b": 5.0})
-        expected = float(expr.evaluate(inputs={"a": 3.0, "b": 5.0}))
-        assert result == pytest.approx(expected)
-
-    def test_minimum_reversed(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.minimum(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 7.0, "b": 2.0})
-        expected = float(expr.evaluate(inputs={"a": 7.0, "b": 2.0}))
-        assert result == pytest.approx(expected)
-
-    def test_maximum_scalars(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.maximum(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 3.0, "b": 5.0})
-        expected = float(expr.evaluate(inputs={"a": 3.0, "b": 5.0}))
-        assert result == pytest.approx(expected)
-
-    def test_maximum_reversed(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.maximum(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 7.0, "b": 2.0})
-        expected = float(expr.evaluate(inputs={"a": 7.0, "b": 2.0}))
-        assert result == pytest.approx(expected)
-
-    def test_modulo_scalar(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.Modulo(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 10.0, "b": 3.0})
-        expected = float(expr.evaluate(inputs={"a": 10.0, "b": 3.0}))
-        assert result == pytest.approx(expected)
-
-    @pytest.mark.parametrize(
-        ("a", "b"), [(-1.0, 3.0), (1.0, -3.0), (-7.5, 2.0), (-7.0, -3.0)]
-    )
-    def test_modulo_with_negative_operands_truncates_like_casadi(self, a, b):
-        # evaluate() takes the floored remainder; Rust keeps CasADi's fmod
-        import casadi
-
-        import pybamm
-
-        expr = pybamm.Modulo(pybamm.InputParameter("a"), pybamm.InputParameter("b"))
-        inputs = {"a": a, "b": b}
-        result = self._eval_scalar(expr, inputs=inputs)
-        expected = float(casadi.evalf(expr.to_casadi(inputs=inputs)))
-        assert result == pytest.approx(expected)
-
-    def test_hypot_scalar(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.hypot(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 3.0, "b": 4.0})
-        expected = float(expr.evaluate(inputs={"a": 3.0, "b": 4.0}))
-        assert result == pytest.approx(expected)
-
-    def test_equal_heaviside_true(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.EqualHeaviside(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 3.0, "b": 5.0})
-        assert result == pytest.approx(1.0)
-
-    def test_equal_heaviside_equal(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.EqualHeaviside(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 5.0, "b": 5.0})
-        assert result == pytest.approx(1.0)
-
-    def test_equal_heaviside_false(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.EqualHeaviside(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 7.0, "b": 5.0})
-        assert result == pytest.approx(0.0)
-
-    def test_not_equal_heaviside_true(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.NotEqualHeaviside(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 3.0, "b": 5.0})
-        assert result == pytest.approx(1.0)
-
-    def test_not_equal_heaviside_equal(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.NotEqualHeaviside(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 5.0, "b": 5.0})
-        assert result == pytest.approx(0.0)
-
-    def test_equality_equal(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.Equality(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 3.0, "b": 3.0})
-        assert result == pytest.approx(1.0)
-
-    def test_equality_not_equal(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.Equality(a, b)
-        result = self._eval_scalar(expr, inputs={"a": 3.0, "b": 4.0})
-        assert result == pytest.approx(0.0)
-
-    def test_sparse_matrix_matmul(self):
-        from scipy.sparse import csr_matrix as scipy_csr
-
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        data = np.array([1.0, 2.0])
-        row = np.array([0, 1])
-        col = np.array([0, 2])
-        sparse_mat = scipy_csr((data, (row, col)), shape=(2, 3))
-
-        mat = pybamm.Matrix(sparse_mat)
-        sv = pybamm.StateVector(slice(0, 3))
-        expr = mat @ sv
-
-        y = np.array([10.0, 20.0, 30.0])
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr.to_rust(g, rust_symbols)
-        result = g.eval_to_array(rust_expr, 0.0, y, np.array([]), [])
-        expected = expr.evaluate(y=y.reshape(-1, 1)).flatten()
         assert_array_almost_equal(result, expected)
 
 
@@ -1063,32 +671,6 @@ class TestInterpolantNDToRust:
             assert_array_almost_equal(result, expected, decimal=10)
 
 
-class TestReductionToRust:
-    def test_max_reduce(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        v = pybamm.Vector(np.array([1.0, 5.0, 3.0]))
-        expr_pybamm = pybamm.max(v)
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_float(rust_expr, 0.0, [], [], [])
-        assert result == pytest.approx(5.0)
-
-    def test_min_reduce(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        v = pybamm.Vector(np.array([1.0, 5.0, 3.0]))
-        expr_pybamm = pybamm.min(v)
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_float(rust_expr, 0.0, [], [], [])
-        assert result == pytest.approx(1.0)
-
-
 class TestConcatenationToRust:
     def test_numpy_concatenation(self):
         import pybamm
@@ -1104,22 +686,9 @@ class TestConcatenationToRust:
         expected = expr_pybamm.evaluate().flatten()
         assert_array_almost_equal(result, expected)
 
-    def test_state_vector_concatenation(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        sv1 = pybamm.StateVector(slice(0, 3))
-        sv2 = pybamm.StateVector(slice(3, 5))
-        expr_pybamm = pybamm.NumpyConcatenation(sv1, sv2)
-        y = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr_pybamm.to_rust(g, rust_symbols)
-        result = g.eval_to_array(rust_expr, 0.0, y, np.array([]), [])
-        expected = expr_pybamm.evaluate(y=y.reshape(-1, 1)).flatten()
-        assert_array_almost_equal(result, expected)
-
-    def test_domain_concatenation_repeated_over_a_secondary_domain(self):
+    def test_domain_concatenation_repeated_over_a_secondary_domain(
+        self, dual_backend_compare
+    ):
         import pybamm
         from pybamm.rust import ExprGraph
         from tests import get_1p1d_discretisation_for_testing
@@ -1143,6 +712,7 @@ class TestConcatenationToRust:
         g = ExprGraph()
         result = g.eval_to_array(expr.to_rust(g), 0.0, y, np.array([]), [])
         np.testing.assert_array_equal(result, expr.evaluate(y=y).ravel())
+        dual_backend_compare(expr, y=y)
 
 
 class TestVectorFieldToRust:
@@ -1158,291 +728,203 @@ class TestVectorFieldToRust:
         result = g.eval_to_array(rust_expr, 0.0, np.array([]), np.array([]), [])
         assert_array_almost_equal(result, [1.0, 2.0, 3.0, 4.0])
 
-    def test_vector_field_matches_casadi(self):
-        import casadi
 
-        import pybamm
-        from pybamm.rust import ExprGraph
+# Distinct, positive states away from every kink, tie and interpolation knot below
+_Y = np.array([0.3, 1.2, 0.7, 2.1, 0.9, 1.6])
 
-        components = [
-            pybamm.StateVector(slice(0, 2)),
-            2 * pybamm.StateVector(slice(2, 4)),
-            pybamm.StateVector(slice(0, 2)) + pybamm.StateVector(slice(2, 4)),
-        ]
-        expr_pybamm = pybamm.VectorField(*components)
-        y = np.array([1.0, 2.0, 3.0, 4.0])
 
-        g = ExprGraph()
-        rust_expr = expr_pybamm.to_rust(g, {})
-        result = g.eval_to_array(rust_expr, 0.0, y, np.array([]), [])
+def _parity_cases():
+    """Lowered nodes on states or inputs, so constant folding cannot remove them,
+    each with the points to check it at."""
+    import pybamm
 
-        t_sym = casadi.MX.sym("t")
-        y_sym = casadi.MX.sym("y", 4)
-        y_dot_sym = casadi.MX.sym("y_dot", 4)
-        casadi_func = casadi.Function(
-            "f", [t_sym, y_sym], [expr_pybamm.to_casadi(t_sym, y_sym, y_dot_sym, {})]
+    def y(start, stop):
+        return pybamm.StateVector(slice(start, stop))
+
+    a = pybamm.InputParameter("a")
+    b = pybamm.InputParameter("b")
+    left, right = y(0, 3), y(3, 6)
+    at_y = [{"y": _Y}]
+    ordered = [{"inputs": {"a": a_val, "b": 5.0}} for a_val in (3.0, 5.0, 7.0)]
+    x_data = np.linspace(0.0, 3.0, 13)
+    # Uneven grids, so a transposed coefficient layout cannot cancel out
+    grid = (
+        np.array([0.0, 0.5, 1.3, 2.0, 3.1, 4.0]),
+        np.array([-1.0, -0.3, 0.4, 1.0, 2.2]),
+        np.array([0.0, 1.0, 2.5, 3.5, 5.0]),
+    )
+    mesh_2d = np.meshgrid(*grid[:2], indexing="ij")
+    mesh_3d = np.meshgrid(*grid, indexing="ij")
+    time_data = pybamm.DiscreteTimeData(
+        np.array([0.0, 1.0, 2.0]), np.array([1.0, 2.0, 3.0]), "data"
+    )
+    cases = {
+        "addition": (left + right, at_y),
+        "subtraction": (left - right, at_y),
+        "multiplication": (left * right, at_y),
+        "division": (left / right, at_y),
+        "power": (left**right, at_y),
+        "scalar_operands": (2.0 * left + 1.0, at_y),
+        "inner": (pybamm.Inner(left, right), at_y),
+        "minimum": (pybamm.minimum(left, right), at_y),
+        "maximum": (pybamm.maximum(left, right), at_y),
+        "modulo": (pybamm.Modulo(a, b), [{"inputs": {"a": 10.0, "b": 3.0}}]),
+        "hypot": (pybamm.hypot(left, right), at_y),
+        "equal_heaviside": (pybamm.EqualHeaviside(a, b), ordered),
+        "not_equal_heaviside": (pybamm.NotEqualHeaviside(a, b), ordered),
+        "dense_matmul": (
+            pybamm.Matrix(np.array([[1.0, 2.0, 0.5], [0.0, -1.0, 3.0]])) @ left,
+            at_y,
+        ),
+        "sparse_matmul": (
+            pybamm.Matrix(csr_matrix(([1.0, 2.0], ([0, 1], [0, 2])), shape=(2, 3)))
+            @ left,
+            at_y,
+        ),
+        "negate": (-left, at_y),
+        "absolute_value": (abs(left - 1.0), at_y),
+        "sign": (
+            pybamm.sign(left - 1.0),
+            [{"y": _Y}, {"y": np.array([1.0, 0.3, 1.7, 2.1, 0.9, 1.6])}],
+        ),
+        "floor": (pybamm.Floor(3 * left), at_y),
+        "ceiling": (pybamm.Ceiling(3 * left), at_y),
+        "index": (pybamm.Index(y(0, 6), slice(2, 5)), at_y),
+        "index_negative_stop": (pybamm.Index(y(0, 6), slice(1, -1)), at_y),
+        "not_constant": (pybamm.NotConstant(left), at_y),
+        "explicit_time_integral": (
+            pybamm.ExplicitTimeIntegral(left, pybamm.Scalar(0.0)),
+            at_y,
+        ),
+        "discrete_time_sum": (
+            pybamm.DiscreteTimeSum((time_data - y(0, 1)) ** 2),
+            [{"t": 0.5, "y": _Y}],
+        ),
+        "max": (pybamm.max(y(0, 6)), at_y),
+        "min": (pybamm.min(y(0, 6)), at_y),
+        "arcsinh2": (pybamm.arcsinh2(left - 1.0, right), at_y),
+        "reg_power": (pybamm.reg_power(left - 1.0, 0.7), at_y),
+        "state_vector_multi_slice": (
+            pybamm.StateVector(slice(0, 2), slice(4, 6)),
+            at_y,
+        ),
+        "state_vector_dot_multi_slice": (
+            pybamm.StateVectorDot(slice(0, 2), slice(4, 6)),
+            [{"y_dot": np.arange(10.0, 16.0)}],
+        ),
+        "time": (
+            pybamm.sqrt(y(0, 1) ** 2 + 1.0) * pybamm.exp(-pybamm.t),
+            [{"t": 2.0, "y": _Y}],
+        ),
+        "inputs": (
+            pybamm.NumpyConcatenation(
+                a * y(0, 1) * y(1, 2) + pybamm.t,
+                pybamm.sin(y(0, 1)) * b + pybamm.exp(-y(1, 2)),
+            ),
+            [{"t": 0.7, "y": _Y, "inputs": {"a": 2.5, "b": -0.8}}],
+        ),
+        "numpy_concatenation": (pybamm.NumpyConcatenation(left, 2 * right), at_y),
+        # VectorField has no evaluate()
+        "vector_field": (
+            pybamm.VectorField(y(0, 2), 2 * y(2, 4), y(0, 2) + y(2, 4)),
+            [{"y": _Y, "check_evaluate": False}],
+        ),
+        "conditional": (
+            pybamm.Conditional(
+                pybamm.InputParameter("s"), 2 * a, b + 5.0, pybamm.Scalar(42.0)
+            ),
+            # Half-integer selectors fall between the branches to the default
+            [
+                {"inputs": {"s": s, "a": 10.0, "b": 20.0}}
+                for s in (0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0)
+            ],
+        ),
+    }
+    for name in (
+        "sqrt",
+        "exp",
+        "log",
+        "sin",
+        "cos",
+        "tanh",
+        "sinh",
+        "cosh",
+        "arcsinh",
+        "arctan",
+        "erf",
+    ):
+        cases[name] = (getattr(pybamm, name)(y(0, 6)), at_y)
+    for interpolator in ("linear", "cubic", "pchip"):
+        cases[f"interpolant_{interpolator}"] = (
+            pybamm.Interpolant(
+                x_data, np.sin(x_data) + x_data, y(0, 6), interpolator=interpolator
+            ),
+            at_y,
         )
-        expected = np.array(casadi_func(0.0, y)).flatten()
-        assert_array_almost_equal(result, expected)
-
-
-class TestRustMatchesPyBaMM:
-    def _assert_rust_eval_matches(self, expr, t=0.0, y=None, y_dot=None, inputs=None):
-        from pybamm.rust import ExprGraph
-
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr.to_rust(g, rust_symbols)
-
-        y_np = (
-            np.asarray(y, dtype=np.float64).ravel()
-            if y is not None
-            else np.array([], dtype=np.float64)
+        cases[f"interpolant_{interpolator}_vector_valued"] = (
+            pybamm.Interpolant(
+                x_data,
+                np.column_stack([np.sin(x_data), x_data**2]),
+                y(0, 1),
+                interpolator=interpolator,
+            ),
+            at_y,
         )
-        y_dot_np = (
-            np.asarray(y_dot, dtype=np.float64).ravel()
-            if y_dot is not None
-            else np.array([], dtype=np.float64)
+    # CasADi's 2D and 3D cubic disagree with evaluate(), so only linear is compared
+    cases["interpolant_2d_linear"] = (
+        pybamm.Interpolant(
+            grid[:2],
+            np.sin(mesh_2d[0]) * np.exp(-0.3 * mesh_2d[1]),
+            (y(0, 1), y(1, 2)),
+        ),
+        [{"y": _Y}],
+    )
+    cases["interpolant_3d_linear"] = (
+        pybamm.Interpolant(
+            grid,
+            np.cos(mesh_3d[0]) * mesh_3d[1] + np.sqrt(1 + mesh_3d[2]),
+            (y(0, 1), y(1, 2), y(2, 3)),
+        ),
+        [{"y": _Y}],
+    )
+    return cases
+
+
+class TestRustCasadiParity:
+    @pytest.mark.parametrize("case", list(_parity_cases()))
+    def test_matches_evaluate_and_casadi(self, case, dual_backend_compare):
+        expr, points = _parity_cases()[case]
+        for point in points:
+            dual_backend_compare(expr, **point)
+
+    @pytest.mark.parametrize(
+        ("a", "b"), [(-1.0, 3.0), (1.0, -3.0), (-7.5, 2.0), (-7.0, -3.0)]
+    )
+    def test_modulo_with_negative_operands_truncates_like_casadi(
+        self, a, b, dual_backend_compare
+    ):
+        # evaluate() takes the floored remainder; Rust keeps CasADi's fmod
+        import pybamm
+
+        expr = pybamm.Modulo(pybamm.InputParameter("a"), pybamm.InputParameter("b"))
+        dual_backend_compare(expr, inputs={"a": a, "b": b}, check_evaluate=False)
+
+    @pytest.mark.parametrize(("a", "b"), [(3.0, 3.0), (3.0, 4.0)])
+    def test_equality_matches_evaluate(self, a, b):
+        # Equality has no CasADi form, so evaluate() is the only reference
+        import pybamm
+        from pybamm.rust import ExprGraph
+
+        expr = pybamm.Equality(pybamm.InputParameter("a"), pybamm.InputParameter("b"))
+        inputs = {"a": a, "b": b}
+        graph = ExprGraph()
+        compiled = graph.compile(expr.to_rust(graph, {}))
+        np.testing.assert_array_equal(
+            compiled(0.0, np.array([]), inputs), np.ravel(expr.evaluate(inputs=inputs))
         )
-        inputs_list = inputs if inputs is not None else []
-        pybamm_result = expr.evaluate(t=t, y=y, y_dot=y_dot)
 
-        if np.isscalar(pybamm_result) or (
-            hasattr(pybamm_result, "shape") and pybamm_result.size == 1
-        ):
-            result = g.eval_to_float(
-                rust_expr,
-                t,
-                y_np.tolist(),
-                y_dot_np.tolist(),
-                inputs_list,
-            )
-            assert result == pytest.approx(float(pybamm_result), rel=1e-5, abs=1e-10)
-        else:
-            result = g.eval_to_array(rust_expr, t, y_np, y_dot_np, inputs_list)
-            np.testing.assert_allclose(
-                result, np.asarray(pybamm_result).flatten(), rtol=1e-5, atol=1e-10
-            )
 
-    def test_scalar_arithmetic(self):
-        import pybamm
-
-        a = pybamm.Scalar(6.0)
-        b = pybamm.Scalar(4.0)
-
-        self._assert_rust_eval_matches(a + b)
-        self._assert_rust_eval_matches(a - b)
-        self._assert_rust_eval_matches(a * b)
-        self._assert_rust_eval_matches(a / b)
-        self._assert_rust_eval_matches(a**b)
-        self._assert_rust_eval_matches(-a)
-        self._assert_rust_eval_matches(pybamm.AbsoluteValue(pybamm.Scalar(-7.5)))
-
-    def test_special_functions(self):
-        import pybamm
-
-        # Use InputParameter to prevent constant folding where needed
-        p = pybamm.InputParameter("x")
-
-        self._assert_rust_eval_matches(pybamm.sqrt(pybamm.Scalar(9.0)))
-        self._assert_rust_eval_matches(pybamm.exp(pybamm.Scalar(2.0)))
-        self._assert_rust_eval_matches(pybamm.log(pybamm.Scalar(np.e)))
-        self._assert_rust_eval_matches(pybamm.sin(pybamm.Scalar(np.pi / 6)))
-        self._assert_rust_eval_matches(pybamm.cos(pybamm.Scalar(np.pi / 3)))
-        self._assert_rust_eval_matches(pybamm.tanh(pybamm.Scalar(1.5)))
-        self._assert_rust_eval_matches(pybamm.sinh(pybamm.Scalar(1.0)))
-        self._assert_rust_eval_matches(pybamm.cosh(pybamm.Scalar(1.0)))
-        self._assert_rust_eval_matches(pybamm.arcsinh(pybamm.Scalar(2.0)))
-
-        from pybamm.rust import ExprGraph
-
-        expr_erf = pybamm.erf(p)
-        g = ExprGraph()
-        rust_symbols = {}
-        re = expr_erf.to_rust(g, rust_symbols)
-        rust_result = g.eval_to_float(re, 0.0, [], [], [1.0])
-        pybamm_result = float(expr_erf.evaluate(inputs={"x": 1.0}))
-        assert rust_result == pytest.approx(pybamm_result)
-
-    def test_floor_ceiling(self):
-        import pybamm
-
-        p = pybamm.InputParameter("x")
-        expr_floor = pybamm.Floor(p)
-        expr_ceil = pybamm.Ceiling(p)
-
-        from pybamm.rust import ExprGraph
-
-        for expr in (expr_floor, expr_ceil):
-            g = ExprGraph()
-            rust_symbols = {}
-            re = expr.to_rust(g, rust_symbols)
-            rust_result = g.eval_to_float(re, 0.0, [], [], [3.3])
-            pybamm_result = float(expr.evaluate(inputs={"x": 3.3}))
-            assert rust_result == pytest.approx(pybamm_result)
-
-    def test_sign(self):
-        import pybamm
-
-        p = pybamm.InputParameter("x")
-        expr = pybamm.sign(p)
-
-        from pybamm.rust import ExprGraph
-
-        g = ExprGraph()
-        rust_symbols = {}
-        re = expr.to_rust(g, rust_symbols)
-        rust_result = g.eval_to_float(re, 0.0, [], [], [5.0])
-        pybamm_result = float(expr.evaluate(inputs={"x": 5.0}))
-        assert rust_result == pytest.approx(pybamm_result)
-
-        g2 = ExprGraph()
-        rust_symbols2 = {}
-        re2 = expr.to_rust(g2, rust_symbols2)
-        rust_result2 = g2.eval_to_float(re2, 0.0, [], [], [-3.0])
-        pybamm_result2 = float(expr.evaluate(inputs={"x": -3.0}))
-        assert rust_result2 == pytest.approx(pybamm_result2)
-
-        g3 = ExprGraph()
-        rust_symbols3 = {}
-        re3 = expr.to_rust(g3, rust_symbols3)
-        rust_zero = g3.eval_to_float(re3, 0.0, [], [], [0.0])
-        pybamm_zero = float(expr.evaluate(inputs={"x": 0.0}))
-        assert rust_zero == pytest.approx(pybamm_zero)
-
-    def test_modulo_minimum_maximum(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-
-        from pybamm.rust import ExprGraph
-
-        for expr_factory, expected in [
-            (pybamm.Modulo, 1.0),
-            (pybamm.minimum, 3.0),
-            (pybamm.maximum, 7.0),
-        ]:
-            expr = expr_factory(a, b)
-            g = ExprGraph()
-            rust_symbols = {}
-            re = expr.to_rust(g, rust_symbols)
-            rust_result = g.eval_to_float(re, 0.0, [], [], [7.0, 3.0])
-            pybamm_result = float(expr.evaluate(inputs={"a": 7.0, "b": 3.0}))
-            assert rust_result == pytest.approx(pybamm_result)
-            assert rust_result == pytest.approx(expected)
-
-    def test_hypot(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        expr = pybamm.hypot(a, b)
-
-        from pybamm.rust import ExprGraph
-
-        g = ExprGraph()
-        rust_symbols = {}
-        re = expr.to_rust(g, rust_symbols)
-        rust_result = g.eval_to_float(re, 0.0, [], [], [3.0, 4.0])
-        pybamm_result = float(expr.evaluate(inputs={"a": 3.0, "b": 4.0}))
-        assert rust_result == pytest.approx(pybamm_result)
-        assert rust_result == pytest.approx(5.0)
-
-    def test_state_vector_arithmetic(self):
-        import pybamm
-
-        sv = pybamm.StateVector(slice(0, 3))
-        expr = pybamm.Scalar(2.0) * sv + pybamm.Scalar(1.0)
-        y = np.array([1.0, 2.0, 3.0])
-        self._assert_rust_eval_matches(expr, y=y.reshape(-1, 1))
-
-    def test_multi_slice_state_vector_and_dot(self):
-        import pybamm
-
-        sv = pybamm.StateVector(slice(0, 2), slice(4, 6))
-        y = np.arange(6.0)
-        self._assert_rust_eval_matches(sv, y=y.reshape(-1, 1))
-
-        sv_dot = pybamm.StateVectorDot(slice(0, 2), slice(4, 6))
-        y_dot = np.arange(10.0, 16.0)
-        self._assert_rust_eval_matches(sv_dot, y_dot=y_dot.reshape(-1, 1))
-
-    def test_heaviside(self):
-        import pybamm
-
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-
-        from pybamm.rust import ExprGraph
-
-        expr_eh = pybamm.EqualHeaviside(a, b)
-        g = ExprGraph()
-        rust_symbols = {}
-        re = expr_eh.to_rust(g, rust_symbols)
-        rust_result = g.eval_to_float(re, 0.0, [], [], [2.0, 3.0])
-        pybamm_result = float(expr_eh.evaluate(inputs={"a": 2.0, "b": 3.0}))
-        assert rust_result == pytest.approx(pybamm_result)
-        assert rust_result == pytest.approx(1.0)
-
-        expr_neh = pybamm.NotEqualHeaviside(a, b)
-        g2 = ExprGraph()
-        rust_symbols2 = {}
-        re2 = expr_neh.to_rust(g2, rust_symbols2)
-        rust_result2 = g2.eval_to_float(re2, 0.0, [], [], [3.0, 3.0])
-        pybamm_result2 = float(expr_neh.evaluate(inputs={"a": 3.0, "b": 3.0}))
-        assert rust_result2 == pytest.approx(pybamm_result2)
-        assert rust_result2 == pytest.approx(0.0)
-
-    def test_interpolation_1d_linear(self):
-        import pybamm
-
-        x = np.linspace(0, 1, 50)
-        y_data = 2 * x
-        sv = pybamm.StateVector(slice(0, 2))
-        interp = pybamm.Interpolant(x, y_data, sv)
-
-        y_test = np.array([0.4, 0.6])
-        self._assert_rust_eval_matches(interp, y=y_test.reshape(-1, 1))
-
-    def test_max_min_reduction(self):
-        import pybamm
-
-        v = pybamm.Vector(np.array([1.0, 5.0, 3.0]))
-        self._assert_rust_eval_matches(pybamm.max(v))
-        self._assert_rust_eval_matches(pybamm.min(v))
-
-    def test_index_slice(self):
-        import pybamm
-
-        v = pybamm.Vector(np.array([10.0, 20.0, 30.0, 40.0, 50.0]))
-        expr = pybamm.Index(v, slice(1, 3))
-        self._assert_rust_eval_matches(expr)
-
-    def test_concatenation(self):
-        import pybamm
-
-        v1 = pybamm.Vector(np.array([1.0, 2.0]))
-        v2 = pybamm.Vector(np.array([3.0, 4.0, 5.0]))
-        expr = pybamm.NumpyConcatenation(v1, v2)
-        self._assert_rust_eval_matches(expr)
-
-    def test_sparse_matmul(self):
-        from scipy.sparse import csr_matrix as scipy_csr
-
-        import pybamm
-
-        data = np.array([1.0, 2.0])
-        row = np.array([0, 1])
-        col = np.array([0, 2])
-        sparse_mat = scipy_csr((data, (row, col)), shape=(2, 3))
-        mat = pybamm.Matrix(sparse_mat)
-        sv = pybamm.StateVector(slice(0, 3))
-        expr = mat @ sv
-
-        y = np.array([10.0, 20.0, 30.0])
-        self._assert_rust_eval_matches(expr, y=y.reshape(-1, 1))
-
+class TestSparseMatrixToRust:
     @pytest.mark.parametrize(
         "entries",
         [
@@ -1521,82 +1003,6 @@ class TestRustMatchesPyBaMM:
         assert result[0] in column_order
         # The matrix the symbol holds keeps its own order
         np.testing.assert_array_equal(entries.indices, [2, 0, 1])
-
-    def test_composed_expression(self):
-        import pybamm
-
-        sv = pybamm.StateVector(slice(0, 1))
-        t_sym = pybamm.t
-        expr = pybamm.sqrt(sv**2 + pybamm.Scalar(1.0)) * pybamm.exp(-t_sym)
-
-        y = np.array([3.0])
-        from pybamm.rust import ExprGraph
-
-        g = ExprGraph()
-        rust_symbols = {}
-        rust_expr = expr.to_rust(g, rust_symbols)
-        rust_result = g.eval_to_float(rust_expr, 2.0, y.tolist(), [], [])
-        pybamm_result = float(
-            np.asarray(expr.evaluate(t=2.0, y=y.reshape(-1, 1))).flat[0]
-        )
-        assert rust_result == pytest.approx(pybamm_result, rel=1e-5)
-
-    def test_conditional_branch_selection(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        selector = pybamm.InputParameter("s")
-        branch1 = pybamm.Scalar(10.0)
-        branch2 = pybamm.Scalar(20.0)
-        branch3 = pybamm.Scalar(30.0)
-        expr = pybamm.Conditional(selector, branch1, branch2, branch3)
-
-        g1 = ExprGraph()
-        rust_symbols1 = {}
-        re1 = expr.to_rust(g1, rust_symbols1)
-        result1 = g1.eval_to_float(re1, 0.0, [], [], [1.0])
-        assert result1 == pytest.approx(10.0)
-
-        g2 = ExprGraph()
-        rust_symbols2 = {}
-        re2 = expr.to_rust(g2, rust_symbols2)
-        result2 = g2.eval_to_float(re2, 0.0, [], [], [2.0])
-        assert result2 == pytest.approx(20.0)
-
-        g3 = ExprGraph()
-        rust_symbols3 = {}
-        re3 = expr.to_rust(g3, rust_symbols3)
-        result3 = g3.eval_to_float(re3, 0.0, [], [], [3.0])
-        assert result3 == pytest.approx(30.0)
-
-        g4 = ExprGraph()
-        rust_symbols4 = {}
-        re4 = expr.to_rust(g4, rust_symbols4)
-        result4 = g4.eval_to_float(re4, 0.0, [], [], [0.0])
-        assert result4 == pytest.approx(0.0)
-
-    def test_conditional_vs_python(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
-        selector = pybamm.InputParameter("s")
-        branch1 = pybamm.InputParameter("a")
-        branch2 = pybamm.InputParameter("b")
-        expr = pybamm.Conditional(selector, branch1, branch2)
-
-        for s_val in [0.5, 1.0, 1.5, 2.0, 2.5]:
-            inputs = {"s": s_val, "a": 100.0, "b": 200.0}
-
-            # Inputs are ordered by expression traversal: s, a, b
-            g = ExprGraph()
-            rust_symbols = {}
-            rust_expr = expr.to_rust(g, rust_symbols)
-            inputs_list = [inputs["s"], inputs["a"], inputs["b"]]
-            rust_result = g.eval_to_float(rust_expr, 0.0, [], [], inputs_list)
-
-            pybamm_result = float(expr.evaluate(inputs=inputs))
-
-            assert rust_result == pytest.approx(pybamm_result, rel=1e-5)
 
 
 class TestRustUnsupportedNodeErrors:
