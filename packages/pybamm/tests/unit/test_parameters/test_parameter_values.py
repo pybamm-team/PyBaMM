@@ -1812,6 +1812,10 @@ class TestParameterValues:
         values["Core-to-surface thermal path length [m]"] = 0.1
         with pytest.warns(DeprecationWarning, match=r"It is ignored"):
             assert values._map_environment_thermal_resistance(lumped) is values
+        # The warning is only emitted once per instance
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            values._map_environment_thermal_resistance(lumped)
 
     def test_process_model_attaches_to_symbol_processor(self):
         """Test that process_model attaches parameter_values to model's symbol_processor."""

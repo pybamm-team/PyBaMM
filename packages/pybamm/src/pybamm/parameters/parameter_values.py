@@ -1011,6 +1011,21 @@ class ParameterValues:
         model.symbol_processor.parameter_values = parameter_values
         return model
 
+    def _warn_environment_thermal_resistance_once(self, message: str) -> None:
+        """
+        Emit the environment thermal resistance deprecation warning once per
+        instance.
+
+        Parameters
+        ----------
+        message : str
+            Warning text.
+        """
+        if getattr(self, "_warned_environment_thermal_resistance", False):
+            return
+        self._warned_environment_thermal_resistance = True
+        warn(message, DeprecationWarning, stacklevel=4)
+
     def _map_environment_thermal_resistance(
         self, model: pybamm.BaseModel
     ) -> ParameterValues:
@@ -1051,11 +1066,9 @@ class ParameterValues:
             return self
         missing = [name for name in new_names if name not in self._store]
         if not missing:
-            warn(
+            self._warn_environment_thermal_resistance_once(
                 f"'{old_name}' is deprecated and will be removed in 27.1. It is "
-                f"ignored because '{new_names[0]}' and '{new_names[1]}' are set.",
-                DeprecationWarning,
-                stacklevel=3,
+                f"ignored because '{new_names[0]}' and '{new_names[1]}' are set."
             )
             return self
         if len(missing) == 1:
@@ -1065,14 +1078,12 @@ class ParameterValues:
                 f"'{missing[0]}' (and '{old_name}' is then ignored), or remove "
                 "the core-to-surface parameter to map the old values."
             )
-        warn(
+        self._warn_environment_thermal_resistance_once(
             f"'{old_name}' is deprecated and will be removed in 27.1. The lumped "
             "surface temperature model now couples the surface to the ambient "
             "through 'Total heat transfer coefficient [W.m-2.K-1]' and the core "
             f"to the surface through '{new_names[0]}' and '{new_names[1]}'. "
-            "Mapping the old values onto these parameters, with a 1 m path length.",
-            DeprecationWarning,
-            stacklevel=3,
+            "Mapping the old values onto these parameters, with a 1 m path length."
         )
         h_name = "Total heat transfer coefficient [W.m-2.K-1]"
         mapped = ParameterValues(self)
