@@ -1,6 +1,9 @@
 #
 # Native PyBaMM Meshes
 #
+from __future__ import annotations
+
+import copy
 import numbers
 import warnings
 
@@ -55,8 +58,8 @@ class Mesh(dict):
     submesh_types: dict
         contains, for each domain, the type of submesh to use (e.g.
         Uniform1DSubMesh), a :class:`MeshGenerator`, or an already built
-        :class:`UnstructuredSubMesh`, which is used as is and takes no geometry
-        or points
+        :class:`UnstructuredSubMesh`, which is copied as is and takes no
+        geometry or points
     submesh_pts: dict
         contains the number of points on each subdomain
 
@@ -219,7 +222,7 @@ class Mesh(dict):
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
             self.base_domains.append(domain)
         for domain, submesh in prebuilt_submeshes.items():
-            self[domain] = submesh
+            self[domain] = self._copy_prebuilt_submesh(submesh)
             self.base_domains.append(domain)
 
         # compute interface data for unstructured meshes
@@ -227,6 +230,19 @@ class Mesh(dict):
 
         # add ghost meshes
         self.add_ghost_meshes()
+
+    @staticmethod
+    def _copy_prebuilt_submesh(
+        submesh: pybamm.UnstructuredSubMesh,
+    ) -> pybamm.UnstructuredSubMesh:
+        """
+        Return a shallow copy of ``submesh`` with its own interface data and
+        boundary faces, which interface pairing writes into.
+        """
+        copied = copy.copy(submesh)
+        copied.interface_data = {}
+        copied.boundary_faces = dict(submesh.boundary_faces)
+        return copied
 
     @staticmethod
     def _input_names(symbol: pybamm.Symbol) -> list[str]:

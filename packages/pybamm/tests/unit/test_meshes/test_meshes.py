@@ -730,7 +730,9 @@ class TestPrebuiltSubMesh:
             {r: 5},
         )
 
-        assert mesh["negative electrode"] is submesh
+        np.testing.assert_array_equal(
+            mesh["negative electrode"].vertices, submesh.vertices
+        )
         assert mesh["negative particle"].npts == 5
         assert "negative electrode" not in geometry
         assert mesh.geometry["negative electrode"] == {}
@@ -743,12 +745,36 @@ class TestPrebuiltSubMesh:
         assert mesh.base_domains == domains
         assert list(mesh.geometry) == domains
 
+    def test_prebuilt_submesh_reused_in_two_meshes(self):
+        submesh = self._generated_mesh()["negative electrode"]
+        x = pybamm.SpatialVariable("x_s", domain=["separator"])
+        z = pybamm.SpatialVariable("z_2d", domain=["separator"])
+        separator = {
+            "separator": {x: {"min": 1.0, "max": 2.0}, z: {"min": 0.0, "max": 2.0}}
+        }
+        submesh_types = {
+            "negative electrode": submesh,
+            "separator": pybamm.UnstructuredMeshGenerator(),
+        }
+        coupled = pybamm.Mesh(separator, submesh_types, {x: 3, z: 4})
+        alone = pybamm.Mesh({}, {"negative electrode": submesh}, {})
+
+        assert "separator" in coupled["negative electrode"].interface_data
+        assert submesh.interface_data == {}
+        assert alone["negative electrode"].interface_data == {}
+        assert alone["negative electrode"].boundary_faces is not submesh.boundary_faces
+        np.testing.assert_array_equal(
+            alone["negative electrode"].vertices, submesh.vertices
+        )
+
     def test_prebuilt_submesh_with_empty_geometry_entry(self):
         submesh = self._generated_mesh()["negative electrode"]
         mesh = pybamm.Mesh(
             {"negative electrode": {}}, {"negative electrode": submesh}, {}
         )
-        assert mesh["negative electrode"] is submesh
+        np.testing.assert_array_equal(
+            mesh["negative electrode"].vertices, submesh.vertices
+        )
 
     def test_prebuilt_submesh_matches_generated_solution(self):
         def solve(geometry, submesh_types, var_pts):
@@ -807,6 +833,7 @@ class TestPrebuiltSubMesh:
         solution = simulation.solve([0, 60])
 
         assert "negative electrode" not in simulation.geometry
+        assert submesh.interface_data == {}
         np.testing.assert_allclose(
             solution["Voltage [V]"](t=[0, 30, 60]),
             expected["Voltage [V]"](t=[0, 30, 60]),
