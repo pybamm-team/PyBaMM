@@ -47,12 +47,21 @@ class Lumped(BaseThermal):
     def get_coupled_variables(self, variables):
         variables.update(self._get_standard_coupled_variables(variables))
 
-        # Newton cooling, accounting for surface area to volume ratio
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         T_surf = variables["Surface temperature [K]"]
         T_surf_av = self._yz_average(T_surf)
         V = variables["Cell thermal volume [m3]"]
-        Q_cool_W = -self.param.h_total * (T_vol_av - T_surf_av) * self.param.A_cooling
+        if self.options["surface temperature"] == "lumped":
+            # Conduction from the core to the surface state
+            conductance = (
+                self.param.lambda_core_surface
+                * self.param.A_cooling
+                / self.param.L_core_surface
+            )
+        else:
+            # Newton cooling straight to the ambient
+            conductance = self.param.h_total * self.param.A_cooling
+        Q_cool_W = -conductance * (T_vol_av - T_surf_av)
         Q_cool_vol_av = Q_cool_W / V
 
         # Contact resistance heating Q_cr

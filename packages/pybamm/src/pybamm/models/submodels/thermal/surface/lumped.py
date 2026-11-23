@@ -6,7 +6,11 @@ import pybamm
 class Lumped(pybamm.BaseSubModel):
     """
     Class for the lumped surface temperature submodel, which adds an ODE for the
-    surface temperature.
+    surface temperature. Heat reaches the surface from the cell core by conduction,
+    with conductance ``lambda * A / L`` from the core-to-surface thermal
+    conductivity and path length, and leaves to the ambient by Newton cooling
+    with the total heat transfer coefficient. For more information see
+    :footcite:t:`Lin2014`.
 
     Parameters
     ----------
@@ -30,8 +34,7 @@ class Lumped(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
         T_surf = variables["Surface temperature [K]"]
         T_amb = variables["Volume-averaged ambient temperature [K]"]
-        R_env = pybamm.Parameter("Environment thermal resistance [K.W-1]")
-        Q_cool_env = -(T_surf - T_amb) / R_env
+        Q_cool_env = -self.param.h_total * self.param.A_cooling * (T_surf - T_amb)
         variables["Environment total cooling [W]"] = Q_cool_env
         return variables
 

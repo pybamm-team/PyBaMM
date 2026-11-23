@@ -136,7 +136,8 @@ class TestThermal:
         parameter_values.update(
             {
                 "Casing heat capacity [J.K-1]": 30,
-                "Environment thermal resistance [K.W-1]": 10,
+                "Core-to-surface thermal conductivity [W.m-1.K-1]": 1,
+                "Core-to-surface thermal path length [m]": 0.1,
             }
         )
 

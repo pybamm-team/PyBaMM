@@ -998,7 +998,8 @@ class ParameterValues:
         >>> params = pybamm.ParameterValues("Chen2020")
         >>> processed_model = params.process_model(model)
         """
-        model = self._processor.process_model(
+        parameter_values = self._map_environment_thermal_resistance(unprocessed_model)
+        model = parameter_values._processor.process_model(
             unprocessed_model,
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
@@ -1007,8 +1008,57 @@ class ParameterValues:
         pybamm.logger.debug(
             "Attaching the `parameter_values` to the `symbol_processor`"
         )
-        model.symbol_processor.parameter_values = self
+        model.symbol_processor.parameter_values = parameter_values
         return model
+
+    def _map_environment_thermal_resistance(
+        self, model: pybamm.BaseModel
+    ) -> ParameterValues:
+        """
+        Translate the deprecated environment thermal resistance for the lumped
+        surface temperature model.
+
+        Parameters
+        ----------
+        model : pybamm.BaseModel
+            Model about to be parameterised.
+
+        Returns
+        -------
+        pybamm.ParameterValues
+            ``self`` when no translation applies, otherwise a copy in which the
+            core-to-surface conductivity takes the old total heat transfer
+            coefficient (path length 1 m) and the total heat transfer
+            coefficient reproduces the environment thermal resistance.
+        """
+        old_name = "Environment thermal resistance [K.W-1]"
+        new_names = (
+            "Core-to-surface thermal conductivity [W.m-1.K-1]",
+            "Core-to-surface thermal path length [m]",
+        )
+        options = getattr(model, "options", None)
+        if (
+            old_name not in self._store
+            or any(name in self._store for name in new_names)
+            or options is None
+            or options.get("surface temperature") != "lumped"
+        ):
+            return self
+        warn(
+            f"'{old_name}' is deprecated and will be removed in 27.1. The lumped "
+            "surface temperature model now couples the surface to the ambient "
+            "through 'Total heat transfer coefficient [W.m-2.K-1]' and the core "
+            f"to the surface through '{new_names[0]}' and '{new_names[1]}'. "
+            "Mapping the old values onto these parameters, with a 1 m path length.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        h_name = "Total heat transfer coefficient [W.m-2.K-1]"
+        mapped = ParameterValues(self)
+        mapped[new_names[0]] = self._store[h_name]
+        mapped[new_names[1]] = 1.0
+        mapped[h_name] = 1 / (pybamm.Parameter(old_name) * model.param.A_cooling)
+        return mapped
 
     def process_geometry(self, geometry: dict) -> None:
         """
