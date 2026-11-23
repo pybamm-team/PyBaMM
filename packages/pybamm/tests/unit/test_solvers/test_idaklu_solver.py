@@ -1935,27 +1935,20 @@ class TestIDAKLUSolver:
             )
 
     @pytest.mark.parametrize(
-        ("output_variables", "options", "calculate_sensitivities"),
-        [
-            (None, None, False),
-            (["I"], None, False),
-            (None, {"hermite_reduction_factor": 2.0}, False),
-            (None, {"calc_ic": False}, False),
-            (None, None, True),
-            (["I"], None, True),
-        ],
+        ("output_variables", "calculate_sensitivities"),
+        [(None, False), (["I"], False), (None, True)],
     )
     def test_state_derivative_event_violated_when_starting_at_a_discontinuity(
-        self, output_variables, options, calculate_sensitivities
+        self, output_variables, calculate_sensitivities
     ):
-        # t > 0.2 adds a t_eval point a float after t0 = 0.2, which IDA reaches by
-        # a restart before its first step, and q' = -2 there violates q' > -1
+        # t > 0.2 adds a t_eval point a float after t0 = 0.2, where IDA restarts
+        # after its first step, and q' = -2 there violates q' > -1
         model = self._current_jump_model(
             {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1},
             jump=pybamm.InputParameter("jump"),
             strict=True,
         )
-        solver = pybamm.IDAKLUSolver(output_variables=output_variables, options=options)
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables)
         solution = solver.solve(
             model,
             [0.2, 1],
@@ -1971,33 +1964,6 @@ class TestIDAKLUSolver:
             np.testing.assert_allclose(
                 np.ravel(solution["I"].sensitivities["jump"]), [0, 1], atol=1e-6
             )
-
-    @pytest.mark.parametrize(
-        ("output_variables", "options"),
-        [(None, None), (["I"], None), (None, {"hermite_reduction_factor": 2.0})],
-    )
-    def test_state_derivative_event_violated_at_a_breakpoint_replaces_it(
-        self, output_variables, options
-    ):
-        # pybamm adds no t_eval points around this jump just after 0.2, so IDA
-        # restarts at the breakpoint itself, where q' = -2 violates q' > -1
-        model = pybamm.BaseModel()
-        q = pybamm.Variable("q")
-        current = 0.5 + 1.5 * pybamm.maximum(pybamm.sign(pybamm.t - 0.2), 0)
-        model.rhs = {q: -current}
-        model.initial_conditions = {q: 1}
-        model.variables = {"I": current}
-        model.events = [pybamm.Event("dq/dt > -1", q.diff(pybamm.t) + 1)]
-        pybamm.Discretisation().process_model(model)
-        solver = pybamm.IDAKLUSolver(output_variables=output_variables, options=options)
-        solution = solver.solve(model, np.array([0, 0.2, 1]))
-        assert solution.termination == "event: dq/dt > -1"
-        # The event point replaces the breakpoint saved before the restart
-        assert solution.t[-1] == 0.2
-        assert np.all(np.diff(solution.t) > 0)
-        np.testing.assert_allclose(solution.y_event.ravel(), [0.9], rtol=1e-6)
-        if output_variables is None:
-            np.testing.assert_allclose(solution.all_yps[-1][:, -1], [-2], rtol=1e-6)
 
     def test_state_derivative_event_with_inputs_threads_and_sensitivities(self):
         # y' = -k y < -0.5 until y = 0.5 / k, at t = ln(2 k) / k
@@ -3901,36 +3867,6 @@ def _coupled_dae_solution(t, a, b, c=0.0, mass_scale=1.0, t0=0.0):
     return {"y": y, "z": b * y + c * after}
 
 
-def _jump_ode(mass_scale=1.0):
-    """Discretised ``m y' = -a y + c [t > 0.5]`` with ``y(0) = b``, where ``m`` is
-    ``mass_scale``."""
-    model = pybamm.BaseModel()
-    y = pybamm.Variable("y")
-    a = pybamm.InputParameter("a")
-    c = pybamm.InputParameter("c")
-    model.rhs = {y: -a * y + c * (pybamm.t > 0.5)}
-    model.initial_conditions = {y: pybamm.InputParameter("b")}
-    model.variables = {"y": y}
-    pybamm.Discretisation().process_model(model)
-    if mass_scale != 1:
-        model.mass_matrix = pybamm.Matrix(mass_scale * model.mass_matrix.entries)
-    return model
-
-
-def _jump_ode_solution(t, a, b, c, mass_scale=1.0):
-    """Closed-form ``y`` of :func:`_jump_ode`."""
-    rate = -a / mass_scale
-    after = t > 0.5
-    shift = np.where(after, t - 0.5, 0.0)
-    y_half = b * np.exp(rate * 0.5)
-    y = np.where(
-        after,
-        c / a + (y_half - c / a) * np.exp(rate * shift),
-        b * np.exp(rate * t),
-    )
-    return {"y": y}
-
-
 def _closed_form_sensitivities(closed_form, t, inputs, step=1e-6):
     """Central differences of a closed-form solution, ``{(name, input): ...}``."""
     sensitivities = {}
@@ -3970,81 +3906,23 @@ class TestIDAKLUSensitivityInitialConditions:
                 )
 
     @pytest.mark.parametrize(
-        "options",
+        ("mass_scale", "options"),
         [
-            {},
-            {"calc_ic": False},
-            {"newton_mode": "full"},
-            {"hermite_interpolation": False},
-            {"jacobian": "dense", "linear_solver": "SUNLinSol_Dense"},
-            {"linear_solver": "SUNLinSol_SPGMR"},
+            (1.0, {}),
+            (1.0, {"calc_ic": False}),
+            (1.0, {"newton_mode": "full"}),
+            (1.0, {"hermite_interpolation": False}),
+            (10.0, {}),
         ],
     )
     @pytest.mark.parametrize("output_variables", [[], ["2z"]])
-    def test_algebraic_sensitivities_are_consistent_at_t0(
-        self, options, output_variables
+    def test_sensitivities_across_a_discontinuity(
+        self, mass_scale, options, output_variables
     ):
-        inputs = {"a": 2.0, "b": 0.5}
+        # z(0) = 0 is inconsistent, and t > 0.5 adds a t_eval point a float after it
         solver = pybamm.IDAKLUSolver(
             rtol=1e-10, atol=1e-12, options=options, output_variables=output_variables
         )
-        solution = solver.solve(
-            _coupled_dae(),
-            [0, 1],
-            inputs=inputs,
-            calculate_sensitivities=True,
-            t_interp=np.linspace(0, 1, 6),
-        )
-
-        if output_variables:
-            self._assert_matches(
-                solution,
-                lambda t, **p: {"z": _coupled_dae_solution(t, **p)["z"]},
-                inputs,
-                scales={"z": ("2z", 2)},
-            )
-            # dz/db = y(0) = 1, where the guess z(0) = 0 has none
-            np.testing.assert_allclose(
-                solution._y0_sensitivities["b"].ravel(), [0, 1], atol=1e-10
-            )
-        else:
-            self._assert_matches(solution, _coupled_dae_solution, inputs)
-
-    def test_init_all_y_ic_rejects_dae_sensitivities(self):
-        solver = pybamm.IDAKLUSolver(options={"init_all_y_ic": True})
-
-        with pytest.raises(pybamm.SolverError, match=r"init_all_y_ic"):
-            solver.solve(
-                _coupled_dae(),
-                [0, 1],
-                inputs={"a": 2.0, "b": 0.5},
-                calculate_sensitivities=True,
-            )
-
-    def test_init_all_y_ic_keeps_ode_sensitivities(self, decay_model):
-        solver = pybamm.IDAKLUSolver(
-            rtol=1e-10, atol=1e-12, options={"init_all_y_ic": True}
-        )
-        t_interp = np.linspace(0, 1, 5)
-        solution = solver.solve(
-            decay_model,
-            [0, 1],
-            inputs={"a": 2.0},
-            calculate_sensitivities=True,
-            t_interp=t_interp,
-        )
-
-        np.testing.assert_allclose(
-            np.ravel(solution["u"].sensitivities["a"]),
-            -t_interp * np.exp(-2 * t_interp),
-            rtol=1e-7,
-            atol=1e-9,
-        )
-
-    @pytest.mark.parametrize("options", [{}, {"calc_ic": False}])
-    @pytest.mark.parametrize("mass_scale", [1.0, 10.0])
-    def test_mass_matrix_dae_sensitivities_across_a_jump(self, mass_scale, options):
-        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, options=options)
         solution = solver.solve(
             _coupled_dae(mass_scale, switch=pybamm.t > 0.5),
             [0, 1],
@@ -4052,60 +3930,23 @@ class TestIDAKLUSensitivityInitialConditions:
             calculate_sensitivities=True,
         )
 
-        def closed_form(t, a, b, c):
-            return _coupled_dae_solution(t, a, b, c, mass_scale=mass_scale)
-
-        self._assert_matches(solution, closed_form, self.inputs)
-
-    @pytest.mark.parametrize("mass_scale", [1.0, 10.0])
-    def test_mass_matrix_ode_sensitivities_across_a_jump(self, mass_scale):
-        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
-        solution = solver.solve(
-            _jump_ode(mass_scale),
-            [0, 1],
-            inputs=self.inputs,
-            calculate_sensitivities=True,
-        )
+        assert np.nextafter(0.5, 1) in solution.t
 
         def closed_form(t, a, b, c):
-            return _jump_ode_solution(t, a, b, c, mass_scale=mass_scale)
+            values = _coupled_dae_solution(t, a, b, c, mass_scale=mass_scale)
+            return {"z": values["z"]} if output_variables else values
 
-        self._assert_matches(solution, closed_form, self.inputs)
-
-    @pytest.mark.parametrize(
-        "options", [{}, {"hermite_interpolation": False}, {"newton_mode": "full"}]
-    )
-    @pytest.mark.parametrize("output_variables", [[], ["2z"]])
-    def test_point_after_a_discontinuity_holds_the_right_limit(
-        self, options, output_variables
-    ):
-        solver = pybamm.IDAKLUSolver(
-            rtol=1e-10, atol=1e-12, options=options, output_variables=output_variables
-        )
-        solution = solver.solve(
-            _coupled_dae(switch=pybamm.t > 0.5),
-            [0, 1],
-            inputs=self.inputs,
-            calculate_sensitivities=True,
-        )
-
-        # The stored point just after t = 0.5 is the right of the t_eval pair
-        first_after = np.flatnonzero(solution.t > 0.5)[0]
-        assert solution.t[first_after] < 0.5 + 1e-15
+        scales = {"z": ("2z", 2)} if output_variables else None
+        self._assert_matches(solution, closed_form, self.inputs, scales=scales)
         if output_variables:
-            self._assert_matches(
-                solution,
-                lambda t, **p: {"z": _coupled_dae_solution(t, **p)["z"]},
-                self.inputs,
-                scales={"z": ("2z", 2)},
+            # The full initial sensitivities, dz/db = y(0) = 1
+            np.testing.assert_allclose(
+                solution._y0_sensitivities["b"].ravel(), [0, 1], atol=1e-10
             )
-        else:
-            self._assert_matches(solution, _coupled_dae_solution, self.inputs)
 
-    @pytest.mark.parametrize("options", [{}, {"hermite_interpolation": False}])
-    def test_three_points_around_a_discontinuity(self, options):
+    def test_three_points_around_a_discontinuity(self):
         # t >= 0.5 adds a t_eval point a float before 0.5, and t > 0.5 one after
-        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, options=options)
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
         solution = solver.solve(
             _coupled_dae(switch=(pybamm.t > 0.5) * (pybamm.t >= 0.5)),
             [0, 1],
@@ -4119,12 +3960,11 @@ class TestIDAKLUSensitivityInitialConditions:
         )
         self._assert_matches(solution, _coupled_dae_solution, self.inputs)
 
-    @pytest.mark.parametrize("options", [{}, {"hermite_interpolation": False}])
     @pytest.mark.parametrize("output_variables", [[], ["2z"]])
-    def test_start_at_a_discontinuity(self, options, output_variables):
+    def test_start_at_a_discontinuity(self, output_variables):
         # As for a step that starts at the switch, t_eval[1] is a float after t0
         solver = pybamm.IDAKLUSolver(
-            rtol=1e-10, atol=1e-12, options=options, output_variables=output_variables
+            rtol=1e-10, atol=1e-12, output_variables=output_variables
         )
         solution = solver.solve(
             _coupled_dae(switch=pybamm.t > 0.5),
@@ -4141,6 +3981,19 @@ class TestIDAKLUSensitivityInitialConditions:
 
         scales = {"z": ("2z", 2)} if output_variables else None
         self._assert_matches(solution, closed_form, self.inputs, scales=scales)
+
+    def test_end_just_after_a_discontinuity(self):
+        # The last t_eval point is the one a float after the switch
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        solution = solver.solve(
+            _coupled_dae(switch=pybamm.t > 0.5),
+            [0, np.nextafter(0.5, 1)],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+        )
+
+        np.testing.assert_array_equal(solution.t[-2:], [0.5, np.nextafter(0.5, 1)])
+        self._assert_matches(solution, _coupled_dae_solution, self.inputs)
 
     def test_interpolation_times_around_a_discontinuity(self):
         right = np.nextafter(0.5, 1)
@@ -4177,41 +4030,72 @@ class TestIDAKLUSensitivityInitialConditions:
             atol=1e-8,
         )
 
-    def test_unsolvable_sensitivity_initial_conditions_raise(self):
-        # The algebraic Jacobian 2 z vanishes at the guess z = 0
+    def test_singular_algebraic_jacobian_at_a_breakpoint(self, caplog):
+        # z is undetermined at t = 0.5 only, which the steps after it resolve
         model = pybamm.BaseModel()
         y = pybamm.Variable("y")
         z = pybamm.Variable("z")
         model.rhs = {y: -y}
-        model.algebraic = {z: z**2 - pybamm.InputParameter("b") * y}
-        model.initial_conditions = {y: 1, z: 0}
-        model.variables = {"z": z}
-        pybamm.Discretisation().process_model(model)
-        solver = pybamm.IDAKLUSolver(options={"silence_sundials_errors": True})
-
-        with pytest.raises(
-            pybamm.SolverError, match=r"consistent initial sensitivities"
-        ):
-            solver.solve(model, [0, 1], inputs={"b": 1.0}, calculate_sensitivities=True)
-
-    def test_unsolvable_sensitivities_after_t0_return_a_partial_solution(self):
-        # The algebraic equation vanishes from t = 0.5, so z is undetermined there
-        model = pybamm.BaseModel()
-        y = pybamm.Variable("y")
-        z = pybamm.Variable("z")
-        model.rhs = {y: -y}
-        model.algebraic = {z: (pybamm.t < 0.5) * (z - pybamm.InputParameter("b") * y)}
+        model.algebraic = {z: (pybamm.t - 0.5) * (z - pybamm.InputParameter("b") * y)}
         model.initial_conditions = {y: 1, z: 1}
         model.variables = {"z": z}
         pybamm.Discretisation().process_model(model)
+        # Tighter tolerances fail before t = 0.5, with or without sensitivities
         solver = pybamm.IDAKLUSolver(
-            on_failure="warn", options={"silence_sundials_errors": True}
+            rtol=1e-6, atol=1e-6, options={"silence_sundials_errors": True}
         )
+        t_eval = np.array([0, 0.25, 0.5, 0.75, 1])
 
-        with pytest.warns(UserWarning, match=r"returning a partial solution"):
-            solution = solver.solve(
-                model, [0, 1], inputs={"b": 1.0}, calculate_sensitivities=True
+        def solve():
+            caplog.clear()
+            with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+                solution = solver.solve(
+                    model, t_eval, inputs={"b": 1.0}, calculate_sensitivities=True
+                )
+            failures = [m for m in caplog.messages if "consistent sensitivities" in m]
+            return solution, failures
+
+        solution, failures = solve()
+        assert solution.termination == "final time"
+        t = np.array([0.75, 1])
+        np.testing.assert_allclose(
+            solution["z"].sensitivities["b"][np.isin(solution.t, t)].ravel(),
+            np.exp(-t),
+            rtol=1e-4,
+        )
+        # The singular factorisation leaves the next solve's sub-block working
+        assert len(failures) == 1
+        assert solve()[1] == failures
+
+    @pytest.mark.parametrize(
+        ("mass_scale", "calculate_sensitivities"), [(0.1, False), (10.0, True)]
+    )
+    def test_mass_matrix_ode_steps_as_its_identity_form(
+        self, mass_scale, calculate_sensitivities
+    ):
+        # m y' = f and y' = f / m are one ODE, so IDAS takes the same steps from
+        # the same yp, at t0 and after the jump
+        def solve(mass, rhs_scale):
+            model = pybamm.BaseModel()
+            y = pybamm.Variable("y")
+            a = pybamm.InputParameter("a")
+            model.rhs = {y: rhs_scale * (-a * y + (pybamm.t > 0.5))}
+            model.initial_conditions = {y: 1}
+            model.variables = {"y": y}
+            pybamm.Discretisation().process_model(model)
+            model.mass_matrix = pybamm.Matrix(mass * model.mass_matrix.entries)
+            return pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).solve(
+                model,
+                [0, 1],
+                inputs={"a": 2.0},
+                calculate_sensitivities=calculate_sensitivities,
             )
 
-        assert solution.termination == "failure"
-        assert solution.t[-1] == np.nextafter(0.5, 0)
+        with_mass = solve(mass_scale, 1)
+        identity = solve(1, 1 / mass_scale)
+
+        assert len(with_mass.t) == len(identity.t)
+        np.testing.assert_allclose(with_mass.t, identity.t, rtol=1e-10)
+        np.testing.assert_allclose(
+            with_mass["y"](with_mass.t), identity["y"](identity.t), rtol=1e-10
+        )

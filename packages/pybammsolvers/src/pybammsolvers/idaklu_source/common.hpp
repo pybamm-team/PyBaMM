@@ -124,7 +124,8 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
 }
 
 /**
- * @brief Whether two times are too close for IDAS to step from one to the other
+ * @brief Whether IDAS, stopping at t_b from t_a, may return without evaluating
+ * the model past t_a
  *
  * Uses the 100 * uround tolerance IDAS uses to decide a stop time is reached,
  * scaled by |t_a| + |t_b| in place of IDAS's |t_n| + |h|.

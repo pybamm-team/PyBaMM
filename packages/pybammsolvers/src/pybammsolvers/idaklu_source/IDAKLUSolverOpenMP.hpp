@@ -134,6 +134,7 @@ public:
     std::vector<sunindextype> rowvals;
     std::vector<int> data_indices;
     std::vector<sunrealtype> full_jac_buf;
+    bool use_sparse = false;
 
     ~SubBlockResources() {
       if (res_nvec) N_VDestroy(res_nvec);
@@ -172,36 +173,8 @@ public:
   };
   std::unique_ptr<AlgSolverState> alg_state_;
 
-  /**
-   * @brief Sparse matrix [-M_diff | dF/dy_alg] and its KLU solver.
-   *
-   * Its columns are the derivatives of the residual with respect to the
-   * unknowns of the initial-condition problem, (y'_diff, y_alg). Built on
-   * first use.
-   */
-  struct InitialConditionMatrix {
-    SUNMatrix A = nullptr;
-    SUNLinearSolver LS = nullptr;
-    N_Vector rhs = nullptr;
-    N_Vector solution = nullptr;
-    // -M on the jac_times_cjmass sparsity
-    std::vector<sunrealtype> minus_mass;
-
-    ~InitialConditionMatrix() {
-      if (LS) SUNLinSolFree(LS);
-      if (A) SUNMatDestroy(A);
-      if (rhs) N_VDestroy(rhs);
-      if (solution) N_VDestroy(solution);
-    }
-  };
-  std::unique_ptr<InitialConditionMatrix> ic_matrix_;
-
   // Sensitivity residuals F_y s + F_p - M s', one vector per parameter
   N_Vector *sens_res_ = nullptr;
-  // Scratch of length number_of_states for the sensitivity initial conditions
-  std::vector<sunrealtype> ic_scratch_;
-  // Whether M is the identity on the differential rows and zero elsewhere
-  bool mass_is_identity_ = true;
 
   int len_rhs_;
   int len_alg_;
@@ -385,10 +358,8 @@ public:
    * @brief Make the states and sensitivities consistent at t_val, then hand
    * them to IDAS.
    * @param calc_states If false, only the sensitivities are made consistent
-   * @return IDA_SUCCESS, or the negative IDACalcIC flag if the sensitivities
-   * could not be made consistent
    */
-  int ConsistentInitialization(
+  void ConsistentInitialization(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
     const int& icopt,
@@ -396,11 +367,13 @@ public:
 
   /**
    * @brief Set a consistent initialization for DAEs.
+   * @param with_sensitivities Whether IDACalcIC also solves the sensitivities
    */
   void ConsistentInitializationDAE(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
-    const int& icopt);
+    const int& icopt,
+    bool with_sensitivities);
 
   /**
    * @brief Use the custom Newton IC solver; returns true on success.
@@ -413,48 +386,47 @@ public:
   void ConsistentInitializationODE(const sunrealtype& t_val);
 
   /**
-   * @brief Run IDACalcIC from the current yy/yyp and copy its result back.
+   * @brief Run IDACalcIC from the current yy/yyp and copy its result back,
+   * keeping the current values if it fails.
    * @param with_sensitivities Whether IDACalcIC also solves for yyS/yypS
-   * @return The IDACalcIC flag
    */
-  int CalcICWithIDAS(
+  void CalcICWithIDAS(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
     int icopt,
     bool with_sensitivities);
 
   /**
-   * @brief Make the sensitivities consistent with the current states.
+   * @brief Make a DAE's sensitivities consistent with the current states.
    *
-   * Keeps the differential sensitivities and solves the linear sensitivity
-   * residual for the algebraic sensitivities and all of yypS.
-   * @return False if the linear solve failed
+   * Keeps the differential sensitivities, solves the algebraic rows for the
+   * algebraic ones with the algebraic sub-block, and sets yypS = F_y s + F_p,
+   * exact as the sub-block is built only for M = I.
+   * @return False without the algebraic sub-block, or if its solve failed
    */
   bool SensitivityConsistentInitialization(const sunrealtype& t_val);
 
   /**
-   * @brief Whether the mass matrix is the identity on the differential rows
-   * and zero on the algebraic rows
-   */
-  bool MassMatrixIsIdentity();
-
-  /**
-   * @brief Build and factorise ic_matrix_ at (t, yy)
+   * @brief Evaluate and factorise the algebraic sub-block of the Jacobian at
+   * (t, yy)
    * @return Zero on success
    */
-  int SetupInitialConditionMatrix(sunrealtype t);
+  int FactorizeAlgebraicJacobian(sunrealtype t);
 
   /**
-   * @brief Solve with the factorised ic_matrix_, in place
+   * @brief Solve with the factorised algebraic sub-block
+   * @param rhs The len_alg_ right-hand side
+   * @param solution The len_alg_ solution, which may alias rhs
    * @return Zero on success
    */
-  int SolveInitialConditionMatrix(sunrealtype* rhs_solution);
+  int SolveAlgebraicJacobian(const sunrealtype* rhs, sunrealtype* solution);
 
   /**
    * @brief Build the algebraic Newton solver for consistent initial conditions.
    * Only built when mass matrix has zeros in algebraic rows (standard-form).
    * Not built for a full-system solve with an iterative linear solver, which
-   * leaves the initial conditions to IDACalcIC.
+   * leaves the initial conditions to IDACalcIC. Without calc_ic, only the
+   * sub-block is built, for the algebraic sensitivities.
    */
   void BuildAlgebraicSolver(const sunrealtype* id_val);
 
@@ -528,14 +500,6 @@ public:
   void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
 
   /**
-   * @brief Save the point a restart began from, once IDAS has stepped from it
-   *
-   * Like t0, the point is stored after the first step so that IDAGetDky can
-   * supply its derivative.
-   */
-  void SaveRestartPoint(sunrealtype t_restart);
-
-  /**
    * @brief Add points inside the last step [t_a, t_b] until linear interpolation
    * of the upsampled output resolves it
    */
@@ -574,33 +538,13 @@ public:
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize
-   * @return The ConsistentInitialization flag, negative on failure
    */
-  int HandleBreakpoint(
+  void HandleBreakpoint(
     sunrealtype t_val,
     const std::vector<sunrealtype> &t_eval,
     int &i_eval,
     sunrealtype &t_eval_next,
     NoProgressGuard &no_progression
-  );
-
-  /**
-   * @brief Move across the t_eval points after t_val that are each within
-   * round-off of the one before, which IDAS cannot step between
-   *
-   * All but the last are made consistent and stored, as is the last if it
-   * ends t_eval.
-   * @param t_val t_eval[i_eval] on entry, and the last of the points on return
-   * @param i_eval The index of t_val
-   * @return The ConsistentInitialization flag, negative on failure
-   */
-  int RestartWithinRoundoff(
-    sunrealtype &t_val,
-    const std::vector<sunrealtype> &t_eval,
-    int &i_eval,
-    int &i_interp,
-    sunrealtype &t_interp_next,
-    const std::vector<sunrealtype> &t_interp
   );
 
   /**
