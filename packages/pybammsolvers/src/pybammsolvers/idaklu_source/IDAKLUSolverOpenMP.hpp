@@ -79,7 +79,7 @@ public:
   int const number_of_events;
   int number_of_timesteps;
   int precon_type;
-  N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
+  N_Vector yy, yyp, y_cache, yp_cache, avtol;  // y, y', their caches, and absolute tolerance
   N_Vector *yyS;
   N_Vector *yypS;
   N_Vector id;              // rhs_alg_id
@@ -260,6 +260,21 @@ public:
   int Step(sunrealtype tout, sunrealtype &t_val);
 
   /**
+   * @brief Take the first step after a (re)initialization at t_start
+   *
+   * IDA skips events that read yp in this step, whose flag is ignored. With yp
+   * at t_start from it, those events are evaluated at both ends of the step.
+   * One non-positive at t_start returns IDA_ROOT_RETURN there; otherwise, one
+   * at the end makes IDA restart at t_start with that yp and retake the step,
+   * its root search locating the crossing.
+   * @param t_start The time of the (re)initialization
+   * @param tout The time IDASolve integrates towards
+   * @param t_val Set to the time reached
+   * @return The IDASolve return flag
+   */
+  int FirstStep(sunrealtype t_start, sunrealtype tout, sunrealtype &t_val);
+
+  /**
    * @brief Concrete implementation of initialization method
    */
   void Initialize() override;
@@ -326,12 +341,6 @@ public:
    * @brief Set a consistent initialization for ODEs
    */
   void ReinitializeIntegrator(const sunrealtype& t_val);
-
-  /**
-   * @brief The IDAS sensitivity corrector: IDA_STAGGERED with sensitivity
-   * error control, else IDA_SIMULTANEOUS
-   */
-  int SensitivityMethod() const;
 
   /**
    * @brief Hand IDAS the per-parameter scales held in sens_scales_.

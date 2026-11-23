@@ -610,6 +610,11 @@ class ConcatenationVariable(Concatenation):
 
         self.print_name = print_name
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # The derivatives are not variables, so they make a plain concatenation
+        return concatenation(*[child.diff(variable) for child in self.children])
+
     bounds = pybamm.expression_tree.legacy_mutation.bounds_property
 
 
