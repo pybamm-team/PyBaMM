@@ -37,6 +37,13 @@ int jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 int events_eval(sunrealtype t, N_Vector yy, N_Vector yp, sunrealtype *events_ptr,
                   void *user_data);
 
+/**
+ * @brief events_eval, but with the events reading yp zero before IDA's first step
+ * after a (re)initialization, where yp is unknown, so that IDA skips them until then
+ */
+int events_with_derivatives_eval(sunrealtype t, N_Vector yy, N_Vector yp,
+                                   sunrealtype *events_ptr, void *user_data);
+
 int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
                          N_Vector resval, N_Vector *yS, N_Vector *ypS,
                          N_Vector *resvalS, void *user_data, N_Vector tmp1,

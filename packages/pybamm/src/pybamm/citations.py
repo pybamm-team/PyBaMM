@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import importlib.util
 import os
 import re
 import warnings
 from functools import cached_property
 from sys import _getframe
+from types import ModuleType
 
 import pybamm
 from pybamm.util import import_optional_dependency
@@ -18,7 +21,8 @@ class Citations:
     a particular citation is relevant for a particular simulation.
 
     Citations listed in `pybamm/CITATIONS.bib` can be registered with their citation
-    key. For all other works provide a BibTeX Citation to :meth:`register`.
+    key. Load other databases with :meth:`read_citations`, or provide a BibTeX
+    citation to :meth:`register`. Requires the optional ``pybamm[cite]`` extra.
 
     Examples
     --------
@@ -33,7 +37,7 @@ class Citations:
     # Set of unknown citations to parse with pybtex
     _unknown_citations: set
     # Dict mapping citation tags for use when registering citations
-    _citation_tags: dict
+    _citation_tags: dict[str, set[str]]
 
     def __init__(self):
         self._check_for_bibtex()
@@ -55,30 +59,36 @@ class Citations:
         self._unknown_citations = set()
         self._citation_tags = {}
         # Register the PyBaMM paper and the NumPy paper
-        self.register("Sulzer2021")
-        self.register("Harris2020")
+        self.register("Sulzer2021", reason="PyBaMM")
+        self.register("Harris2020", reason="NumPy")
 
     @staticmethod
     def _caller_name():
-        """
-        Returns the qualified name of classes that call :meth:`register` internally.
-        Gets cached in order to reduce the number of calls.
-        """
+        """Return the qualified name of the class calling :meth:`register`."""
         caller_name = _getframe().f_back.f_back.f_locals["self"].__class__.__qualname__
         return caller_name
 
-    def read_citations(self):
-        """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
-        by passing a BibTeX citation to :meth:`register`.
+    def read_citations(self, filename: str | os.PathLike | None = None) -> None:
+        """Load known citations from a BibTeX file without registering them.
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path, optional
+            Database to load. Defaults to PyBaMM's bundled ``CITATIONS.bib``.
         """
         if not self._module_import_error:
-            for key, entry in self._parse_citations_file().items():
+            for key, entry in self._parse_citations_file(filename).items():
                 self._add_citation(key, entry)
+                if key in self._unknown_citations:
+                    self._papers_to_cite.add(key)
+                    self._unknown_citations.discard(key)
 
-    def _parse_citations_file(self):
-        """Parse ``CITATIONS.bib`` with pybtex, returning its entries by key."""
+    def _parse_citations_file(self, filename=None):
+        """Parse a BibTeX file, defaulting to the bundled bibliography."""
         parse_file = import_optional_dependency("pybtex.database", "parse_file")
-        return parse_file(self._citations_file, bib_format="bibtex").entries
+        if filename is None:
+            filename = self._citations_file
+        return parse_file(filename, bib_format="bibtex").entries
 
     @cached_property
     def _all_citations(self) -> dict[str, str]:
@@ -117,16 +127,15 @@ class Citations:
             self._citation_keys.add(key)
 
     def _add_citation_tag(self, key, entry):
-        """Adds a tag for a citation key in the dict, which represents the name of the
-        class that called :meth:`register`"""
-        self._citation_tags[key] = entry
+        """Add a distinct reason for citing a key or deferred BibTeX string."""
+        self._citation_tags.setdefault(key, set()).add(entry)
 
     @property
     def _cited(self):
         """Return a list of the BibTeX entries that have been cited"""
         return [self._all_citations[key] for key in self._papers_to_cite]
 
-    def register(self, key):
+    def register(self, key: str, reason: str | None = None) -> None:
         """Register a paper to be cited, one at a time. The intended use is that
         :meth:`register` should be called only when the referenced functionality is
         actually being used.
@@ -138,23 +147,33 @@ class Citations:
         Parameters
         ----------
         key : str
-            - The citation key for an entry in `pybamm/CITATIONS.bib` or
+            - A known citation key (including loaded external databases), or
             - A BibTeX formatted citation
+        reason : str, optional
+            Human-readable reason for citing the reference. Defaults to the calling
+            class name, if available. Distinct reasons accumulate for each citation.
+
+        Raises
+        ------
+        TypeError
+            If ``reason`` is neither a string nor None.
         """
+        if reason is not None and not isinstance(reason, str):
+            raise TypeError("reason must be a string or None")
+        if reason is None:
+            try:
+                reason = Citations._caller_name()
+            except KeyError:
+                # Standalone callers need not provide a class context or reason.
+                pass
+        if reason is not None:
+            self._add_citation_tag(key, reason)
+
         # Check if citation is a known key
         if key in self._citation_keys:
             self._papers_to_cite.add(key)
-            # Add citation tags for the key for verbose output, but
-            # don't if they already exist in _citation_tags dict
-            if key not in self._citation_tags:
-                try:
-                    caller = Citations._caller_name()
-                    self._add_citation_tag(key, entry=caller)
-                    # Don't add citation tags if the citation is registered manually
-                except KeyError:  # pragma: no cover
-                    pass
+            self._unknown_citations.discard(key)
         else:
-            # If citation is unknown, parse it later with pybtex
             self._unknown_citations.add(key)
             return
 
@@ -169,10 +188,13 @@ class Citations:
             A BibTeX formatted citation
         """
         if not self._module_import_error:
+            if key in self._all_citations:
+                self._papers_to_cite.add(key)
+                self._unknown_citations.discard(key)
+                return
             PybtexError = import_optional_dependency("pybtex.scanner", "PybtexError")
             parse_string = import_optional_dependency("pybtex.database", "parse_string")
             try:
-                # Parse string as a bibtex citation, and check that a citation was found
                 bib_data = parse_string(key, bib_format="bibtex")
                 if not bib_data.entries:
                     raise PybtexError("no entries found")
@@ -181,6 +203,10 @@ class Citations:
                 for entry_key, entry in bib_data.entries.items():
                     self._add_citation(entry_key, entry)
                     self._papers_to_cite.add(entry_key)
+                    for reason in self._citation_tags.get(key, ()):
+                        self._add_citation_tag(entry_key, reason)
+                self._citation_tags.pop(key, None)
+                self._unknown_citations.discard(key)
                 return
             except PybtexError as error:
                 raise KeyError(
@@ -188,42 +214,41 @@ class Citations:
                 ) from error
 
     def _tag_citations(self):
-        """Prints the citation tags for the citations that have been registered
-        (non-manually) in the code, for verbose output purposes
-        """
-        if self._citation_tags:  # pragma: no cover
-            print("\nCitations registered: \n")
-            for key, entry in self._citation_tags.items():
-                print(f"{key} was cited due to the use of {entry}")
+        """Format citation reasons in a stable order."""
+        lines = [
+            f"{key}: {'; '.join(sorted(reasons))}"
+            for key, reasons in sorted(self._citation_tags.items())
+            if key in self._papers_to_cite
+        ]
+        return "\nCitations registered: \n\n" + "\n".join(lines) if lines else ""
 
-    def print(self, filename=None, output_format="text", verbose=False):
-        """Print all citations that were used for running simulations. The verbose
-        option is provided to print tags for citations in the output such that it can
-        be seen where the citations were registered due to the use of PyBaMM models
-        and solvers in the code.
-
-        .. note::
-            If a citation is registered manually, it will not be tagged.
+    def print(
+        self,
+        filename: str | os.PathLike | None = None,
+        output_format: str = "text",
+        verbose: bool = False,
+    ) -> None:
+        """Print citations with optional reasons.
 
         .. warning::
-            This function will notify the user if a citation that has been previously
-            registered is invalid or cannot be parsed.
+            Invalid citations produce a warning.
 
         Parameters
         ----------
-        filename : str, optional
+        filename : str or pathlib.Path, optional
             Filename to which to print citations. If None, citations are printed
             to the terminal.
+        output_format : str, optional
+            Bibliography format: ``"text"`` (default) or ``"bibtex"``.
         verbose: bool, optional
-            If True, prints the citation tags for the citations that have been
-            registered. An example of the output is shown below.
+            If True, append citation reasons to text output. Defaults to False.
 
         Examples
         --------
         .. code-block:: python
 
             pybamm.lithium_ion.SPM()
-            pybamm.Citations.print(verbose=True) or pybamm.print_citations(verbose=True)
+            pybamm.print_citations(verbose=True)
 
         will append the following at the end of the list of citations:
 
@@ -231,40 +256,49 @@ class Citations:
 
             Citations registered:
 
-            Marquis2019 was cited due to the use of SPM
+            Marquis2019: SPM
 
         """
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
         if not self._module_import_error:
             pybtex = import_optional_dependency("pybtex")
-            try:
-                for key in self._unknown_citations:
+            for key in tuple(self._unknown_citations):
+                try:
                     self._parse_citation(key)
-            except KeyError:  # pragma: no cover
-                warnings.warn(
-                    message=f'\nCitation with key "{key}" is invalid. Please try again\n',
-                    category=UserWarning,
-                    stacklevel=2,
-                )
-                # delete the invalid citation from the set
-                self._unknown_citations.remove(key)
+                except KeyError:
+                    # Another pending BibTeX entry may define this key before we warn.
+                    pass
+            # Raw BibTeX can resolve a key that failed earlier in this pass.
+            for key in tuple(self._unknown_citations):
+                if key not in self._all_citations:
+                    warnings.warn(
+                        message=f'\nCitation with key "{key}" is invalid. Please try again\n',
+                        category=UserWarning,
+                        stacklevel=2,
+                    )
+                    self._citation_tags.pop(key, None)
+                self._unknown_citations.discard(key)
 
             cite_list = self.format_citations(output_format, pybtex)
-            self.write_citations(cite_list, filename, verbose)
+            self.write_citations(
+                cite_list, filename, verbose and output_format == "text"
+            )
         else:
             self.print_import_warning()
 
-    def write_citations(self, cite_list, filename, verbose):
+    def write_citations(
+        self, cite_list: str, filename: str | os.PathLike | None, verbose: bool
+    ) -> None:
+        if verbose:
+            cite_list += self._tag_citations()
         if filename is None:
             print(cite_list)
-            if verbose:
-                self._tag_citations()  # pragma: no cover
         else:
             with open(filename, "w") as f:
                 f.write(cite_list)
 
-    def format_citations(self, output_format, pybtex):
+    def format_citations(self, output_format: str, pybtex: ModuleType) -> str:
         if output_format == "text":
             cite_list = pybtex.format_from_strings(
                 self._cited, style="plain", output_backend="plaintext"
@@ -286,12 +320,12 @@ class Citations:
             )
 
 
-def print_citations(filename=None, output_format="text", verbose=False):
+def print_citations(
+    filename: str | os.PathLike | None = None,
+    output_format: str = "text",
+    verbose: bool = False,
+) -> None:
     """See :meth:`Citations.print`"""
-    if verbose and filename is not None:  # pragma: no cover
-        raise ValueError(
-            "Verbose output is available only for the terminal and not for printing to files",
-        )
     pybamm.citations.print(filename, output_format, verbose)
 
 
