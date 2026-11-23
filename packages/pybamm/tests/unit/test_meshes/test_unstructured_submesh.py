@@ -730,6 +730,20 @@ class TestFileGenerators:
         # mesh file (boundary_mapping) or be set explicitly
         assert sub.boundary_faces == {}
 
+    def test_user_supplied_records_coordinate_axes(self, tmp_path):
+        pytest.importorskip("meshio")
+        path = tmp_path / "square.vtu"
+        self._write_two_triangle_vtu(path)
+        gen = UserSuppliedUnstructuredMesh(str(path))
+
+        x_n = pybamm.SpatialVariable("x_n", ["negative electrode"], direction="lr")
+        z = pybamm.SpatialVariable("z", ["current collector"], direction="tb")
+        lims = {x_n: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}
+        assert gen(lims, {}).coordinate_axes == ("x", "z")
+
+        # one variable for a 2D mesh says nothing about the second column
+        assert gen({"x_n": {"min": 0.0, "max": 1.0}}, {}).coordinate_axes is None
+
     def test_user_supplied_subdomain_filtering(self, tmp_path):
         """subdomain_mapping selects only the cells with the matching tag."""
         import pytest
