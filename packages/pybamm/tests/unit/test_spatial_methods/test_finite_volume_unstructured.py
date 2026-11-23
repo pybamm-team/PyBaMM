@@ -1453,6 +1453,30 @@ class TestFiniteVolumeUnstructuredBehavior:
         with pytest.raises(pybamm.ShapeError, match="per-face"):
             method.laplacian(variable, values, {variable: bcs(np.ones(len(tag) + 1))})
 
+    def test_side_bc_value_sizes(self):
+        mesh = _make_2d_mesh(2, 2)
+        tag = np.concatenate([mesh.boundary_faces["top"], mesh.boundary_faces["right"]])
+        mesh.boundary_faces["side"] = tag
+        faces = tag[:2]
+        side_value = FiniteVolumeUnstructured._side_bc_value
+
+        # a value with no shape cannot be sized, so it passes through
+        unsized = object()
+        assert side_value(mesh, "side", faces, unsized) is unsized
+
+        # one entry per tagged face per auxiliary point keeps the reached faces
+        per_face = np.arange(1.0, 2 * len(tag) + 1)
+        reduced = side_value(mesh, "side", faces, pybamm.Vector(per_face), repeats=2)
+        np.testing.assert_array_equal(
+            reduced.evaluate().flatten(), per_face[np.tile(np.isin(tag, faces), 2)]
+        )
+
+        # len(tag) entries read as per tagged face or per reached face and point
+        with pytest.raises(pybamm.ShapeError, match="fits both"):
+            side_value(
+                mesh, "side", faces, pybamm.Vector(np.ones(len(tag))), repeats=2
+            )
+
     def test_boundary_value_averages_whole_tag_under_coupled_interface(self):
         # The value averages every face of the tag, including faces a
         # concatenated variable's condition does not reach
