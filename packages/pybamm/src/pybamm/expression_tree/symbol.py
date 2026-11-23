@@ -500,6 +500,10 @@ class Symbol:
     # Static slots that are stored but do not define identity (e.g. callables,
     # raw arrays whose string form is hashed instead). Subclasses extend this.
     _id_excluded_fields: tuple[str, ...] = ()
+    # The fix every Rust conversion error suggests
+    _RUST_FALLBACK_HINT = (
+        "Use a CasADi-backed model (set `model.convert_to_format = 'casadi'`) instead."
+    )
 
     @property
     def leaves(self) -> Sequence[Symbol]:
@@ -1495,9 +1499,7 @@ class Symbol:
     ) -> pybamm.rust.Expr:
         raise NotImplementedError(
             f"Cannot convert symbol of type '{type(self).__name__}' to the Rust "
-            "backend. Use a CasADi-backed model (set "
-            "`model.convert_to_format = 'casadi'`) for models using "
-            "this symbol."
+            f"backend. {self._RUST_FALLBACK_HINT}"
         )
 
     def _to_rust_matmul_left(
