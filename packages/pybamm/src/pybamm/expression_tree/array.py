@@ -174,18 +174,39 @@ class Array(pybamm.Symbol):
         key = (self.id, "matmul left")
         cached = rust_symbols.get(key)
         if cached is None:
-            # Rows sum in stored order; in column order a stencil's rounding telescopes
-            csr = csr_matrix(entries, copy=True)
-            csr.sum_duplicates()
-            cached = graph.sparse_matrix(
-                csr.indptr.tolist(),
-                csr.indices.tolist(),
-                csr.data.astype(float),
-                csr.shape[0],
-                csr.shape[1],
-            )
+            cached = self._rust_sparse_matrix(graph, entries)
             rust_symbols[key] = cached
         return cached
+
+    @staticmethod
+    def _rust_sparse_matrix(
+        graph: pybamm.rust.ExprGraph, entries: csr_matrix
+    ) -> pybamm.rust.Expr:
+        """
+        Allocate a sparse matrix node, each row stored in ascending column order.
+
+        Parameters
+        ----------
+        graph : :class:`pybamm.rust.ExprGraph`
+            The graph to allocate the node in.
+        entries : :class:`scipy.sparse.csr_matrix`
+            The matrix, in any stored order.
+
+        Returns
+        -------
+        :class:`pybamm.rust.Expr`
+            The sparse matrix node.
+        """
+        # Rows sum in stored order; in column order a stencil's rounding telescopes
+        csr = csr_matrix(entries, copy=True)
+        csr.sum_duplicates()
+        return graph.sparse_matrix(
+            csr.indptr.tolist(),
+            csr.indices.tolist(),
+            csr.data.astype(float),
+            csr.shape[0],
+            csr.shape[1],
+        )
 
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""

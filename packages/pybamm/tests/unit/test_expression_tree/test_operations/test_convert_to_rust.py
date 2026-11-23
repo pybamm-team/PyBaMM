@@ -654,6 +654,12 @@ def _parity_cases():
     time_data = pybamm.DiscreteTimeData(
         np.array([0.0, 1.0, 2.0]), np.array([1.0, 2.0, 3.0]), "data"
     )
+    # Its unstored zero meets a zero and its stored zero a NaN: only the first
+    # stays zero, as in CasADi
+    sparse_column = pybamm.Matrix(
+        csr_matrix(([0.0, 2.0], ([0, 1], [0, 0])), shape=(3, 1))
+    )
+    poisoned = [*at_y, {"y": np.array([0.3, 1.2, 0.7, np.nan, 0.9, 0.0])}]
     cases = {
         "addition": (left + right, at_y),
         "subtraction": (left - right, at_y),
@@ -683,6 +689,15 @@ def _parity_cases():
                 pybamm.Matrix(csr_matrix(np.array([[0.0], [3.0], [2.0]]))),
             ),
             [{}],
+        ),
+        "sparse_column_product": (sparse_column * right, poisoned),
+        "sparse_column_product_on_the_right": (right * sparse_column, poisoned),
+        "sparse_column_quotient": (sparse_column / right, poisoned),
+        "sparse_column_times_input": (sparse_column * a, [{"inputs": {"a": 2.5}}]),
+        "sparse_column_over_input": (sparse_column / a, [{"inputs": {"a": 2.5}}]),
+        "fully_stored_sparse_column_quotient": (
+            pybamm.Matrix(csr_matrix(np.array([[1.0], [2.0], [3.0]]))) / right,
+            at_y,
         ),
         "negate": (-left, at_y),
         "absolute_value": (abs(left - 1.0), at_y),
@@ -866,6 +881,20 @@ class TestSparseMatrixToRust:
         np.testing.assert_array_equal(
             g.eval_to_array(product, 0.0, y, np.array([]), []), [0.0, 6.0, 0.0]
         )
+
+    def test_a_sparse_column_product_lowers_without_a_dense_copy(self):
+        # The same graph as the diagonal product it stands for: no dense column
+        y = pybamm.StateVector(slice(0, 3))
+        n_nodes = []
+        for expr in (
+            pybamm.Matrix(csr_matrix(np.array([[1.0], [0.0], [3.0]]))) * y,
+            pybamm.Matrix(csr_matrix(np.diag([1.0, 0.0, 3.0]))) @ y,
+        ):
+            graph = ExprGraph()
+            compiled = graph.compile(expr.to_rust(graph, {}), n_states=3)
+            n_nodes.append(graph.n_nodes)
+            assert compiled.jacobian("y").nnz == 2
+        assert n_nodes[0] == n_nodes[1]
 
     def test_sparse_matmul_sums_rows_in_column_order(self):
         # A stencil row stored out of column order; summing the two outer
