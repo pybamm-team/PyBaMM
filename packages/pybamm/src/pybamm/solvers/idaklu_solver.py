@@ -209,7 +209,7 @@ def _state_time_derivative_expression(
     Parameters
     ----------
     model : :class:`pybamm.BaseModel`
-        The model, with its residual and Jacobians processed.
+        The model, with its residual processed.
     t_casadi, y_casadi : casadi.MX
         Time and state symbols.
     p_casadi_stacked : casadi.MX
@@ -229,14 +229,14 @@ def _state_time_derivative_expression(
         return ydot
     if n_rhs == 0:
         algebraic = model.rhs_algebraic_eval(*arguments)
-        jacobian = model.jac_rhs_algebraic_eval(*arguments)
+        jacobian = casadi.jacobian(algebraic, y_casadi)
         return -casadi.solve(jacobian, casadi.jacobian(algebraic, t_casadi), "csparse")
     ydot_differential = model.rhs_eval(*arguments)
     if not model.is_standard_form_dae:
         mass = to_casadi_dm(model.mass_matrix.entries[:n_rhs, :n_rhs])
         ydot_differential = casadi.solve(mass, ydot_differential)
     algebraic = model.algebraic_eval(*arguments)
-    jacobian = model.jac_algebraic_eval(*arguments)
+    jacobian = casadi.jacobian(algebraic, y_casadi)
     rate = casadi.jacobian(algebraic, t_casadi) + casadi.mtimes(
         jacobian[:, :n_rhs], ydot_differential
     )
@@ -275,7 +275,9 @@ def _time_sensitivity_functions(
     dict
         ``"state_time_derivative"``, ``y'`` at a consistent point;
         ``"reads_start_time"``, whether the residual depends on the experiment
-        step start time at all; and ``"events"``, the termination events'
+        step start time at all; ``"algebraic_jacobian"``, the algebraic
+        equations' Jacobian with respect to the algebraic states (only with
+        algebraic states); and ``"events"``, the termination events'
         derivatives with respect to time, the states, the differentiated inputs
         and the start time (only with events).
     """
@@ -290,6 +292,13 @@ def _time_sensitivity_functions(
         "reads_start_time": start_time is not None
         and casadi.depends_on(model.rhs_algebraic_eval(*arguments), start_time),
     }
+    if model.len_alg > 0:
+        algebraic = model.rhs_algebraic_eval(*arguments)[model.len_rhs :]
+        functions["algebraic_jacobian"] = casadi.Function(
+            "algebraic_jacobian",
+            arguments,
+            [casadi.jacobian(algebraic, y_casadi)[:, model.len_rhs :]],
+        )
     if model.terminate_events_eval:
         # Along a consistent trajectory the state derivatives an event reads are
         # the model's own, so its derivatives include theirs
@@ -1525,14 +1534,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y = np.array(y, dtype=np.float64)
         if model.len_alg == 0:
             return y
+        jacobian_eval = self._setup["time_sensitivity_fcns"]["algebraic_jacobian"]
         atol = self._check_atol_type(getattr(model, "atol", self.atol), model)[n_rhs:]
         previous_error = np.inf
         for _ in range(_CONSISTENT_STATE_MAX_ITERATIONS):
             residual = np.asarray(model.rhs_algebraic_eval(time, y, inputs)).reshape(
                 -1
             )[n_rhs:]
-            jacobian = model.jac_rhs_algebraic_eval(time, y, inputs).sparse()
-            step = np.atleast_1d(spsolve(jacobian[n_rhs:, n_rhs:].tocsc(), residual))
+            jacobian = jacobian_eval(time, y, inputs).sparse()
+            step = np.atleast_1d(spsolve(jacobian.tocsc(), residual))
             y[n_rhs:] -= step
             error = np.max(np.abs(step) / (atol + self.rtol * np.abs(y[n_rhs:])))
             # Stop well within tolerance, or within it once roundoff stalls Newton
