@@ -177,6 +177,36 @@ impl ParamRegistry {
         self.packed_width
     }
 
+    /// The parameters indexed below `index_extent`, or `None` past this registry's extent.
+    ///
+    /// Registration only appends, so this is the registry as it stood at that extent.
+    pub fn truncated(&self, index_extent: usize) -> Option<Self> {
+        if index_extent > self.index_extent {
+            return None;
+        }
+        let entries: BTreeMap<ParamIdx, ParamEntry> = self
+            .entries
+            .iter()
+            .filter(|(index, _)| index.index() < index_extent)
+            .map(|(&index, entry)| (index, entry.clone()))
+            .collect();
+        let by_name = entries
+            .iter()
+            .map(|(&index, entry)| (entry.name.clone(), index))
+            .collect();
+        let packed_width = entries
+            .values()
+            .map(|entry| entry.slot.offset.index() + entry.slot.width.index())
+            .max()
+            .unwrap_or(0);
+        Some(Self {
+            by_name,
+            entries,
+            index_extent,
+            packed_width: PackedWidth::new(packed_width),
+        })
+    }
+
     fn entry(&self, idx: ParamIdx) -> Option<&ParamEntry> {
         self.entries.get(&idx)
     }
@@ -403,6 +433,23 @@ mod tests {
             ParamRegistry::from_arena(&arena),
             Err(CoreError::ParamSlotRange { .. })
         ));
+    }
+
+    #[test]
+    fn truncating_recovers_the_registry_an_earlier_extent_saw() {
+        let mut registry = ParamRegistry::new();
+        registry.register("wide", 3).unwrap();
+        registry.register("k", 1).unwrap();
+        let earlier = registry.clone();
+        registry.register("later", 2).unwrap();
+
+        assert_eq!(registry.truncated(earlier.index_extent()), Some(earlier));
+        assert_eq!(
+            registry.truncated(registry.index_extent()),
+            Some(registry.clone())
+        );
+        assert_eq!(registry.truncated(0), Some(ParamRegistry::new()));
+        assert_eq!(registry.truncated(registry.index_extent() + 1), None);
     }
 
     #[test]
