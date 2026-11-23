@@ -14,7 +14,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-import black
 import numpy as np
 
 import pybamm
@@ -78,6 +77,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
         """
         Creates python source code for the function.
         """
+        import black
+
         src = f"def {self.func_name}({', '.join(self.func_args)}):\n"
 
         # Fix printing of parameters so they print as Parameter('name'). Do this on a
@@ -1615,7 +1616,8 @@ class Serialise:
 
         - If a value is a dict with a "$type" (kernel) or legacy "type" key,
           deserialize it as a PyBaMM symbol.
-        - Otherwise (float, int, bool, str, list, dict-without-type), leave it as-is.
+        - Decode list items using the parameter-value decoder.
+        - Otherwise (float, int, bool, str, dict-without-type), leave it as-is.
         """
         with open(filename) as f:
             raw_dict = json.load(f)
@@ -1625,7 +1627,10 @@ class Serialise:
             if isinstance(val, dict) and ("$type" in val or "type" in val):
                 deserialized[key] = convert_symbol_from_json(val)
 
-            elif isinstance(val, (list, numbers.Number | bool, str, dict)):
+            elif isinstance(val, list):
+                deserialized[key] = pybamm.deserialize_parameter_value(val)
+
+            elif isinstance(val, (numbers.Number | bool, str, dict)):
                 deserialized[key] = val
 
             else:

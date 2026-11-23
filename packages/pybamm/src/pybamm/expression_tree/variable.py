@@ -6,7 +6,6 @@ from __future__ import annotations
 import numbers
 
 import numpy as np
-import sympy
 
 import pybamm
 from pybamm.type_definitions import (
@@ -142,6 +141,8 @@ class VariableBase(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -228,9 +229,13 @@ class Variable(VariableBase):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
-            # reference gets differentiated out
+            # The reference and bounds identify the state; d/dt drops the reference
             return pybamm.VariableDot(
-                self.name + "'", domains=self._domains, scale=self.scale
+                self.name + "'",
+                domains=self._domains,
+                bounds=self.bounds,
+                scale=self.scale,
+                reference=self.reference,
             )
         else:
             return pybamm.Scalar(0)
@@ -264,18 +269,16 @@ class VariableDot(VariableBase):
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
     bounds : tuple, optional
-        Physical bounds on the variable. Included for compatibility with `VariableBase`,
-        but ignored.
+        Physical bounds on the variable, identifying it with its :class:`Variable`.
     print_name : str, optional
         The name to use for printing. Default is None, in which case self.name is used.
     scale : float or :class:`pybamm.Symbol`, optional
-        The scale of the variable, used for scaling the model when solving. The state
-        vector representing this variable will be multiplied by this scale.
-        Default is 1.
+        The scale of the variable, used for scaling the model when solving. The
+        derivative of the state vector representing this variable will be multiplied
+        by this scale. Default is 1.
     reference : float or :class:`pybamm.Symbol`, optional
-        The reference value of the variable, used for scaling the model when solving.
-        This value will be added to the state vector representing this variable.
-        Default is 0.
+        The constant reference value of the variable, identifying it with its
+        :class:`Variable`. It does not enter the derivative. Default is 0.
     """
 
     __slots__ = ()
@@ -287,7 +290,13 @@ class VariableDot(VariableBase):
         Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
         we remove this here
         """
-        return Variable(self.name[:-1], domains=self._domains, scale=self.scale)
+        return Variable(
+            self.name[:-1],
+            domains=self._domains,
+            bounds=self.bounds,
+            scale=self.scale,
+            reference=self.reference,
+        )
 
     def diff(self, variable: pybamm.Symbol) -> pybamm.Scalar:
         if variable == self:

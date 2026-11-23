@@ -12,7 +12,6 @@ import itertools
 
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, diags, eye, kron
-from scipy.spatial import cKDTree
 
 import pybamm
 
@@ -127,6 +126,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         ``(a_idx, b_idx, matched)`` where ``matched`` is True iff at least
         one pair was found.
         """
+        from scipy.spatial import cKDTree
+
         a_idx = (
             np.concatenate(list(a_mesh.boundary_faces.values()))
             if a_mesh.boundary_faces
@@ -1115,7 +1116,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         for k in range(d):
             Gk = self._block_diagonal(G_components[k], repeats)
             comp = pybamm.Matrix(Gk) @ discretised_symbol + bc_vecs[k]
-            components.append(comp)
+            # Constant folding (e.g. a zero component) drops the domains
+            components.append(comp.with_domains(symbol))
 
         return pybamm.VectorField(*components)
 
@@ -1408,7 +1410,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             Dk = self._block_diagonal(D_components[k], repeats)
             result = result + pybamm.Matrix(Dk) @ comps[k]
 
-        return result
+        return result.with_domains(symbol)
 
     def _divergence_matrices(self, submesh):
         """Divergence matrices ``D_k``: ``(div F)_i = (1/V_i) sum_f F_k,f n_k,f A_f``.
@@ -1429,7 +1431,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         for comp in grad.components:
             sq = comp**2
             result = sq if result is None else result + sq
-        return result
+        return result.with_domains(symbol)
 
     # ------------------------------------------------------------------
     # Binary operator handling (scalar * VectorField, etc.)
@@ -1452,12 +1454,13 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 n = disc_right.n_components
                 disc_left = pybamm.VectorField(*[disc_left] * n)
 
+            # Re-attach domains that constant folding drops
             new_comps = [
                 pybamm.simplify_if_constant(
                     bin_op.create_copy(
                         [disc_left.components[k], disc_right.components[k]]
                     )
-                )
+                ).with_domains(bin_op)
                 for k in range(n)
             ]
             return pybamm.VectorField(*new_comps)

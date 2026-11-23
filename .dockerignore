@@ -18,5 +18,6 @@ packages/pybammsolvers/SuiteSparse
 packages/pybammsolvers/sundials
 packages/pybammsolvers/wheelhouse
 packages/pybammsolvers/build
+packages/pybamm-rust/target
 *.json.gz
 results.json

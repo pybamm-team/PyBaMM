@@ -6,7 +6,6 @@ import casadi
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse
-import sympy
 
 import pybamm
 
@@ -196,6 +195,8 @@ class Conditional(pybamm.Symbol):
         return switch(index, *shared)
 
     def to_equation(self):
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         return sympy.Function("Conditional")(
