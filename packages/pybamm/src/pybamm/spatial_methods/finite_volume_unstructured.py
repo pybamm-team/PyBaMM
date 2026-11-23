@@ -982,7 +982,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     D_bnd = disc_D
                 else:
                     D_bnd = pybamm.Matrix(E_f) @ disc_D
-                bc_value = self._tile_bc_value(bc_value, n_bnd, repeats)
+                bc_value = self._tile_bc_value(
+                    self._side_bc_value(submesh, side, fi_arr, bc_value, repeats),
+                    n_bnd,
+                    repeats,
+                )
                 a_over_v = submesh.face_areas[fi_arr] / vol[bnd_own]
 
                 if bc_type == "Dirichlet":
@@ -1032,6 +1036,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             n_bnd = len(face_indices)
             if n_bnd == 0:
                 continue
+            bc_value = self._side_bc_value(
+                submesh, side, face_indices, bc_value, repeats
+            )
             owners = submesh.face_owner[face_indices]
             a_over_v = submesh.face_areas[face_indices] / submesh.cell_volumes[owners]
 
@@ -1086,6 +1093,55 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if not interior:
             return faces
         return faces[~np.isin(faces, np.concatenate(interior))]
+
+    @classmethod
+    def _side_bc_value(cls, submesh, side, faces, bc_value, repeats=1):
+        """The part of ``bc_value`` that applies to ``faces``, the faces of
+        ``side`` a condition reaches (see :meth:`_bc_side_faces`).
+
+        A per-face value sized to the whole tag keeps the entries of
+        ``faces``; scalars, per-point values and values sized to ``faces``
+        pass through.
+
+        Raises
+        ------
+        pybamm.ShapeError
+            If the value's length fits neither the tag nor ``faces``, or
+            fits both readings.
+        """
+        n_bnd = len(faces)
+        if cls._is_scalar_value(bc_value) or cls._is_per_point_value(
+            bc_value, n_bnd, repeats
+        ):
+            return bc_value
+        shape = getattr(bc_value, "shape_for_testing", None)
+        if shape is None:
+            return bc_value
+        size = int(np.prod(shape))
+        tag = submesh.boundary_faces[side]
+        n_tag = len(tag)
+        fits_faces = size in (n_bnd, n_bnd * repeats)
+        fits_tag = n_tag != n_bnd and size in (n_tag, n_tag * repeats)
+        if fits_faces and fits_tag:
+            raise pybamm.ShapeError(
+                f"Boundary condition on {side!r} has {size} entries, which "
+                f"fits both its {n_tag} tagged faces and the {n_bnd} it "
+                "reaches outside coupled interfaces; give a scalar or one "
+                "value per reached face"
+            )
+        if fits_faces:
+            return bc_value
+        if not fits_tag:
+            raise pybamm.ShapeError(
+                f"Boundary condition on {side!r} has {size} entries; a "
+                f"per-face value needs one per tagged face ({n_tag}) or per "
+                f"face outside coupled interfaces ({n_bnd}), times {repeats} "
+                "auxiliary points if it varies over them"
+            )
+        keep = csr_matrix(eye(n_tag, format="csr")[np.isin(tag, faces)])
+        if size != n_tag:
+            keep = cls._block_diagonal(keep, repeats)
+        return pybamm.Matrix(keep) @ bc_value
 
     @staticmethod
     def _boundary_faces_for_side(submesh, side):
@@ -1170,7 +1226,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         for k in range(d):
             Gk = self._block_diagonal(G_components[k], repeats)
             comp = pybamm.Matrix(Gk) @ discretised_symbol + bc_vecs[k]
-            components.append(comp)
+            # Constant folding (e.g. a zero component) drops the domains
+            components.append(comp.with_domains(symbol))
 
         return pybamm.VectorField(*components)
 
@@ -1331,6 +1388,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             faces = self._bc_side_faces(submesh, side, bcs, interface_faces)
             if len(faces) == 0:
                 continue
+            bc_value = self._side_bc_value(submesh, side, faces, bc_value, repeats)
             owners = submesh.face_owner[faces]
             for k in range(d):
                 coeffs = coeff[owners, k, slot[faces]]
@@ -1466,7 +1524,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             Dk = self._block_diagonal(D_components[k], repeats)
             result = result + pybamm.Matrix(Dk) @ comps[k]
 
-        return result
+        return result.with_domains(symbol)
 
     def _divergence_matrices(self, submesh):
         """Divergence matrices ``D_k``: ``(div F)_i = (1/V_i) sum_f F_k,f n_k,f A_f``.
@@ -1487,7 +1545,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         for comp in grad.components:
             sq = comp**2
             result = sq if result is None else result + sq
-        return result
+        return result.with_domains(symbol)
 
     # ------------------------------------------------------------------
     # Binary operator handling (scalar * VectorField, etc.)
@@ -1510,12 +1568,13 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 n = disc_right.n_components
                 disc_left = pybamm.VectorField(*[disc_left] * n)
 
+            # Re-attach domains that constant folding drops
             new_comps = [
                 pybamm.simplify_if_constant(
                     bin_op.create_copy(
                         [disc_left.components[k], disc_right.components[k]]
                     )
-                )
+                ).with_domains(bin_op)
                 for k in range(n)
             ]
             return pybamm.VectorField(*new_comps)
@@ -1609,9 +1668,13 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     }
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
-        """Area-weighted average of the owner-cell values over the faces of a
+        """Area-weighted average of the owner-cell values over every face of a
         boundary side (zeroth-order boundary value), one value per auxiliary
-        point; corner sides return the single closest boundary cell."""
+        point; corner sides return the single closest boundary cell.
+
+        The average includes faces under a coupled interface, which a
+        condition on a concatenated variable does not reach (see
+        :meth:`_bc_side_faces`)."""
         if isinstance(symbol, pybamm.BoundaryGradient):
             raise NotImplementedError(
                 "BoundaryGradient is not implemented for unstructured meshes; "
@@ -1632,8 +1695,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         owners = submesh.face_owner[face_indices]
         face_areas = submesh.face_areas[face_indices]
 
-        # A scalar per auxiliary point, matching the symbol's shape: total
-        # flux through the side is preserved when the value scales a flux
+        # Averaged over every face of the tag: as a flux scale it keeps the
+        # side's total flux only if the condition reaches all of those faces
         row = np.zeros(n)
         np.add.at(row, owners, face_areas / face_areas.sum())
         sub_matrix = csr_matrix(row.reshape(1, -1))

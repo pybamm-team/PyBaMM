@@ -1021,7 +1021,8 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
     @staticmethod
     def _domain_name_from_lims(lims, subdomain_mapping=()):
-        """The domain of the geometry's spatial variables, preferring one in
+        """The domain of the geometry's spatial variables other than the
+        ``"current collector"`` (unless it is the only one), preferring one in
         ``subdomain_mapping``; string keys are standard spatial variables."""
         candidates = []
         for var in lims:
@@ -1033,11 +1034,10 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 candidates.append(var.domain[0])
         # Standard y and z live on the current collector whichever domain
         # they mesh, so they only name it when nothing else does
-        in_mapping = [c for c in candidates if c in subdomain_mapping]
+        regions = [c for c in candidates if c != "current collector"]
         for pool in (
-            [c for c in in_mapping if c != "current collector"],
-            in_mapping,
-            [c for c in candidates if c != "current collector"],
+            [c for c in regions if c in subdomain_mapping],
+            regions,
             candidates,
         ):
             if pool:
