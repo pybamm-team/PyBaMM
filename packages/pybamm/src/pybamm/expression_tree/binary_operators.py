@@ -239,44 +239,20 @@ class BinaryOperator(pybamm.Symbol):
     def _to_rust(
         self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
     ) -> pybamm.rust.Expr:
-        if isinstance(self, MatrixMultiplication):
-            left = self.left._to_rust_matmul_left(graph, rust_symbols)
-            right = self.right._to_rust_inner(graph, rust_symbols)
-            return graph.matmul(left, right)
         left, right = self._children_to_rust(graph, rust_symbols)
-        if isinstance(self, Addition):
-            return graph.add(left, right)
-        elif isinstance(self, Subtraction):
-            return graph.sub(left, right)
-        elif isinstance(self, Multiplication):
-            return graph.mul(left, right)
-        elif isinstance(self, Division):
-            return graph.div(left, right)
-        elif isinstance(self, Power):
-            return graph.pow(left, right)
-        elif isinstance(self, Inner):
-            return graph.mul(left, right)
-        elif isinstance(self, Minimum):
-            return graph.minimum(left, right)
-        elif isinstance(self, Maximum):
-            return graph.maximum(left, right)
-        elif isinstance(self, Modulo):
-            return graph.modulo(left, right)
-        elif isinstance(self, Hypot):
-            return graph.hypot(left, right)
-        elif isinstance(self, EqualHeaviside):
-            return graph.equal_heaviside(left, right)
-        elif isinstance(self, NotEqualHeaviside):
-            return graph.not_equal_heaviside(left, right)
-        elif isinstance(self, Equality):
-            return graph.equality(left, right)
-        else:
-            raise NotImplementedError(
-                f"Cannot convert binary operator of type '{type(self).__name__}' "
-                "to the Rust backend. Use a CasADi-backed model (set "
-                "`model.convert_to_format = 'casadi'`) for models using "
-                "this operator."
-            )
+        return self._rust_node(graph, left, right)
+
+    def _rust_node(
+        self,
+        graph: pybamm.rust.ExprGraph,
+        left: pybamm.rust.Expr,
+        right: pybamm.rust.Expr,
+    ) -> pybamm.rust.Expr:
+        """Allocate this operator's node in ``graph`` over its converted operands."""
+        raise NotImplementedError(
+            f"Cannot convert binary operator of type '{type(self).__name__}' "
+            f"to the Rust backend. {self._RUST_FALLBACK_HINT}"
+        )
 
     def _evaluates_on_edges(self, dimension: str) -> bool | str:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -376,6 +352,10 @@ class Power(BinaryOperator):
         with np.errstate(invalid="ignore"):
             return left**right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.pow(left, right)
+
 
 class Addition(BinaryOperator):
     """
@@ -403,6 +383,10 @@ class Addition(BinaryOperator):
     def _binary_evaluate(self, left: ChildValue, right: ChildValue):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left + right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.add(left, right)
 
 
 class Subtraction(BinaryOperator):
@@ -432,6 +416,10 @@ class Subtraction(BinaryOperator):
     def _binary_evaluate(self, left: ChildValue, right: ChildValue):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left - right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.sub(left, right)
 
 
 class Multiplication(BinaryOperator):
@@ -477,6 +465,10 @@ class Multiplication(BinaryOperator):
             return csr_matrix(right.multiply(left))
         else:
             return left * right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.mul(left, right)
 
 
 class KroneckerProduct(BinaryOperator):
@@ -638,6 +630,14 @@ class MatrixMultiplication(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left @ right
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        left = self.left._to_rust_matmul_left(graph, rust_symbols)
+        right = self.right._to_rust_inner(graph, rust_symbols)
+        return graph.matmul(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         result = try_repeated_row_matmul(self._children[0], right)
@@ -691,6 +691,10 @@ class Division(BinaryOperator):
             return left * (1 / right)
         else:
             return left / right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.div(left, right)
 
 
 class Inner(BinaryOperator):
@@ -746,6 +750,10 @@ class Inner(BinaryOperator):
             return right.multiply(left)
         else:
             return left * right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.mul(left, right)
 
     def _binary_new_copy(
         self,
@@ -817,6 +825,10 @@ class Equality(BinaryOperator):
             return int(left == right.item())
         else:
             return int(left == right)
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.equality(left, right)
 
     def _binary_new_copy(
         self,
@@ -917,6 +929,10 @@ class EqualHeaviside(_Heaviside):
         with np.errstate(invalid="ignore"):
             return left <= right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.equal_heaviside(left, right)
+
     def _t_discon_next(self, value: float):
         if self.left == pybamm.t:
             # t <= x
@@ -949,6 +965,10 @@ class NotEqualHeaviside(_Heaviside):
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left < right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.not_equal_heaviside(left, right)
 
     def _t_discon_next(self, value: float):
         if self.left == pybamm.t:
@@ -1003,6 +1023,10 @@ class Modulo(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left % right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.modulo(left, right)
 
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
@@ -1111,6 +1135,10 @@ class Minimum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.minimum(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmin(left, right)
@@ -1163,6 +1191,10 @@ class Maximum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.maximum(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmax(left, right)
@@ -1213,6 +1245,10 @@ class Hypot(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return np.hypot(left, right)
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.hypot(left, right)
 
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
