@@ -128,9 +128,7 @@ class DiscreteTimeSum(pybamm.UnaryOperator):
         # return result of evaluating the child, we'll only implement the sum once the model is solved (in pybamm.ProcessedVariable)
         return child
 
-    def _to_rust(
-        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
-    ) -> pybamm.rust.Expr:
+    def _rust_node(self, graph, child):
+        """See :meth:`pybamm.UnaryOperator._rust_node()`."""
         # Pass-through: actual summation happens in ProcessedVariable
-        (child,) = self._children_to_rust(graph, rust_symbols)
         return child
