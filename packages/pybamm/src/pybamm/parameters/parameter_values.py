@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import sys
 from collections import defaultdict
 from collections.abc import Iterator, Mapping
 from pathlib import Path
@@ -1024,7 +1026,15 @@ class ParameterValues:
         if getattr(self, "_warned_environment_thermal_resistance", False):
             return
         self._warned_environment_thermal_resistance = True
-        warn(message, DeprecationWarning, stacklevel=4)
+        # Attribute the warning to the first caller outside pybamm, so the
+        # default filters show it to users
+        package_dir = os.path.dirname(pybamm.__file__)
+        frame = sys._getframe(1)
+        stacklevel = 2
+        while frame is not None and frame.f_code.co_filename.startswith(package_dir):
+            frame = frame.f_back
+            stacklevel += 1
+        warn(message, DeprecationWarning, stacklevel=stacklevel)
 
     def _map_environment_thermal_resistance(
         self, model: pybamm.BaseModel
@@ -1086,7 +1096,7 @@ class ParameterValues:
             "Mapping the old values onto these parameters, with a 1 m path length."
         )
         h_name = "Total heat transfer coefficient [W.m-2.K-1]"
-        mapped = ParameterValues(self)
+        mapped = self.copy()
         mapped[new_names[0]] = self._store[h_name]
         mapped[new_names[1]] = 1.0
         mapped[h_name] = 1 / (pybamm.Parameter(old_name) * model.param.A_cooling)
