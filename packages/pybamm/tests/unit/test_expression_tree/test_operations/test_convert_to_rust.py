@@ -660,6 +660,8 @@ def _parity_cases():
         csr_matrix(([0.0, 2.0], ([0, 1], [0, 0])), shape=(3, 1))
     )
     poisoned = [*at_y, {"y": np.array([0.3, 1.2, 0.7, np.nan, 0.9, 0.0])}]
+    # evaluate() has no sparse remainder
+    poisoned_unevaluated = [{**point, "check_evaluate": False} for point in poisoned]
     cases = {
         "addition": (left + right, at_y),
         "subtraction": (left - right, at_y),
@@ -698,6 +700,19 @@ def _parity_cases():
         "fully_stored_sparse_column_quotient": (
             pybamm.Matrix(csr_matrix(np.array([[1.0], [2.0], [3.0]]))) / right,
             at_y,
+        ),
+        "sparse_column_remainder": (
+            pybamm.Modulo(sparse_column, right),
+            poisoned_unevaluated,
+        ),
+        "sparse_column_remainder_by_input": (
+            pybamm.Modulo(sparse_column, a),
+            [{"inputs": {"a": 2.5}, "check_evaluate": False}],
+        ),
+        # With nothing stored it folds to zero, even against a zero divisor
+        "unstored_sparse_column_remainder": (
+            pybamm.Modulo(pybamm.Matrix(csr_matrix((3, 1))), right),
+            poisoned_unevaluated,
         ),
         "negate": (-left, at_y),
         "absolute_value": (abs(left - 1.0), at_y),
@@ -894,6 +909,17 @@ class TestSparseMatrixToRust:
             compiled = graph.compile(expr.to_rust(graph, {}), n_states=3)
             n_nodes.append(graph.n_nodes)
             assert compiled.jacobian("y").nnz == 2
+        assert n_nodes[0] == n_nodes[1]
+
+    def test_a_fully_stored_sparse_column_quotient_lowers_as_a_dense_one(self):
+        # With no unstored row to skip, a gather and scatter would only cost
+        y = pybamm.StateVector(slice(0, 3))
+        column = np.array([[1.0], [2.0], [3.0]])
+        n_nodes = []
+        for entries in (csr_matrix(column), column):
+            graph = ExprGraph()
+            (pybamm.Matrix(entries) / y).to_rust(graph, {})
+            n_nodes.append(graph.n_nodes)
         assert n_nodes[0] == n_nodes[1]
 
     def test_sparse_matmul_sums_rows_in_column_order(self):
