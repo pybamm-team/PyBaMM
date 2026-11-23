@@ -1804,9 +1804,14 @@ class TestParameterValues:
         # Ambient surface models never use the old parameter
         ambient = pybamm.lithium_ion.SPM({"thermal": "lumped"})
         assert values._map_environment_thermal_resistance(ambient) is values
-        # The new parameters take precedence over the old one
+        # A partial migration is ambiguous
         values["Core-to-surface thermal conductivity [W.m-1.K-1]"] = 1
-        assert values._map_environment_thermal_resistance(lumped) is values
+        with pytest.raises(KeyError, match=r"Core-to-surface thermal path length"):
+            values._map_environment_thermal_resistance(lumped)
+        # With both new parameters set, the old one is ignored with a warning
+        values["Core-to-surface thermal path length [m]"] = 0.1
+        with pytest.warns(DeprecationWarning, match=r"It is ignored"):
+            assert values._map_environment_thermal_resistance(lumped) is values
 
     def test_process_model_attaches_to_symbol_processor(self):
         """Test that process_model attaches parameter_values to model's symbol_processor."""

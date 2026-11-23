@@ -1030,6 +1030,12 @@ class ParameterValues:
             core-to-surface conductivity takes the old total heat transfer
             coefficient (path length 1 m) and the total heat transfer
             coefficient reproduces the environment thermal resistance.
+
+        Raises
+        ------
+        KeyError
+            If the environment thermal resistance is set together with only one
+            of the core-to-surface conductivity and path length.
         """
         old_name = "Environment thermal resistance [K.W-1]"
         new_names = (
@@ -1039,11 +1045,26 @@ class ParameterValues:
         options = getattr(model, "options", None)
         if (
             old_name not in self._store
-            or any(name in self._store for name in new_names)
             or options is None
             or options.get("surface temperature") != "lumped"
         ):
             return self
+        missing = [name for name in new_names if name not in self._store]
+        if not missing:
+            warn(
+                f"'{old_name}' is deprecated and will be removed in 27.1. It is "
+                f"ignored because '{new_names[0]}' and '{new_names[1]}' are set.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            return self
+        if len(missing) == 1:
+            raise KeyError(
+                f"'{old_name}' is set with only one of the core-to-surface "
+                f"parameters, so '{missing[0]}' cannot be inferred. Set "
+                f"'{missing[0]}' (and '{old_name}' is then ignored), or remove "
+                "the core-to-surface parameter to map the old values."
+            )
         warn(
             f"'{old_name}' is deprecated and will be removed in 27.1. The lumped "
             "surface temperature model now couples the surface to the ambient "
