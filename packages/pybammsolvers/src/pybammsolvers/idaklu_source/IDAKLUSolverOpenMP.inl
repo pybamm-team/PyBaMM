@@ -595,13 +595,14 @@ int IDAKLUSolverOpenMP<ExprSet>::FirstStep(
   }
   N_VScale(SUN_RCONST(1.0), y_cache, yy);
   N_VScale(SUN_RCONST(1.0), yp_cache, yyp);
-  // IDA holds the sensitivities it was reinitialized with at t_start
-  if (sensitivity) {
-    CheckErrors(IDAGetSensDky(ida_mem, t_start, 0, yyS), "IDAGetSensDky");
-    CheckErrors(IDAGetSensDky(ida_mem, t_start, 1, yypS), "IDAGetSensDky");
-  }
+  // IDASolve does not write yyS and yypS, so they still hold the start sensitivities
+
   // IDA's root search finds only sign changes, so an event at t_start stops there
   if (at_start) {
+    // The stored ypS comes from the step, like yp and as at every other point
+    if (save_hermite_sensitivities_) {
+      CheckErrors(IDAGetSensDky(ida_mem, t_start, 1, yypS), "IDAGetSensDky");
+    }
     t_val = t_start;
     return IDA_ROOT_RETURN;
   }
