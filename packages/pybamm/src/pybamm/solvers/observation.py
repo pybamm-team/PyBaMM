@@ -134,14 +134,14 @@ def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariabl
         model.get_processed_variable_or_event(name) for model in solution.all_models
     ]
     vars_casadi = [None] * len(solution.all_models)
-    chain_rules = [None] * len(solution.all_models)
+    chain_rules: list[dict] = []
     for i, (model, ys, inputs) in enumerate(
         zip(solution.all_models, solution.all_ys, solution.all_inputs, strict=True)
     ):
         var_pybamm = vars_pybamm[i]
         check_variable_in_solve(solution, name, var_pybamm)
         cache = ObserverCache.of(model)
-        chain_rules[i] = cache.chain_rules
+        chain_rules.append(cache.chain_rules)
         if isinstance(var_pybamm, pybamm.VectorField):
             vars_casadi[i] = [
                 cache.casadi_leaf(

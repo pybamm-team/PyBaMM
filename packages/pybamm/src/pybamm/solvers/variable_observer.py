@@ -11,6 +11,7 @@ import bisect
 import numbers
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from typing import Any
 
 import casadi
 import numpy as np
@@ -533,8 +534,9 @@ class _ChainRule:
         p_other = np.ascontiguousarray(p_other, dtype=float)
         directions = np.eye(self._n_params)
         S_var = np.empty((n_times * var_len, self._n_params), order="F")
-        # Buffers are per call, so concurrent calls never share their memory
-        buffers = {}
+        # Buffers are per call, so concurrent calls never share their memory. Any,
+        # as casadi's stubs miss that SWIG takes a buffer and its size as one argument
+        buffers: dict[int, Any] = {}
         for k in range(self._n_params):
             dy_dp_k = np.ascontiguousarray(dy_dp[:, k], dtype=float)
             S_var_k = S_var[:, k]
