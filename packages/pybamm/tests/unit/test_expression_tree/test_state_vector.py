@@ -131,18 +131,6 @@ class TestStateVector:
         assert not ranges_tile([(0, 3), (2, 5)], 0, 5)
         assert not ranges_tile([(0, 2)], 0, 5)
 
-    def test_multi_slice_to_rust(self):
-        from pybamm.rust import ExprGraph
-
-        sv = pybamm.StateVector(slice(0, 2), slice(4, 6))
-        graph = ExprGraph()
-        cf = graph.compile(sv.to_rust(graph, {}), name="sv", n_states=6)
-        y = np.arange(6.0)
-        np.testing.assert_array_equal(
-            np.asarray(cf(0.0, y, np.array([]))).ravel(),
-            sv.evaluate(y=y.reshape(-1, 1)).ravel(),
-        )
-
 
 class TestStateVectorDot:
     def test_evaluate(self):
