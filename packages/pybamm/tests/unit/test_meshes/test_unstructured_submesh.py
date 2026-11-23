@@ -1012,6 +1012,10 @@ class TestFileGenerators:
         mapped = {"negative electrode": 1, "current collector": 2}
         assert f({"z": {}, "x_n": {}, "y": {}}, mapped) == "negative electrode"
         assert f({"z": {}}, mapped) == "current collector"
+        # ...and a mapped current collector never stands in for an unmapped
+        # electrode
+        cc_mapped = {"current collector": 1, "positive electrode": 2}
+        assert f({"x_n": {}, "y": {}, "z": {}}, cc_mapped) == "negative electrode"
         # a domain in the mapping wins over any other
         assert f({x: {}, x_ncc: {}}, {"negative current collector": 1}) == (
             "negative current collector"
@@ -1049,6 +1053,28 @@ class TestFileGenerators:
             whole = gen({x_s: {"min": 0.0, "max": 1.0}}, {})
         assert whole.npts == 2
         assert "'separator' is not in subdomain_mapping" in caplog.text
+
+    def test_unmapped_domain_does_not_load_mapped_current_collector(
+        self, tmp_path, caplog
+    ):
+        """An electrode missing from subdomain_mapping must not be meshed with
+        the mapped current collector's cells that its y/z variables name."""
+        pytest.importorskip("meshio")
+        path = tmp_path / "tagged.vtu"
+        self._write_two_triangle_vtu(path, tags=[1, 2])
+        gen = UserSuppliedUnstructuredMesh(
+            str(path),
+            subdomain_mapping={"current collector": 1, "positive electrode": 2},
+        )
+        lims = {
+            "x_n": {"min": 0.0, "max": 1.0},
+            "y": {"min": 0.0, "max": 1.0},
+            "z": {"min": 0.0, "max": 1.0},
+        }
+        with caplog.at_level("WARNING", logger="pybamm"):
+            whole = gen(lims, {})
+        assert whole.npts == 2
+        assert "'negative electrode' is not in subdomain_mapping" in caplog.text
 
     @staticmethod
     def _tagged_gmsh_mesh():
