@@ -405,82 +405,91 @@ class Interpolant(pybamm.Function):
         self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
     ) -> pybamm.rust.Expr:
         converted_children = self._children_to_rust(graph, rust_symbols)
-        if self.dimension == 1 and self.y.ndim > 2:
+        if self.dimension in (2, 3):
+            return self._nd_to_rust(graph, converted_children)
+        if self.dimension != 1:
+            raise NotImplementedError(
+                f"Rust conversion is not implemented for {self.dimension}D "
+                f"{self.interpolator} interpolation. {self._RUST_FALLBACK_HINT}"
+            )
+        if self.y.ndim > 2:
             raise NotImplementedError(
                 f"Rust conversion of 1D {self.interpolator} interpolation does "
                 f"not support y data with more than two dimensions "
                 f"(y.ndim={self.y.ndim}). {self._RUST_FALLBACK_HINT}"
             )
-        # Vector-valued y (n, m): one interpolant per column, in evaluate()'s order
-        if self.dimension == 1 and self.interpolator == "linear":
-            x_data = self.x[0].tolist()
-            child = converted_children[0]
-            if self.y.ndim == 2:
-                columns = [
-                    self._rust_table(
-                        graph.interpolant_1d_linear,
-                        x_data,
-                        self.y[:, j].tolist(),
-                        child,
-                    )
-                    for j in range(self.y.shape[1])
-                ]
-                return graph.concat(columns)
-            return self._rust_table(
-                graph.interpolant_1d_linear, x_data, self.y.tolist(), child
-            )
-        elif self.dimension == 1 and self.interpolator in ("cubic", "pchip"):
-            from scipy import interpolate
-
-            # The PPoly evaluate() uses; reshape gives scalar y a column axis
-            ppoly = cast(interpolate.PPoly, self.function)
-            breakpoints = ppoly.x.tolist()
-            c = ppoly.c.reshape(ppoly.c.shape[0], ppoly.c.shape[1], -1)
-            nseg = c.shape[1]
-            deg = c.shape[0] - 1
-            if deg > 3:
-                raise pybamm.ModelError(
-                    f"Rust conversion cannot represent interpolant '{self.name}': "
-                    f"its {self.interpolator} spline has degree {deg}, above 3. "
-                    f"{self._RUST_FALLBACK_HINT}"
-                )
-            child = converted_children[0]
-            columns = []
-            for col in range(c.shape[2]):
-                coeffs: list[float] = []
-                for i in range(nseg):
-                    # Horner power basis [c0, c1, c2, c3]; pad degrees < 3 with zeros.
-                    power = [0.0, 0.0, 0.0, 0.0]
-                    for j in range(deg + 1):
-                        power[deg - j] = float(c[j, i, col])
-                    coeffs.extend(power)
-                columns.append(
-                    self._rust_table(
-                        graph.interpolant_1d_cubic, breakpoints, coeffs, child
-                    )
-                )
-            if self.y.ndim == 2:
-                return graph.concat(columns)
-            return columns[0]
-        elif self.dimension in (2, 3):
-            # The constructor rejects ND pchip, so this is linear or cubic.
-            breakpoints = [np.asarray(xi, dtype=float).tolist() for xi in self.x]
-            if self.interpolator == "linear":
-                order, coeffs = self._nd_linear_coeffs()
-            else:
-                order, coeffs = self._nd_cubic_coeffs()
-            return self._rust_table(
-                graph.interpolant_nd,
-                breakpoints,
-                coeffs.tolist(),
-                order,
-                converted_children,
-            )
+        (child,) = converted_children
+        if self.interpolator == "linear":
+            tables = self._linear_tables_to_rust(graph, child)
         else:
-            raise NotImplementedError(
-                f"Rust conversion is not implemented for {self.dimension}D "
-                f"{self.interpolator} interpolation. {self._RUST_FALLBACK_HINT}"
+            tables = self._spline_tables_to_rust(graph, child)
+        # Vector-valued y (n, m): one table per column, in evaluate()'s order
+        return graph.concat(tables) if self.y.ndim == 2 else tables[0]
+
+    def _linear_tables_to_rust(
+        self, graph: pybamm.rust.ExprGraph, child: pybamm.rust.Expr
+    ) -> list[pybamm.rust.Expr]:
+        """Allocate one 1D linear table per column of ``y``."""
+        breakpoints = self.x[0].tolist()
+        values = self.y.reshape(self.y.shape[0], -1)
+        return [
+            self._rust_table(
+                graph.interpolant_1d_linear,
+                breakpoints,
+                values[:, column].tolist(),
+                child,
             )
+            for column in range(values.shape[1])
+        ]
+
+    def _spline_tables_to_rust(
+        self, graph: pybamm.rust.ExprGraph, child: pybamm.rust.Expr
+    ) -> list[pybamm.rust.Expr]:
+        """Allocate one 1D cubic table per column of ``y``, from the piecewise
+        polynomial :meth:`evaluate` uses."""
+        from scipy import interpolate
+
+        polynomial = cast(interpolate.PPoly, self.function)
+        # Indexed (degree - power, segment, column); scalar y gains a column axis
+        coefficients = polynomial.c.reshape(
+            polynomial.c.shape[0], polynomial.c.shape[1], -1
+        )
+        degree = coefficients.shape[0] - 1
+        if degree > 3:
+            raise pybamm.ModelError(
+                f"Rust conversion cannot represent interpolant '{self.name}': "
+                f"its {self.interpolator} spline has degree {degree}, above 3. "
+                f"{self._RUST_FALLBACK_HINT}"
+            )
+        breakpoints = polynomial.x.tolist()
+        tables = []
+        for column in range(coefficients.shape[2]):
+            # Ascending powers [c0, c1, c2, c3] per segment, zero-padded to a cubic
+            powers = np.zeros((coefficients.shape[1], 4))
+            powers[:, : degree + 1] = coefficients[::-1, :, column].T
+            tables.append(
+                self._rust_table(
+                    graph.interpolant_1d_cubic,
+                    breakpoints,
+                    powers.ravel().tolist(),
+                    child,
+                )
+            )
+        return tables
+
+    def _nd_to_rust(
+        self, graph: pybamm.rust.ExprGraph, children: list[pybamm.rust.Expr]
+    ) -> pybamm.rust.Expr:
+        """Allocate one 2D or 3D table over every child."""
+        # The constructor rejects ND pchip, so this is linear or cubic
+        breakpoints = [np.asarray(xi, dtype=float).tolist() for xi in self.x]
+        if self.interpolator == "linear":
+            order, coefficients = self._nd_linear_coeffs()
+        else:
+            order, coefficients = self._nd_cubic_coeffs()
+        return self._rust_table(
+            graph.interpolant_nd, breakpoints, coefficients.tolist(), order, children
+        )
 
     def _rust_table(self, build, *args):
         """Build a Rust interpolant table, raising one Rust refuses as a ModelError."""
