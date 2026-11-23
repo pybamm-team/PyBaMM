@@ -732,8 +732,16 @@ class TestPrebuiltSubMesh:
 
         assert mesh["negative electrode"] is submesh
         assert mesh["negative particle"].npts == 5
-        assert geometry["negative electrode"] == {}
+        assert "negative electrode" not in geometry
+        assert mesh.geometry["negative electrode"] == {}
         assert mesh.base_domains == ["negative particle", "negative electrode"]
+
+    def test_prebuilt_submeshes_keep_submesh_types_order(self):
+        submesh = self._generated_mesh()["negative electrode"]
+        domains = [f"domain {i}" for i in range(8)]
+        mesh = pybamm.Mesh({}, dict.fromkeys(domains, submesh), {})
+        assert mesh.base_domains == domains
+        assert list(mesh.geometry) == domains
 
     def test_prebuilt_submesh_with_empty_geometry_entry(self):
         submesh = self._generated_mesh()["negative electrode"]
@@ -798,7 +806,7 @@ class TestPrebuiltSubMesh:
         )
         solution = simulation.solve([0, 60])
 
-        assert not simulation.geometry.get("negative electrode")
+        assert "negative electrode" not in simulation.geometry
         np.testing.assert_allclose(
             solution["Voltage [V]"](t=[0, 30, 60]),
             expected["Voltage [V]"](t=[0, 30, 60]),

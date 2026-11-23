@@ -65,28 +65,37 @@ class Mesh(dict):
     def __init__(self, geometry, submesh_types, var_pts):
         super().__init__()
 
-        # A prebuilt submesh already has its extent, so it takes an empty geometry
-        prebuilt_domains = {
-            domain
-            for domain, submesh_type in submesh_types.items()
-            if isinstance(submesh_type, pybamm.SubMesh)
-        }
-        for domain in prebuilt_domains:
-            if not isinstance(submesh_types[domain], pybamm.UnstructuredSubMesh):
+        # A prebuilt submesh already has its extent, so it takes no geometry
+        prebuilt_submeshes = {}
+        for domain, submesh in submesh_types.items():
+            if not isinstance(submesh, pybamm.SubMesh):
+                continue
+            if not isinstance(submesh, pybamm.UnstructuredSubMesh):
                 raise pybamm.GeometryError(
-                    f"Domain '{domain}' has a prebuilt "
-                    f"{type(submesh_types[domain]).__name__}, but only a "
-                    "pybamm.UnstructuredSubMesh can be passed prebuilt. Pass the "
-                    "submesh class or a pybamm.MeshGenerator instead."
+                    f"Domain '{domain}' has a prebuilt {type(submesh).__name__}, "
+                    "but only a pybamm.UnstructuredSubMesh can be passed prebuilt. "
+                    "Pass the submesh class or a pybamm.MeshGenerator instead."
                 )
-            if geometry.setdefault(domain, {}):
+            if geometry.get(domain):
                 raise pybamm.GeometryError(
                     f"Domain '{domain}' has a prebuilt submesh, so it cannot also "
                     "have a geometry. Remove its entry from the geometry."
                 )
+            prebuilt_submeshes[domain] = submesh
 
-        # Save geometry
-        self.geometry = geometry
+        # Save geometry; prebuilt domains get an empty entry because processed
+        # variables read each domain's coordinate names from it
+        if prebuilt_submeshes:
+            self.geometry = pybamm.Geometry(
+                {**geometry, **{domain: {} for domain in prebuilt_submeshes}}
+            )
+            geometry = {
+                domain: domain_geometry
+                for domain, domain_geometry in geometry.items()
+                if domain not in prebuilt_submeshes
+            }
+        else:
+            self.geometry = geometry
 
         # Preprocess var_pts
         var_pts_input = var_pts
@@ -121,9 +130,6 @@ class Mesh(dict):
         # create submesh_pts from var_pts
         submesh_pts = {}
         for domain in geometry:
-            if domain in prebuilt_domains:
-                submesh_pts[domain] = {}
-                continue
             # create mesh generator if just class is passed (will throw an error
             # later if the mesh needed parameters)
             if not isinstance(
@@ -157,6 +163,8 @@ class Mesh(dict):
                             )
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
+        for domain in prebuilt_submeshes:
+            submesh_pts[domain] = {}
         self.submesh_pts = submesh_pts
 
         # evaluate any expressions in geometry
@@ -208,12 +216,10 @@ class Mesh(dict):
         # Create submeshes
         self.base_domains = []
         for domain in geometry:
-            if domain in prebuilt_domains:
-                self[domain] = submesh_types[domain]
-            else:
-                self[domain] = submesh_types[domain](
-                    geometry[domain], submesh_pts[domain]
-                )
+            self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
+            self.base_domains.append(domain)
+        for domain, submesh in prebuilt_submeshes.items():
+            self[domain] = submesh
             self.base_domains.append(domain)
 
         # compute interface data for unstructured meshes
