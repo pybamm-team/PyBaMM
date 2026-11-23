@@ -1013,13 +1013,17 @@ class Solution(SolutionBase):
     def t_event_sensitivities(self) -> dict | None:
         """Sensitivities of the event time to the inputs.
 
-        For a solve terminated by an event ``g(t, y, p, s) = 0``, the derivative
-        ``dt_event/dp = -(g_y S + g_p + g_s ds/dp) / (g_y y' + g_t)``, where ``S``
-        holds the state sensitivities and ``y'`` the state time derivatives at the
-        event, and ``s`` is the start time of the step. A dict with a ``(1,)``
-        array per input and a ``(1, n_p)`` row under ``"all"``, or None if the
-        solve did not end on an event or computed no sensitivities. Like
-        :attr:`sensitivities`, a join keeps only the inputs every segment shares.
+        ``dt_event/dp = -(g_y S + g_p + g_s ds/dp) / (g_y y' + g_t)`` at the event
+        ``g(t, y, p, s) = 0`` that ended the solve, with state sensitivities ``S``,
+        state time derivatives ``y'`` and step start time ``s``. A join keeps only
+        the inputs every segment shares. An entry is NaN where undefined, as at a
+        tangent event.
+
+        Returns
+        -------
+        dict or None
+            A read-only ``(1,)`` array per input and a ``(1, n_p)`` row under
+            ``"all"``, or None without an event or sensitivities.
 
         Raises
         ------
@@ -1038,6 +1042,7 @@ class Solution(SolutionBase):
         # The event's segment may have more inputs than the join keeps
         shared = {name: sensitivities[name] for name in names}
         shared["all"] = np.column_stack(list(shared.values()))
+        shared["all"].flags.writeable = False
         return shared
 
     def _segment_time_sensitivities(self) -> list[dict | None]:
@@ -1211,7 +1216,8 @@ class Solution(SolutionBase):
         a model with the solution). When the final time moves with the inputs (an
         event, see :attr:`t_event_sensitivities`), its sensitivities are total
         derivatives along that moving time, unlike the rows of the full solution,
-        which are partial derivatives at fixed time.
+        which are partial derivatives at fixed time. For an input whose event-time
+        sensitivity is undefined, they are partial derivatives too.
         """
         if self._last_state is None:
             self._last_state = self._build_last_state()

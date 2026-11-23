@@ -156,14 +156,16 @@ def _time_sensitivities(dt_dp: np.ndarray, sensitivity_names: list[str]) -> dict
     Returns
     -------
     dict
-        A ``(1,)`` array per name, and all of them as a ``(1, n_p)`` row under
-        ``"all"``.
+        A read-only ``(1,)`` array per name, and all of them as a ``(1, n_p)``
+        row under ``"all"``.
     """
     sensitivities = {
         name: np.array([value])
         for name, value in zip(sensitivity_names, dt_dp, strict=True)
     }
-    sensitivities["all"] = np.asarray(dt_dp, dtype=np.float64).reshape(1, -1)
+    sensitivities["all"] = np.array(dt_dp, dtype=np.float64).reshape(1, -1)
+    for array in sensitivities.values():
+        array.flags.writeable = False
     return sensitivities
 
 
@@ -1352,7 +1354,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t = sol.t
         t_eval = np.array(t_eval)
         # An event reading yp that is violated as IDA restarts at a breakpoint
-        # stops the solve at that fixed time, without crossing zero
+        # stops the solve at that breakpoint, without crossing zero
         stopped_at_breakpoint = termination == "event" and bool(
             np.any(t_eval[1:-1] == t[-1])
         )
@@ -1557,7 +1559,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return y
 
     def _prepare_start_time_shift(
-        self, old_solution, model, time, inputs_dict, end_time_fixed, segmented
+        self,
+        old_solution,
+        model,
+        time,
+        inputs_dict,
+        end_time_fixed,
+        segmented,
+        step_times,
     ):
         """Account for a step start time that moves with the differentiated inputs.
 
@@ -1584,6 +1593,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         segmented : bool
             Whether a discontinuity whose time depends on an input splits the step
             into more than one integration.
+        step_times : numpy.ndarray
+            The step's own time points, which move with its start.
 
         Returns
         -------
@@ -1642,7 +1653,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 - ydot * dt
                 for column, dt in zip(initial_sensitivities, dt_start, strict=True)
             )
-        return _StartTimeShift(dt_start, end_time_fixed, shift_rows)
+        return _StartTimeShift(dt_start, end_time_fixed, shift_rows, step_times)
 
     def _shift_rows_to_fixed_time(self, yS_out, t, y_out, inputs_dict, start_shift):
         """State sensitivity rows at fixed time from rows at fixed time since start.
@@ -1707,7 +1718,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             How the start time moves, or None if it does not.
         stopped_at_breakpoint : bool, optional
             Whether the terminating event was violated as the solver restarted at
-            a breakpoint, so the solve ended at that fixed time.
+            a breakpoint, so the solve ended at that breakpoint's time.
 
         Returns
         -------
@@ -1731,7 +1742,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ydot_end = None
         if solution.termination == "event" and solution.closest_event_idx is not None:
             if stopped_at_breakpoint:
-                dt_end = np.zeros(len(names))
+                # The step's own times move with its start; constant ones do not
+                moves = start_shift is not None and np.any(
+                    start_shift.step_times == t_end
+                )
+                dt_end = dt_start if moves else np.zeros(len(names))
             else:
                 ydot_end = self._state_time_derivative(t_end, y_end, inputs)
                 dt_end = self._event_time_sensitivities(
@@ -1744,6 +1759,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     solution.closest_event_idx,
                 )
             solution._t_event_sensitivities = _time_sensitivities(dt_end, names)
+            # Where undefined, the rest treats the event time as fixed
+            dt_end = np.where(np.isfinite(dt_end), dt_end, 0.0)
         elif solution.termination == "final time" and not (
             start_shift is None
             or start_shift.end_time_fixed
@@ -1804,8 +1821,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Returns
         -------
         numpy.ndarray
-            ``dt_e/dp``, one entry per sensitivity name; NaN if the event is
-            tangent to the trajectory.
+            ``dt_e/dp``, one entry per sensitivity name; not finite where it is
+            undefined, and NaN for all if the event is tangent to the trajectory.
         """
         dg_dt, dg_dy, dg_dp, dg_dstart = (
             np.asarray(value)
@@ -1817,11 +1834,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not np.isfinite(rate) or abs(rate) <= np.sqrt(np.finfo(float).eps) * scale:
             _warn(
                 "The terminating event is tangent to the trajectory, so the "
-                "sensitivity of its time is undefined and set to NaN."
+                "sensitivity of its time is undefined and set to NaN. The last "
+                "state, and a step after it, treat the event time as fixed."
             )
             return np.full(state_sensitivities.shape[1], np.nan)
         explicit = dg_dp[event_index] + dg_dstart[event_index, 0] * start_sensitivities
-        return -(dg_dy @ state_sensitivities + explicit) / rate
+        dt_event = -(dg_dy @ state_sensitivities + explicit) / rate
+        if not np.all(np.isfinite(dt_event)):
+            undefined = [
+                name
+                for name, value in zip(
+                    self._setup["sensitivity_names"], dt_event, strict=True
+                )
+                if not np.isfinite(value)
+            ]
+            _warn(
+                f"The sensitivity of the terminating event's time to {undefined} is "
+                "not finite. The last state, and a step after it, treat the event "
+                "time as fixed for these inputs."
+            )
+        return dt_event
 
     def _set_consistent_initialization(self, model, time, inputs_list):
         """

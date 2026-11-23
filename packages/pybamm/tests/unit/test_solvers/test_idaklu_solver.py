@@ -20,6 +20,7 @@ from scipy.interpolate import CubicHermiteSpline
 from scipy.sparse import csc_matrix
 
 import pybamm
+import pybamm.solvers.idaklu_solver as idaklu_solver_module
 from tests import (
     get_broken_input_model,
     get_discretisation_for_testing,
@@ -3428,7 +3429,9 @@ class TestIDAKLUEventTimeSensitivities:
         )
         joined = solution + step
         assert joined.t_event_sensitivities is None
-        assert joined._t_end_sensitivities == step._t_end_sensitivities
+        assert joined._t_end_sensitivities.keys() == step._t_end_sensitivities.keys()
+        for name, value in step._t_end_sensitivities.items():
+            np.testing.assert_array_equal(joined._t_end_sensitivities[name], value)
         assert len(joined._segment_time_sensitivities()) == len(joined.all_ts)
 
         folded = pybamm.Solution.from_sub_solutions([solution, step])
@@ -3513,6 +3516,129 @@ class TestIDAKLUEventTimeSensitivities:
         )
         np.testing.assert_allclose(
             solution.last_state["y"].sensitivities["k"], [dy_event], rtol=1e-6
+        )
+
+    def test_event_time_sensitivities_are_read_only(self):
+        solution, _, _ = self._solve()
+        with pytest.raises(ValueError, match="read-only"):
+            solution.t_event_sensitivities["all"][0, 0] = 0.0
+
+    def test_a_tangent_event_leaves_the_last_state_and_next_step_finite(
+        self, monkeypatch
+    ):
+        # An event flat along the trajectory, as at a tangent, has no time derivative
+        build = idaklu_solver_module._time_sensitivity_functions
+
+        def flat_events(*args):
+            functions = build(*args)
+            events = functions.get("events")
+            if events is not None:
+                functions["events"] = lambda *values: [
+                    np.zeros(np.shape(value)) for value in events(*values)
+                ]
+            return functions
+
+        monkeypatch.setattr(
+            idaklu_solver_module, "_time_sensitivity_functions", flat_events
+        )
+        with pytest.warns(pybamm.SolverWarning, match="tangent to the trajectory"):
+            solution, inputs, names = self._solve()
+        assert np.isnan(solution.t_event_sensitivities["all"]).all()
+        assert np.isfinite(solution.last_state.sensitivities["all"]).all()
+
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        step = solver.step(
+            solution,
+            _threshold_model(events=False),
+            self.duration,
+            inputs=dict(inputs, c=2.0),
+            calculate_sensitivities=names,
+            save=False,
+        )
+        assert np.isfinite(step.sensitivities["all"]).all()
+
+    def test_an_undefined_input_leaves_the_others_moving(self, monkeypatch):
+        reference, _, names = self._solve()
+        # The event's derivative with respect to the first input is unbounded
+        build = idaklu_solver_module._time_sensitivity_functions
+
+        def unbounded_first_input(*args):
+            functions = build(*args)
+            events = functions["events"]
+
+            def derivatives(*values):
+                dg_dt, dg_dy, dg_dp, dg_dstart = (
+                    np.array(value) for value in events(*values)
+                )
+                dg_dp[:, 0] = np.inf
+                return dg_dt, dg_dy, dg_dp, dg_dstart
+
+            functions["events"] = derivatives
+            return functions
+
+        monkeypatch.setattr(
+            idaklu_solver_module, "_time_sensitivity_functions", unbounded_first_input
+        )
+        with pytest.warns(pybamm.SolverWarning, match=rf"to \['{names[0]}'\]"):
+            solution, _, _ = self._solve()
+
+        assert not np.isfinite(solution.t_event_sensitivities[names[0]]).any()
+        np.testing.assert_allclose(
+            solution.t_event_sensitivities[names[1]],
+            reference.t_event_sensitivities[names[1]],
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            solution.last_state["y"].sensitivities[names[1]],
+            reference.last_state["y"].sensitivities[names[1]],
+            rtol=1e-12,
+        )
+        assert np.isfinite(solution.last_state.sensitivities["all"]).all()
+
+    def test_stop_at_a_step_time_moves_with_the_step_start(self):
+        # The first solve ends at t = 0.5 / k, and the step after it stops one
+        # second later, at its own time where dI/dt jumps from 0 to 5
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        current = pybamm.Variable("I")
+        k = pybamm.InputParameter("k")
+        stage = pybamm.InputParameter("stage")
+        cycle = pybamm.Interpolant(
+            np.array([0.0, 1.0, 2.0]),
+            np.array([0.0, 0.0, 5.0]),
+            pybamm.t - pybamm.InputParameter(pybamm.Simulation._START_TIME_INPUT),
+        )
+        model.rhs = {y: -k}
+        model.algebraic = {current: current - cycle}
+        model.initial_conditions = {y: 1, current: 0}
+        model.variables = {"y": y, "I": current}
+        model.events = [
+            pybamm.Event("y > 0.5 [experiment]", y - 0.5 + 10 * stage),
+            pybamm.Event("dI/dt < 1", 1 - current.diff(pybamm.t) + 10 * (1 - stage)),
+        ]
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        rate = 2.0
+        inputs = {"k": rate, "stage": 0, pybamm.Simulation._START_TIME_INPUT: 0.0}
+        first = solver.solve(
+            model, [0, 5], inputs=inputs, calculate_sensitivities=["k"]
+        )
+
+        inputs.update(stage=1, **{pybamm.Simulation._START_TIME_INPUT: first.t[-1]})
+        step = solver.step(
+            first,
+            model,
+            2.0,
+            t_eval=np.array([0.0, 1.0, 2.0]),
+            inputs=inputs,
+            calculate_sensitivities=["k"],
+            save=False,
+        )
+
+        assert step.termination == "event: dI/dt < 1"
+        assert step.t[-1] == pytest.approx(0.5 / rate + 1)
+        np.testing.assert_allclose(
+            step.t_event_sensitivities["k"], [-0.5 / rate**2], rtol=1e-6
         )
 
     @pytest.mark.parametrize("output_variables", [None, ["I"]])

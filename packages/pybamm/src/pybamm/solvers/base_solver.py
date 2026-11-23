@@ -40,6 +40,8 @@ class _StartTimeShift:
         Whether the solver's rows still need ``-y'(t) dt_start/dp`` to become
         sensitivities at fixed time, because the step's equations read its start
         time and so its initial sensitivities were left unshifted.
+    step_times : numpy.ndarray
+        The step's own time points.
     first_segment : bool
         Whether the integration starts at the step's start time, rather than at a
         discontinuity within the step whose time depends on an input.
@@ -51,15 +53,12 @@ class _StartTimeShift:
     sensitivities: npt.NDArray[np.float64]
     end_time_fixed: bool
     shift_rows: bool
+    step_times: npt.NDArray[np.float64]
     first_segment: bool = True
     last_segment: bool = True
 
     def for_segment(self, first: bool, last: bool) -> _StartTimeShift:
         """The shift for one integration of a step split at discontinuities.
-
-        :class:`pybamm.IDAKLUSolver` only splits a step at discontinuities whose
-        time depends on an input, and stops at those at constant times within one
-        integration.
 
         Parameters
         ----------
@@ -1706,11 +1705,11 @@ class BaseSolver:
         inputs: dict,
         end_time_fixed: bool,
         segmented: bool,
+        step_times: npt.NDArray[np.float64],
     ) -> _StartTimeShift | None:
         """Account for a step start time that moves with the inputs.
 
-        Solvers that track event time sensitivities override this; the base
-        solver treats every start time as fixed.
+        This solver treats every start time as fixed.
 
         Parameters
         ----------
@@ -1727,6 +1726,8 @@ class BaseSolver:
         segmented : bool
             Whether a discontinuity whose time depends on an input splits the step
             into more than one integration.
+        step_times : numpy.ndarray
+            The step's own time points, which move with its start.
 
         Returns
         -------
@@ -2071,6 +2072,8 @@ class BaseSolver:
             t_eval[0] = t_start_shifted
             if t_interp.size > 0 and t_interp[0] == t_start:
                 t_interp[0] = t_start_shifted
+        # Before discontinuities at constant times, which do not move, are added
+        step_times = t_eval
 
         # Set timer
         timer = pybamm.Timer()
@@ -2214,6 +2217,7 @@ class BaseSolver:
                 end_time_fixed,
                 # IDAKLU only splits at discontinuities whose time depends on an input
                 segmented=len(start_indices) > 1,
+                step_times=step_times,
             )
 
         set_up_time = timer.time()
