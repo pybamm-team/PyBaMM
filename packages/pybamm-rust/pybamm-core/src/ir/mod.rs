@@ -1169,15 +1169,16 @@ pub enum GraphError {
     Invalid(String),
 }
 
-/// Check a caller-built graph at `root` can be lowered, in one walk of its topological order.
+/// Check caller-built graphs at `roots` can be lowered, in one walk of their combined
+/// topological order, so a subgraph the roots share is checked once.
 ///
 /// The earliest unsupported node wins over any invalid one; otherwise the earliest invalid.
 /// A node kind only the rewrite passes build is invalid here: the reads a forged tangent
 /// load makes are not part of the extents callers check their buffers against.
-pub fn validate(arena: &Arena, root: NodeId) -> Result<(), GraphError> {
+pub fn validate(arena: &Arena, roots: impl IntoIterator<Item = NodeId>) -> Result<(), GraphError> {
     let mut widths = NodeWidths::new(arena.len());
     let mut invalid = None;
-    for node_id in arena.topological_order(root) {
+    for node_id in arena.topological_order_of(roots) {
         let node = &arena[node_id];
         if let Node::MatMul(a, _) = node
             && !matches!(&arena[*a], Node::SparseMatrix(_) | Node::Array(_))
@@ -1923,7 +1924,7 @@ mod tests {
 
     /// The message [`validate`] rejects `root` with as invalid.
     fn invalid_message(arena: &Arena, root: NodeId) -> String {
-        match validate(arena, root) {
+        match validate(arena, [root]) {
             Err(GraphError::Invalid(message)) => message,
             other => panic!("expected an invalid graph, got {other:?}"),
         }
@@ -1939,12 +1940,12 @@ mod tests {
         })));
         let mm = arena.alloc(Node::MatMul(s, v));
         assert_eq!(
-            validate(&arena, mm),
+            validate(&arena, [mm]),
             Err(GraphError::Unsupported(
                 "MatMul left operand must be a constant matrix, got Scalar(2.0)".to_string()
             ))
         );
-        assert_eq!(validate(&arena, v), Ok(()));
+        assert_eq!(validate(&arena, [v]), Ok(()));
     }
 
     #[test]
@@ -1957,7 +1958,7 @@ mod tests {
         let mm = arena.alloc(Node::MatMul(s, v));
         let root = arena.alloc(Node::Concat(vec![inverted, mm]));
         assert!(matches!(
-            validate(&arena, root),
+            validate(&arena, [root]),
             Err(GraphError::Unsupported(message)) if message.contains("constant matrix")
         ));
 
@@ -2091,7 +2092,7 @@ mod tests {
             start: 0,
             end: (1 << 31) + 1,
         });
-        assert_eq!(validate(&arena, half), Ok(()));
+        assert_eq!(validate(&arena, [half]), Ok(()));
         let doubled = arena.alloc(Node::Concat(vec![half, half]));
         assert!(invalid_message(&arena, doubled).contains("has width 4294967298"));
     }

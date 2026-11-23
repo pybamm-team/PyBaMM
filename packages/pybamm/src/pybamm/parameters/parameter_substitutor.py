@@ -8,6 +8,7 @@ import numpy as np
 
 import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.util import _is_flux_boundary_condition
 
 if TYPE_CHECKING:
     from pybamm.type_definitions import Numeric
@@ -124,7 +125,7 @@ class ParameterSubstitutor:
                 return self._process_function_parameter(symbol)
             return self._process_callable_function_parameter(symbol, new_leaves)
 
-        if isinstance(symbol, pybamm.Variable):
+        if isinstance(symbol, pybamm.VariableBase):
             n_children = len(symbol.children)
             scale, reference, *bounds = new_leaves[n_children:]
             if isinstance(reference, pybamm.Vector):
@@ -265,6 +266,9 @@ class ParameterSubstitutor:
             else:
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
             function_out = function.diff(new_diff_variable)
+            # A constant derivative keeps the function's shape, as above
+            if function_out.evaluates_to_number():
+                function_out = function_out * pybamm.ones_like(*new_children)
 
         # Process again just to be sure
         return self.process_symbol(function_out)
@@ -337,14 +341,12 @@ class ParameterSubstitutor:
         placeholders = {pybamm.Parameter(arg): child for arg, child in inputs.items()}
 
         # Rebuild the expression with the inputs' domains, leaves first, so the
-        # stored template is never modified.
+        # stored template is never modified. rebuild re-derives the other domains.
         def rebind_domains(node, new_leaves):
             new_node = pybamm.rebuild(node, new_leaves, simplify=False)
             if node in placeholders:
                 return new_node.with_domains(placeholders[node])
-            return new_node.with_domains(
-                new_node._combine_children_domains(new_node.children)
-            )
+            return new_node
 
         expression = pybamm.tree_map(rebind_domains, expression)
 
@@ -392,6 +394,9 @@ class ParameterSubstitutor:
             # return differentiated function
             new_diff_variable = self.process_symbol(symbol.diff_variable)
             function_out = function.diff(new_diff_variable)
+            # A constant derivative keeps the function's shape, as above
+            if function_out.evaluates_to_number():
+                function_out = function_out * pybamm.ones_like(*new_children)
 
         return function_out
 
@@ -577,6 +582,9 @@ class ParameterSubstitutor:
                 pybamm.logger.verbose(
                     f"Processing parameters for {variable!r} ({side} bc)"
                 )
+                if _is_flux_boundary_condition(typ):
+                    # Flux boundary conditions are specified as a tuple ("Flux", symbol)
+                    typ = (typ[0], self.process_symbol(typ[1]))
                 new_boundary_conditions[processed_variable][side] = (
                     self.process_symbol(bc),
                     typ,

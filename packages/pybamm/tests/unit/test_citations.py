@@ -6,11 +6,25 @@ import warnings
 
 import pytest
 from pybtex.database import Entry, parse_file
+from pybtex.exceptions import PybtexError
 
 import pybamm
 
 
 class TestCitations:
+    @pytest.fixture
+    def citation_database(self, monkeypatch):
+        citations = pybamm.citations
+        # Resetting registrations leaves the bibliography and its key index in place.
+        monkeypatch.setattr(
+            citations, "_all_citations", citations._all_citations.copy()
+        )
+        monkeypatch.setattr(
+            citations, "_citation_keys", citations._citation_keys.copy()
+        )
+        yield
+        citations._reset()
+
     def test_citations(self):
         citations = pybamm.citations
         # other tests on the same worker may have registered papers
@@ -110,7 +124,7 @@ class TestCitations:
         assert citations._all_citations == entries
         assert citations._citation_keys == set(entries)
 
-    def test_without_pybtex(self, monkeypatch):
+    def test_construct_without_pybtex(self, monkeypatch):
         find_spec = importlib.util.find_spec
         monkeypatch.setattr(
             importlib.util,
@@ -131,6 +145,9 @@ class TestCitations:
     def test_input_validation(self):
         """Test type validation of ``_add_citation``"""
         pybamm.citations.register(1)
+
+        with pytest.raises(TypeError, match="reason"):
+            pybamm.citations.register("Marquis2019", reason=123)
 
         with pytest.raises(TypeError):
             pybamm.citations._parse_citation(1)
@@ -607,3 +624,193 @@ class TestCitations:
         pybamm.JaxSolver()
         assert "jax2018" in citations._papers_to_cite
         assert "jax2018" in citations._citation_tags
+
+    def test_default_reasons(self):
+        citations = pybamm.citations
+        citations._reset()
+        assert citations._citation_tags == {
+            "Sulzer2021": {"PyBaMM"},
+            "Harris2020": {"NumPy"},
+        }
+
+    @pytest.mark.parametrize("as_string", [False, True])
+    def test_external_database_does_not_cite(
+        self, citation_database, tmp_path, as_string
+    ):
+        citations = pybamm.citations
+        citations._reset()
+        path = tmp_path / "downstream.bib"
+        path.write_text("@misc{Downstream2026, title={Downstream example}}")
+        registered = citations._papers_to_cite.copy()
+
+        citations.read_citations(str(path) if as_string else path)
+
+        assert "Downstream2026" in citations._all_citations
+        assert citations._papers_to_cite == registered
+
+    def test_external_database_missing_file(self, tmp_path):
+        pybamm.citations._reset()
+        with pytest.raises(PybtexError):
+            pybamm.citations.read_citations(tmp_path / "missing.bib")
+
+    def test_reload_external_database(self, citation_database, tmp_path):
+        citations = pybamm.citations
+        citations._reset()
+        path = tmp_path / "downstream.bib"
+        path.write_text("@misc{Downstream2026, title={Downstream example}}")
+
+        citations.read_citations(path)
+        citations.read_citations(path)
+        citations.read_citations()
+
+        assert "Downstream2026" in citations._all_citations
+        assert "Marquis2019" in citations._all_citations
+
+    def test_external_database_replacement_warning(self, citation_database, tmp_path):
+        citations = pybamm.citations
+        citations._reset()
+        path = tmp_path / "downstream.bib"
+        path.write_text("@misc{Downstream2026, title={Original}}")
+        citations.read_citations(path)
+        path.write_text("@misc{Downstream2026, title={Replacement}}")
+
+        with pytest.warns(UserWarning, match="Replacing citation for Downstream2026"):
+            citations.read_citations(path)
+
+        assert "Replacement" in citations._all_citations["Downstream2026"]
+
+    def test_register_loaded_external_citation(
+        self, citation_database, tmp_path, capsys
+    ):
+        citations = pybamm.citations
+        citations._reset()
+        path = tmp_path / "downstream.bib"
+        path.write_text("@misc{Downstream2026, title={Downstream example}}")
+        citations.read_citations(path)
+
+        citations.register("Downstream2026")
+        citations.print(output_format="bibtex")
+
+        assert "Downstream2026" in citations._papers_to_cite
+        assert "Downstream2026" in capsys.readouterr().out
+
+    def test_reasons(self):
+        citations = pybamm.citations
+        citations._reset()
+        citations.register("Marquis2019", reason="SPM model")
+        citations.register("Marquis2019", reason="SPM model")
+        citations.register("Marquis2019", reason="Parameter values")
+
+        def register_without_class_context():
+            citations.register("Marquis2019")
+            citations.register("Doyle1993")
+
+        register_without_class_context()
+
+        assert citations._citation_tags["Marquis2019"] == {
+            "SPM model",
+            "Parameter values",
+        }
+        assert "Doyle1993" not in citations._citation_tags
+
+    def test_deferred_reasons(self, citation_database):
+        citations = pybamm.citations
+        citations._reset()
+        raw = "@misc{One2026, title={One}}\n@misc{Two2026, title={Two}}"
+        citations.register(raw, reason="Downstream model")
+        citations.register(raw, reason="Other use")
+
+        citations.print(output_format="bibtex")
+
+        for key in ["One2026", "Two2026"]:
+            assert key in citations._papers_to_cite
+            assert citations._citation_tags[key] == {
+                "Downstream model",
+                "Other use",
+            }
+        assert not citations._unknown_citations
+
+    def test_registration_before_loading(self, citation_database, tmp_path):
+        citations = pybamm.citations
+        citations._reset()
+        citations.register("Downstream2026", reason="Before loading")
+        path = tmp_path / "downstream.bib"
+        path.write_text("@misc{Downstream2026, title={Example}}")
+
+        citations.read_citations(path)
+
+        assert "Downstream2026" in citations._papers_to_cite
+        assert "Downstream2026" not in citations._unknown_citations
+        assert citations._citation_tags["Downstream2026"] == {"Before loading"}
+
+    @pytest.mark.parametrize("key_first", [True, False])
+    def test_key_and_raw_bibtex_registration_order(self, citation_database, key_first):
+        citations = pybamm.citations
+        citations._reset()
+        key = "Downstream2026"
+        raw = "@misc{Downstream2026, title={Example}}"
+        registrations = (
+            ((key, "Key registration"), (raw, "Raw registration"))
+            if key_first
+            else ((raw, "Raw registration"), (key, "Key registration"))
+        )
+        for citation, reason in registrations:
+            citations.register(citation, reason=reason)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            citations.print(output_format="bibtex")
+
+        assert not caught
+        assert key in citations._papers_to_cite
+        assert key not in citations._unknown_citations
+        assert citations._citation_tags[key] == {
+            "Key registration",
+            "Raw registration",
+        }
+        assert raw not in citations._citation_tags
+
+    @pytest.mark.parametrize("to_file", [False, True])
+    def test_verbose_text_output(self, tmp_path, capsys, to_file):
+        citations = pybamm.citations
+        citations._reset()
+        citations.register("Marquis2019", reason="SPM model")
+        citations.register("Marquis2019", reason="Parameter values")
+        citations.register("Doyle1993", reason="Uncited model")
+        citations._papers_to_cite.remove("Doyle1993")
+        filename = tmp_path / "citations.txt" if to_file else None
+
+        pybamm.print_citations(filename, verbose=True)
+
+        output = filename.read_text() if to_file else capsys.readouterr().out
+        assert "Marquis2019: Parameter values; SPM model" in output
+        assert "Doyle1993: Uncited model" not in output
+        pybamm.print_citations()
+        assert "Citations registered" not in capsys.readouterr().out
+
+    def test_verbose_bibtex_preserves_existing_note(self, citation_database, tmp_path):
+        citations = pybamm.citations
+        citations._reset()
+        raw = "@misc{Example2026, title={Example}, note={Original {note}}}"
+        citations.register(raw, reason="SPM model")
+        filename = tmp_path / "citations.bib"
+
+        pybamm.print_citations(filename, "bibtex")
+        original = filename.read_text()
+        pybamm.print_citations(filename, "bibtex", verbose=True)
+
+        assert filename.read_text() == original
+        assert "Original {note}" in original
+
+    def test_without_pybtex(self, monkeypatch, tmp_path, caplog):
+        citations = pybamm.citations
+        citations._reset()
+        monkeypatch.setattr(citations, "_module_import_error", True)
+
+        citations.read_citations(tmp_path / "not-read.bib")
+        citations.register("Marquis2019", reason="Model")
+        citations.register("@misc{Example2026, title={Example}}", reason="Manual")
+        citations.print(tmp_path / "not-written.bib", "bibtex", verbose=True)
+
+        assert "Could not print citations" in caplog.text
+        assert not (tmp_path / "not-written.bib").exists()
