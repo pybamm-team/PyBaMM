@@ -528,6 +528,13 @@ class SpatialOperator(UnaryOperator):
     # Names of __init__ args (besides the child) to serialise; subclasses set this.
     _json_extra_fields: tuple[str, ...] = ()
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Commutes with d/dt; overridden if not linear in the child's values alone
+        if variable == pybamm.t:
+            return self._unary_new_copy(self.child.diff(variable))
+        return super()._diff(variable)
+
     def to_json(self):
         json_dict = super().to_json()
         for field in self._json_extra_fields:
@@ -559,6 +566,11 @@ class Gradient(SpatialOperator):
                 f"Cannot take gradient of '{child}' since it evaluates on edges"
             )
         super().__init__("grad", child)
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Uses the child's boundary conditions, which its time derivative lacks
+        raise NotImplementedError
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -595,9 +607,10 @@ class Divergence(SpatialOperator):
     For tensor fields (rank-2 tensors), returns a vector field.
     """
 
-    __slots__ = ()
+    __slots__ = ("no_simplification",)
+    _json_extra_fields = ("no_simplification",)
 
-    def __init__(self, child):
+    def __init__(self, child, no_simplification=False):
         if child._domains["primary"] == []:
             raise pybamm.DomainError(
                 f"Cannot take divergence of '{child}' since its domain is empty. "
@@ -613,6 +626,23 @@ class Divergence(SpatialOperator):
                 "divergence."
             )
         super().__init__("div", child)
+        self.no_simplification = no_simplification
+
+    @classmethod
+    def _from_json(cls, snippet):
+        """Instantiate from JSON, defaulting the simplification flag for old data."""
+        return cls(
+            snippet["children"][0],
+            no_simplification=snippet.get("no_simplification", False),
+        )
+
+    def __setstate__(self, state):
+        """
+        Set default value for no_simplification if not present in state.
+        This is for backwards compatibility with old pickled objects.
+        """
+        state.setdefault("no_simplification", False)
+        super().__setstate__(state)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -625,10 +655,10 @@ class Divergence(SpatialOperator):
         Uses the convenience function :meth:`div` to cover scenarios where divergence is
         0 or interacts with other functions.
         """
-        if perform_simplifications:
+        if perform_simplifications and not self.no_simplification:
             return div(child)
         else:
-            return Divergence(child)
+            return Divergence(child, no_simplification=self.no_simplification)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -649,6 +679,11 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Uses the child's boundary conditions, which its time derivative lacks
+        raise NotImplementedError
+
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
@@ -667,6 +702,11 @@ class GradientSquared(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad squared", child)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Not linear in the child, unlike the other spatial operators
+        raise NotImplementedError
+
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
@@ -683,6 +723,10 @@ class Mass(SpatialOperator):
     def __init__(self, child):
         super().__init__("mass", child)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
+
     def _evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self._domains, typ="matrix")
 
@@ -698,6 +742,10 @@ class BoundaryMass(SpatialOperator):
 
     def __init__(self, child):
         super().__init__("boundary mass", child)
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
 
     def _evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self._domains, typ="matrix")
@@ -944,6 +992,10 @@ class DefiniteIntegralVector(SpatialOperator):
         self.vector_type = vector_type
         # integrating removes the domain
         super().__init__(name, child, domains=_EMPTY_DOMAINS)
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -1256,6 +1308,10 @@ class BoundaryMeshSize(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary mesh size", child, side)
 
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        return pybamm.Scalar(0)
+
 
 class ExplicitTimeIntegral(UnaryOperator):
     __slots__ = ("initial_condition",)
@@ -1388,6 +1444,11 @@ class UpwindDownwind(SpatialOperator):
             raise TypeError(
                 f"Cannot upwind '{child}' since it does not " + "evaluate on nodes."
             )
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Uses the child's boundary conditions, which its time derivative lacks
+        raise NotImplementedError
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -1643,7 +1704,7 @@ def grad(symbol):
         return Gradient(symbol)
 
 
-def div(symbol):
+def div(symbol, no_simplification=False):
     """
     convenience function for creating a :class:`Divergence`
 
@@ -1666,16 +1727,17 @@ def div(symbol):
         else:
             new_child = pybamm.PrimaryBroadcast(0, symbol.child._domains["primary"])
         return pybamm.PrimaryBroadcast(new_child, symbol._domains["primary"])
-    # Divergence commutes with Negate operator
-    if isinstance(symbol, pybamm.Negate):
-        return -div(symbol.orphans[0])
-    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
-        left, right = symbol.orphans
-        if isinstance(left, pybamm.Negate):
-            return -div(symbol._binary_new_copy(left.orphans[0], right))
+    if not no_simplification:
+        # Divergence commutes with Negate operator
+        if isinstance(symbol, pybamm.Negate):
+            return -div(symbol.orphans[0])
+        elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
+            left, right = symbol.orphans
+            if isinstance(left, pybamm.Negate):
+                return -div(symbol._binary_new_copy(left.orphans[0], right))
 
     # Last resort
-    return Divergence(symbol)
+    return Divergence(symbol, no_simplification=no_simplification)
 
 
 def laplacian(symbol):
