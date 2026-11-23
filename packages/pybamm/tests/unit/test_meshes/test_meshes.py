@@ -776,6 +776,50 @@ class TestPrebuiltSubMesh:
         prebuilt = solve({}, {"negative electrode": submesh}, {})
         np.testing.assert_allclose(prebuilt, expected, rtol=1e-12, atol=1e-12)
 
+    def test_prebuilt_submesh_in_lithium_ion_simulation(self):
+        model = pybamm.lithium_ion.BasicDFNUnstructured()
+        var_pts = {name: 3 for name in model.default_var_pts}
+        geometry = model.default_geometry
+        model.default_parameter_values.process_geometry(geometry)
+        submesh = pybamm.Mesh(
+            {"negative electrode": geometry["negative electrode"]},
+            {"negative electrode": model.default_submesh_types["negative electrode"]},
+            var_pts,
+        )["negative electrode"]
+
+        expected = pybamm.Simulation(model, var_pts=var_pts).solve([0, 60])
+        simulation = pybamm.Simulation(
+            model,
+            submesh_types={
+                **model.default_submesh_types,
+                "negative electrode": submesh,
+            },
+            var_pts=var_pts,
+        )
+        solution = simulation.solve([0, 60])
+
+        assert not simulation.geometry.get("negative electrode")
+        np.testing.assert_allclose(
+            solution["Voltage [V]"](t=[0, 30, 60]),
+            expected["Voltage [V]"](t=[0, 30, 60]),
+            rtol=1e-10,
+            atol=1e-10,
+        )
+
+    def test_prebuilt_submesh_rejects_simulation_geometry(self):
+        model = pybamm.lithium_ion.BasicDFNUnstructured()
+        submesh = self._generated_mesh()["negative electrode"]
+        simulation = pybamm.Simulation(
+            model,
+            geometry=model.default_geometry,
+            submesh_types={
+                **model.default_submesh_types,
+                "negative electrode": submesh,
+            },
+        )
+        with pytest.raises(pybamm.GeometryError, match=r"cannot also have a geometry"):
+            simulation.build()
+
     def test_prebuilt_submesh_rejects_geometry(self):
         submesh = self._generated_mesh()["negative electrode"]
         x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
