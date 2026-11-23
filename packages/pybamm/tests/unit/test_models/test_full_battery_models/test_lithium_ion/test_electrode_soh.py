@@ -615,6 +615,7 @@ class TestElectrodeSOHComposite:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+            "surface form": "algebraic",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
