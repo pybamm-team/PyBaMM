@@ -6,8 +6,9 @@ from math import fsum
 from operator import add
 
 import numpy as np
-import pybamm
 import pytest
+
+import pybamm
 from pybamm.solvers.observation import OutputAssembly
 
 SEED = 7.0
