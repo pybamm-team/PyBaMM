@@ -7,6 +7,8 @@
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# uv would glob the Rust crate and error on its absent pyproject.
+exclude = ["packages/pybamm-rust"]
 
 [tool.uv.sources]
 pybammsolvers = { workspace = true }
@@ -136,3 +138,40 @@ ignore = [
     "PP301",  # pytest config — lives in packages/pybamm
     "PY005",  # tests folder — lives in packages/pybamm/tests, not at the root
 ]
+
+# Each PR adds a fragment to changelog.d/; `towncrier build` collects them into
+# CHANGELOG.md at release time, so PRs never edit the same file.
+[tool.towncrier]
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+start_string = "<!-- towncrier release notes start -->\n"
+template = "changelog.d/template.md"
+title_format = ""
+issue_format = "[#{issue}](https://github.com/pybamm-team/PyBaMM/pull/{issue})"
+ignore = ["README.md", "template.md"]
+wrap = false
+
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Breaking changes"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Features"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "bugfix"
+name = "Bug fixes"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "optimization"
+name = "Optimizations"
+showcontent = true

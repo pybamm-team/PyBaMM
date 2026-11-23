@@ -19,6 +19,7 @@ import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
+from pybamm.util import _is_flux_boundary_condition
 
 _SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
@@ -417,6 +418,20 @@ class BaseModel:
                 )
         self._variables = pybamm.FuzzyDict(variables)
 
+    @property
+    def summary_variables(self):
+        """Names of the variables to summarise per cycle when solving an experiment."""
+        return self._summary_variables
+
+    @summary_variables.setter
+    def summary_variables(self, value):
+        for var in value:
+            if var not in self.variables:
+                raise KeyError(
+                    f"No cycling variable defined for summary variable '{var}'"
+                )
+        self._summary_variables = value
+
     def get_processed_variables_dict(self) -> dict[str, pybamm.Symbol]:
         """
         Get a dictionary of processed variables.
@@ -449,6 +464,15 @@ class BaseModel:
         value = self._variables[name]
         self.process_and_register_variable(name, value)
         return self._variables_processed[name]
+
+    def is_algebraic_state(self, symbol: pybamm.Symbol) -> bool:
+        """Whether ``symbol`` is one of the model's algebraic state variables.
+
+        Matched by name, since a model copy keeps a state's name but not its id.
+        """
+        return isinstance(symbol, pybamm.Variable) and symbol.name in {
+            state.name for state in self.algebraic
+        }
 
     def get_processed_variable_or_event(self, name: str) -> pybamm.Symbol:
         """
@@ -543,6 +567,8 @@ class BaseModel:
         def resolve(node, new_leaves):
             if not isinstance(node, pybamm.CoupledVariable):
                 return pybamm.rebuild(node, new_leaves)
+            if isinstance(node, pybamm.CoupledVariableDot):
+                return resolve(node.get_coupled_variable(), new_leaves).diff(pybamm.t)
             if node.name not in self._variables:
                 raise ValueError(
                     f"CoupledVariable '{node.name}' not found in model.variables"
@@ -1033,11 +1059,13 @@ class BaseModel:
                 parameter_info[submodel_name] = submodel_info
 
         else:
-            parameters = self._find_symbols(pybamm.Parameter)
+            parameters = self._find_symbols(pybamm.Parameter, include_geometry=True)
             for param in parameters:
                 parameter_info[param.name] = (param, "Parameter")
 
-            input_parameters = self._find_symbols(pybamm.InputParameter)
+            input_parameters = self._find_symbols(
+                pybamm.InputParameter, include_geometry=True
+            )
             for input_param in input_parameters:
                 if not input_param.domain:
                     parameter_info[input_param.name] = (input_param, "InputParameter")
@@ -1047,7 +1075,9 @@ class BaseModel:
                         f"InputParameter in {input_param.domain}",
                     )
 
-            function_parameters = self._find_symbols(pybamm.FunctionParameter)
+            function_parameters = self._find_symbols(
+                pybamm.FunctionParameter, include_geometry=True
+            )
             for func_param in function_parameters:
                 if func_param.name not in parameter_info:
                     input_names = "', '".join(func_param.input_names)
@@ -1224,8 +1254,10 @@ class BaseModel:
         self,
         typ: type[_SymbolT] | tuple[type[_SymbolT], ...],
         fixed_input_parameters=None,
+        include_geometry=False,
     ) -> list[_SymbolT]:
-        """Find all the instances of `typ` in the model"""
+        """Find all the instances of `typ` in the model (and, optionally, in its
+        default geometry)"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
         all_items = chain(
@@ -1241,6 +1273,10 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
+        if include_geometry:
+            all_items = chain(
+                all_items, pybamm.Geometry(self.default_geometry).parameters
+            )
         symbols = pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items)
         # The unpacker only returns instances of `typ`
         return cast(list[_SymbolT], list(symbols))
@@ -1469,7 +1505,8 @@ class BaseModel:
 
         def _extract_from_y_slices(var, solution_var, solution_model, solution):
             solution_y_slice = solution_model.y_slices[solution_var][0]
-            y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
+            y = solution.all_ys[-1]
+            y_last = y[:, -1] if y.ndim > 1 else y
 
             # Validate slice bounds
             slice_stop = (
@@ -2701,9 +2738,12 @@ class BoundaryConditionsDict(dict):
                     eqn, typ = bc
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
-                if bc[1] not in ["Dirichlet", "Neumann"]:
+                if bc[1] not in [
+                    "Dirichlet",
+                    "Neumann",
+                ] and not _is_flux_boundary_condition(bc[1]):
                     raise pybamm.ModelError(
-                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
+                        f"boundary condition types must be Dirichlet, Neumann or ('Flux', pybamm.Symbol), not '{bc[1]}'"
                     )
 
         return boundary_conditions

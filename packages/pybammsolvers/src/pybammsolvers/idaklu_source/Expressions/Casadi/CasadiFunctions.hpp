@@ -5,6 +5,7 @@
 #include "../Expressions.hpp"
 #include <casadi/casadi.hpp>
 #include <casadi/core/function.hpp>
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 
@@ -17,6 +18,7 @@ struct SerializedCasadiFunctions {
   std::string events;
   std::string alg_res;
   std::string alg_jac;
+  std::string upsampling;
   std::vector<std::string> var_fcns;
   std::vector<std::string> dvar_dy_fcns;
   std::vector<std::string> dvar_dp_fcns;
@@ -31,6 +33,7 @@ SerializedCasadiFunctions serialize_casadi_functions(
   const casadi::Function &events,
   const casadi::Function &alg_res,
   const casadi::Function &alg_jac,
+  const casadi::Function &upsampling,
   const std::vector<casadi::Function*>& var_fcns,
   const std::vector<casadi::Function*>& dvar_dy_fcns,
   const std::vector<casadi::Function*>& dvar_dp_fcns
@@ -114,7 +117,9 @@ public:
     const SetupOptions& setup_opts,
     const SerializedCasadiFunctions *serialized_fcns = nullptr,
     const BaseFunctionType &alg_res_fn = BaseFunctionType(),
-    const BaseFunctionType &alg_jac_fn = BaseFunctionType()
+    const BaseFunctionType &alg_jac_fn = BaseFunctionType(),
+    const BaseFunctionType &upsampling_fn = BaseFunctionType(),
+    const std::vector<bool> &events_read_yp_arg = {}
   ) :
     rhs_alg_casadi(
       rhs_alg,
@@ -148,6 +153,10 @@ public:
       alg_jac_fn,
       setup_opts.num_solvers > 1,
       serialized_fcns != nullptr ? &serialized_fcns->alg_jac : nullptr),
+    upsampling_casadi_(
+      upsampling_fn,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->upsampling : nullptr),
     ExpressionSet<CasadiFunction>(
       static_cast<Expression*>(&rhs_alg_casadi),
       static_cast<Expression*>(&jac_times_cjmass_casadi),
@@ -168,6 +177,19 @@ public:
   {
     this->alg_res = static_cast<Expression*>(&alg_res_casadi_);
     this->alg_jac = static_cast<Expression*>(&alg_jac_casadi_);
+    this->upsampling_fcn = static_cast<Expression*>(&upsampling_casadi_);
+    // The caller's mask comes from the symbolic events. CasADi cannot see
+    // inside compiled ones, and reports every event as reading yp
+    std::vector<bool> reads_yp = events_read_yp_arg;
+    if (reads_yp.empty() && events.n_in() > 3) {
+      reads_yp = events.which_depends(
+        events.name_in(3), {events.name_out(0)}, 1, true);
+    } else if (!reads_yp.empty() && reads_yp.size() != static_cast<size_t>(n_e)) {
+      throw std::invalid_argument("events_read_yp must have one entry per event");
+    }
+    if (std::find(reads_yp.begin(), reads_yp.end(), true) != reads_yp.end()) {
+      this->events_read_yp = std::move(reads_yp);
+    }
     // NOTE: You must allocate ALL std::vector elements before taking references
     const bool deep_copy = setup_opts.num_solvers > 1;
     if (serialized_fcns != nullptr) {
@@ -232,6 +254,7 @@ public:
   CasadiFunction events_casadi;
   CasadiFunction alg_res_casadi_;
   CasadiFunction alg_jac_casadi_;
+  CasadiFunction upsampling_casadi_;
 
   std::vector<CasadiFunction> var_fcns_casadi;
   std::vector<CasadiFunction> dvar_dy_fcns_casadi;

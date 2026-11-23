@@ -1,24 +1,33 @@
 #
 # Tests for the Solution class
 #
+import bz2
 import copyreg
+import gc
+import gzip
 import io
 import json
 import logging
+import lzma
+import os
 import pickle
 import subprocess
 import sys
+import tempfile
 from unittest import mock
 
 import numpy as np
-import pandas as pd
 import pytest
 import scipy
 from scipy.io import loadmat
 
 import pybamm
-from pybamm.solvers.solution import _DEFAULT_SOLUTION_OPTIONS, make_cycle_solution
-from tests import get_discretisation_for_testing
+from pybamm.solvers.solution import (
+    _DEFAULT_SOLUTION_OPTIONS,
+    _write_csv,
+    make_cycle_solution,
+)
+from tests import concatenated_states, get_discretisation_for_testing
 
 
 class _PicklerBeforeVariableObservers(pickle.Pickler):
@@ -45,7 +54,7 @@ class TestSolution:
         y = np.tile(t, (20, 1))
         sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
         np.testing.assert_array_equal(sol.t, t)
-        np.testing.assert_array_equal(sol.y, y)
+        np.testing.assert_array_equal(sol.all_ys[0], y)
         assert sol.t_event is None
         assert sol.y_event is None
         assert sol.termination == "final time"
@@ -93,12 +102,12 @@ class TestSolution:
         # Without yps, yp should be None
         sol_no_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {})
         assert sol_no_yp.hermite_interpolation is False
-        assert sol_no_yp.yp is None
+        assert sol_no_yp.all_yps is None
 
         # With yps, yp should return the concatenated time derivatives
         sol_with_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=yp)
         assert sol_with_yp.hermite_interpolation is True
-        np.testing.assert_array_equal(sol_with_yp.yp, yp)
+        np.testing.assert_array_equal(sol_with_yp.all_yps[0], yp)
 
     def test_sensitivities(self):
         t = np.linspace(0, 1)
@@ -334,7 +343,7 @@ class TestSolution:
         assert sol_sum.integration_time == 0.8
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(
-            sol_sum.y, np.concatenate([y1, y2[:, 1:]], axis=1)
+            concatenated_states(sol_sum.all_ys), np.concatenate([y1, y2[:, 1:]], axis=1)
         )
         np.testing.assert_array_equal(sol_sum.all_inputs, [{"a": 1}, {"a": 2}])
         assert sol_sum.all_inputs_stacked[0] is sol1.all_inputs_stacked[0]
@@ -923,8 +932,12 @@ class TestSolution:
 
         # Test
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
-        with pytest.raises(
-            pybamm.SolverError, match=r"The solution is made up from different models"
+        with (
+            pytest.warns(DeprecationWarning),
+            pytest.raises(
+                pybamm.SolverError,
+                match=r"The solution is made up from different models",
+            ),
         ):
             sol_sum.y
 
@@ -1010,6 +1023,51 @@ class TestSolution:
         assert sol_copy.set_up_time == sol1.set_up_time
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
+
+    def test_states_are_deprecated(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (2, 1))
+        solution = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=2 * y)
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"`Solution\.y` is deprecated and will be removed in 27\.2",
+        ):
+            np.testing.assert_array_equal(solution.y, y)
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"`Solution\.yp` is deprecated and will be removed in 27\.2",
+        ):
+            np.testing.assert_array_equal(solution.yp, 2 * y)
+
+    def test_t_additive(self):
+        model = pybamm.BaseModel()
+        t1, t2, t3 = np.linspace(0, 1), np.linspace(1, 2), np.linspace(2, 3)
+        plain = pybamm.Solution(t1, np.tile(t1, (2, 1)), model, {})
+        assert plain.t_additive is None
+        np.testing.assert_array_equal(plain.t, t1)
+        sol1, sol2, sol3 = (
+            pybamm.Solution(t, np.tile(t, (2, 1)), model, {}, t_additive=t_additive)
+            for t, t_additive in [
+                (t1, np.array([0.25])),
+                (t2, None),
+                (t3, np.array([2.5])),
+            ]
+        )
+        assert (plain + sol2).t_additive is None
+        for joined in [
+            sol1 + sol2 + sol3,
+            pybamm.Solution.from_sub_solutions([sol1, sol2, sol3]),
+        ]:
+            np.testing.assert_array_equal(joined.t_additive, [0.25, 2.5])
+            # The single-point states hold no added times
+            for state in [joined.first_state, joined.last_state]:
+                assert state.t_additive is None
+                assert state.t.size == 1
+        np.testing.assert_array_equal(sol1.copy().t_additive, [0.25])
+        np.testing.assert_array_equal(sol1.t, np.union1d(t1, [0.25]))
+        np.testing.assert_array_equal(
+            pickle.loads(pickle.dumps(sol1)).t_additive, [0.25]
+        )
 
     def test_copy_with_computed_variables(self):
         model = pybamm.BaseModel()
@@ -1206,9 +1264,13 @@ class TestSolution:
             for output_variables in (None, ["u"])
         )
 
-        np.testing.assert_allclose(solution.first_state.y, [[1], [2]], rtol=1e-6)
         np.testing.assert_allclose(
-            solution.first_state.y, full_solution.first_state.y, rtol=1e-6
+            solution.first_state.all_ys[0], [[1], [2]], rtol=1e-6
+        )
+        np.testing.assert_allclose(
+            solution.first_state.all_ys[0],
+            full_solution.first_state.all_ys[0],
+            rtol=1e-6,
         )
 
     def test_first_last_state_empty_y(self):
@@ -1256,11 +1318,17 @@ class TestSolution:
 
         assert isinstance(sol.cycles[0], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[0].t, sol.t[:len_cycle_1])
-        np.testing.assert_array_equal(sol.cycles[0].y, sol.y[:, :len_cycle_1])
+        np.testing.assert_array_equal(
+            concatenated_states(sol.cycles[0].all_ys),
+            concatenated_states(sol.all_ys)[:, :len_cycle_1],
+        )
 
         assert isinstance(sol.cycles[1], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
-        np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1:])
+        np.testing.assert_allclose(
+            concatenated_states(sol.cycles[1].all_ys),
+            concatenated_states(sol.all_ys)[:, len_cycle_1:],
+        )
 
     def test_solutions_reject_undefined_attributes(self):
         # An experiment keeps several solutions per step, so none carries a __dict__
@@ -1295,7 +1363,9 @@ class TestSolution:
         first_state = solution.first_state
         loaded = pickle.loads(pickle.dumps(solution))
         np.testing.assert_array_equal(loaded.t, t)
-        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
+        np.testing.assert_array_equal(
+            loaded.first_state.all_ys[0], first_state.all_ys[0]
+        )
 
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
@@ -1401,9 +1471,15 @@ class TestSolution:
             assert csv_str.replace("\r", "") == f.read()
 
         # read csv
-        df = pd.read_csv(f"{test_stub}.csv")
-        np.testing.assert_allclose(df["c"], solution.data["c"], rtol=1e-7, atol=1e-6)
-        np.testing.assert_allclose(df["2c"], solution.data["2c"], rtol=1e-7, atol=1e-6)
+        with open(f"{test_stub}.csv") as f:
+            assert f.readline().rstrip() == "c,2c"
+        csv_data = np.loadtxt(f"{test_stub}.csv", delimiter=",", skiprows=1)
+        np.testing.assert_allclose(
+            csv_data[:, 0], solution.data["c"], rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            csv_data[:, 1], solution.data["2c"], rtol=1e-7, atol=1e-6
+        )
 
         # to json
         solution.save_data(f"{test_stub}.json", to_format="json")
@@ -1434,6 +1510,113 @@ class TestSolution:
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
         np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
 
+    def test_write_csv_format(self, tmp_path):
+        data = {
+            "Time [s]": np.array([0.0, 1e-7, 1e16]),
+            "a,b": np.array([np.nan, -0.0, np.inf]),
+            'say "hi"': np.array([1, 2, 3]),
+            "Cycle": np.float64(1.0),
+            "Z": np.array([1 + 2j, np.nan, 2 - 0.5j]),
+            "single": np.array([0.1, 0.25, 1 / 3], dtype=np.float32),
+        }
+        expected = os.linesep.join(
+            [
+                'Time [s],"a,b","say ""hi""",Cycle,Z,single',
+                "0.0,,1,1.0,(1+2j),0.1",
+                "1e-07,-0.0,2,1.0,,0.25",
+                "1e+16,inf,3,1.0,(2-0.5j),0.33333334",
+                "",
+            ]
+        )
+        assert _write_csv(data) == expected
+        path = tmp_path / "data.csv"
+        assert _write_csv(data, str(path)) is None
+        assert path.read_bytes() == expected.encode()
+
+        # a lone empty field is quoted, so its row is not blank
+        assert _write_csv({"a": np.array([np.nan])}) == os.linesep.join(["a", '""', ""])
+        assert _write_csv({}) == os.linesep
+
+        with pytest.raises(ValueError, match=r"same length"):
+            _write_csv({"a": np.arange(2.0), "b": np.arange(3.0)})
+        with pytest.raises(ValueError, match=r"1-dimensional"):
+            _write_csv({"a": np.ones((2, 2))})
+        with pytest.raises(ValueError, match=r"not a scalar"):
+            _write_csv({"a": 1.0})
+
+    @pytest.mark.parametrize(
+        ("suffix", "opener"),
+        [
+            (".csv", open),
+            (".csv.gz", gzip.open),
+            (".csv.bz2", bz2.open),
+            (".csv.xz", lzma.open),
+        ],
+    )
+    def test_write_csv_compresses_by_extension(self, tmp_path, suffix, opener):
+        data = {"a": np.array([1.0, 2.0])}
+        path = tmp_path / f"data{suffix}"
+        _write_csv(data, path)
+        with opener(path, "rt", newline="", encoding="utf-8") as file:
+            assert file.read() == _write_csv(data)
+
+    @pytest.mark.parametrize("suffix", [".csv.zip", ".csv.ZST", ".tar", ".tar.gz"])
+    def test_write_csv_rejects_other_compressions(self, tmp_path, suffix):
+        path = tmp_path / f"data{suffix}"
+        with pytest.raises(ValueError, match=r"compressed only as \.gz, \.bz2 or \.xz"):
+            _write_csv({"a": np.array([1.0])}, path)
+        assert not path.exists()
+
+    @pytest.mark.parametrize("chunk_cells", [1, 7, 12])
+    def test_write_csv_in_chunks(self, monkeypatch, chunk_cells):
+        data = {
+            "a": np.array([np.nan, 1.0, 2.5, -0.0, 1e16]),
+            "Cycle": np.float64(1.0),
+            "n": np.arange(5),
+        }
+        in_one_chunk = _write_csv(data)
+        # With 3 columns: 1, 2 and 4 rows a chunk
+        monkeypatch.setattr("pybamm.solvers.solution._CSV_CHUNK_CELLS", chunk_cells)
+        assert _write_csv(data) == in_one_chunk
+
+    def test_write_csv_to_a_text_file_and_object_columns(self):
+        # None in an object column is missing, like NaN
+        data = {"a": np.array([1.5, None, "x,y"], dtype=object)}
+        buffer = io.StringIO()
+        assert _write_csv(data, buffer) is None
+        assert buffer.getvalue() == os.linesep.join(["a", "1.5", '""', '"x,y"', ""])
+
+    def test_write_csv_to_a_binary_file(self, tmp_path):
+        data = {"Voltage [V]": np.array([4.2, 3.0]), "µ": np.array([1.0, 2.0])}
+        expected = _write_csv(data).encode("utf-8")
+        buffer = io.BytesIO()
+        assert _write_csv(data, buffer) is None
+        # getvalue fails on a closed buffer, so this also checks it stays open
+        assert buffer.getvalue() == expected
+
+        # Not an io class, so binary by its mode
+        with tempfile.NamedTemporaryFile(dir=tmp_path) as file:
+            _write_csv(data, file)
+            file.seek(0)
+            assert file.read() == expected
+
+    def test_write_csv_to_a_binary_file_raises_the_first_error(self):
+        class UnwritableField:
+            def __str__(self):
+                raise RuntimeError("cannot write this field")
+
+        class UnflushableFile(io.BytesIO):
+            def flush(self):
+                raise OSError("cannot flush")
+
+        data = {"x": np.array([1.0, UnwritableField()], dtype=object)}
+        file = UnflushableFile()
+        with pytest.raises(RuntimeError, match="cannot write this field"):
+            _write_csv(data, file)
+        # Nothing left holding the file closes it later
+        gc.collect()
+        assert not file.closed
+
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()
         c = pybamm.Variable("c")
@@ -1441,19 +1624,53 @@ class TestSolution:
         model.initial_conditions = {c: 1}
         model.variables["c"] = c
 
-        solver = pybamm.ScipySolver()
+        solver = pybamm.IDAKLUSolver()
         sol1 = solver.solve(model, np.linspace(0, 1))
         sol2 = solver.solve(model, np.linspace(1, 2))
+        sol3 = solver.solve(model, np.linspace(2, 3))
+        sol4 = solver.solve(model, np.linspace(3.1, 4))
+        sol5 = solver.solve(model, np.linspace(4.1, 5))
 
-        sol = sol1 + sol2
-        sol.cycles = [sol]
+        sola = sol1 + sol2  # duplicate time point at 1 dropped from sol2
+        solb = sol3 + sol4  # no duplicate time point between sol3 and sol4
+        # duplicate time point at 2 dropped from solb, no duplicate time point between solb and sol5
+        sol = sola + solb + sol5
+        sol.cycles = [sola, solb, sol5]
         sol.cycles[0].steps = [sol1, sol2]
+        sol.cycles[1].steps = [sol3, sol4]
+        sol.cycles[2].steps = [sol5]
 
         data = sol.get_data_dict("c")
-        np.testing.assert_array_equal(data["Cycle"], 0)
+        assert len(data["Step"]) == len(data["Cycle"]) == len(data["c"])
         np.testing.assert_array_equal(
-            data["Step"], np.concatenate([np.zeros(50), np.ones(50)])
+            data["Cycle"],
+            np.concatenate(
+                [
+                    np.zeros(len(sola.t)),
+                    np.ones(len(solb.t) - 1),  # duplicate time point at 2
+                    2 * np.ones(len(sol5.t)),
+                ]
+            ),
         )
+        np.testing.assert_array_equal(
+            data["Step"],
+            np.concatenate(
+                [
+                    np.zeros(len(sol1.t)),
+                    np.ones(len(sol2.t) - 1),  # duplicate time point at 1
+                    np.zeros(len(sol3.t) - 1),  # duplicate time point at 2
+                    np.ones(len(sol4.t)),
+                    np.zeros(len(sol5.t)),
+                ]
+            ),
+        )
+
+        # test that the data can be saved to csv and read back in correctly
+        csv_str = sol.save_data(variables=["c"], to_format="csv")
+        csv_data = np.genfromtxt(io.StringIO(csv_str), delimiter=",", names=True)
+        np.testing.assert_array_equal(csv_data["Cycle"], data["Cycle"])
+        np.testing.assert_array_equal(csv_data["Step"], data["Step"])
+        np.testing.assert_allclose(csv_data["c"], data["c"], rtol=1e-7, atol=1e-6)
 
     def test_pickle_first_states_across_processes(self, tmp_path):
         # Regression test for #5444: a Solution pickled in one process and
@@ -2009,6 +2226,9 @@ class TestSolution:
 
         with pytest.raises(ValueError, match=r"Input cannot be converted"):
             sol.observe(None)
+        # Time derivatives need the state derivatives, which aren't stored
+        with pytest.raises(ValueError, match=r"Must provide a 'y_dot'"):
+            sol.observe(model.variables["Voltage [V]"].diff(pybamm.t))
 
         # 2. Trying to observe a symbol which is not part of the parameter_values or model
         symbol = pybamm.Parameter("_not_in_model")
@@ -2251,7 +2471,9 @@ class TestSolution:
         folded = functools.reduce(operator.add, [s.copy() for s in sols])
 
         np.testing.assert_array_equal(batch.t, folded.t)
-        np.testing.assert_array_equal(batch.y, folded.y)
+        np.testing.assert_array_equal(
+            concatenated_states(batch.all_ys), concatenated_states(folded.all_ys)
+        )
         assert [len(s) for s in batch.all_ts] == [len(s) for s in folded.all_ts]
         assert len(batch.sub_solutions) == len(folded.sub_solutions)
         assert batch.all_inputs == folded.all_inputs
@@ -2375,7 +2597,9 @@ class TestSolution:
         folded = functools.reduce(operator.add, [s.copy() for s in sols])
 
         assert out.hermite_interpolation
-        np.testing.assert_array_equal(out.yp, folded.yp)
+        np.testing.assert_array_equal(
+            concatenated_states(out.all_yps), concatenated_states(folded.all_yps)
+        )
 
     def test_from_sub_solutions_mixed_hermite_is_not_hermite(self):
         # If any segment lacks yps, the fold is non-hermite (mirrors __add__'s AND).
@@ -2586,7 +2810,9 @@ class TestSolution:
 
         assert out.hermite_interpolation == folded.hermite_interpolation
         assert out.hermite_interpolation is True
-        np.testing.assert_array_equal(out.yp, folded.yp)
+        np.testing.assert_array_equal(
+            concatenated_states(out.all_yps), concatenated_states(folded.all_yps)
+        )
 
     def test_join_trailing_last_state_keeps_event_sensitivities(self):
         # Simulation carries last_state over a cycle whose steps are all infeasible;
@@ -2743,5 +2969,7 @@ class TestSolutionSolverStatistics:
         assert not hasattr(loaded, "label")
         assert loaded.solver_statistics is None
         np.testing.assert_array_equal(loaded.t, solution.t)
-        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
+        np.testing.assert_array_equal(
+            loaded.first_state.all_ys[0], first_state.all_ys[0]
+        )
         assert loaded.last_state.t[0] == pytest.approx(solution.t[-1])

@@ -96,7 +96,7 @@ jobs:
           skopeo copy oci-archive:benchmark-image.tar \
             "docker://$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
 
-      - uses: bencherdev/bencher@f80847436d7157936b40525db4c2a1064124f04a # v0.6.13
+      - uses: bencherdev/bencher@7de3c69a85380826613050826b4bce062be2f07d # v0.6.16
         if: steps.artifact.outputs.found == 'true'
 
       # --start-point-* rebases the PR branch onto its base every run, so the

@@ -261,8 +261,24 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_hys_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_hys_p
         )
 
+        # The contact resistance lumps unresolved series resistances, so its heat has
+        # no location and is spread uniformly over the electrode stack
+        if self.options["contact resistance"] == "true":
+            I = variables["Current [A]"]
+            T_vol_av = variables["Volume-averaged cell temperature [K]"]
+            V_stack = (
+                self.param.n_electrodes_parallel
+                * self.param.L_y
+                * self.param.L_z
+                * self.param.L_x
+            )
+            Q_cr = I**2 * self.param.R_contact(T_vol_av) / V_stack
+        else:
+            Q_cr = pybamm.Scalar(0)
+        Q_cr = pybamm.FullBroadcast(Q_cr, Q_ohm.domain, "current collector")
+
         # Total heating
-        Q = Q_ohm + Q_rxn + Q_rev + Q_mix + Q_hys
+        Q = Q_ohm + Q_rxn + Q_rev + Q_mix + Q_hys + Q_cr
 
         # Compute the X-average over the entire cell, including current collectors
         # Note: this can still be a function of y and z for higher-dimensional pouch
@@ -272,6 +288,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_av = self._x_average(Q_rev, 0, 0)
         Q_mix_av = self._x_average(Q_mix, 0, 0)
         Q_hys_av = self._x_average(Q_hys, 0, 0)
+        Q_cr_av = self._x_average(Q_cr, 0, 0)
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
 
         # Compute the integrated heat source per unit simulated electrode-pair area
@@ -282,6 +299,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_Wm2 = Q_rev_av * self.param.L
         Q_mix_Wm2 = Q_mix_av * self.param.L
         Q_hys_Wm2 = Q_hys_av * self.param.L
+        Q_cr_Wm2 = Q_cr_av * self.param.L
         Q_Wm2 = Q_av * self.param.L
 
         # Now average over the electrode height and width
@@ -290,6 +308,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_Wm2_av = self._yz_average(Q_rev_Wm2)
         Q_mix_Wm2_av = self._yz_average(Q_mix_Wm2)
         Q_hys_Wm2_av = self._yz_average(Q_hys_Wm2)
+        Q_cr_Wm2_av = self._yz_average(Q_cr_Wm2)
         Q_Wm2_av = self._yz_average(Q_Wm2)
 
         # Compute total heat source terms (in W) over the *entire cell volume*, not
@@ -303,6 +322,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_W = Q_rev_Wm2_av * n_elec * A
         Q_mix_W = Q_mix_Wm2_av * n_elec * A
         Q_hys_W = Q_hys_Wm2_av * n_elec * A
+        Q_cr_W = Q_cr_Wm2_av * n_elec * A
         Q_W = Q_Wm2_av * n_elec * A
 
         # Compute volume-averaged heat source terms over the *entire cell volume*, not
@@ -313,6 +333,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_vol_av = Q_rev_W / V
         Q_mix_vol_av = Q_mix_W / V
         Q_hys_vol_av = Q_hys_W / V
+        Q_cr_vol_av = Q_cr_W / V
         Q_vol_av = Q_W / V
 
         # Add lumped heat capacity if option is enabled
@@ -358,6 +379,12 @@ class BaseThermal(pybamm.BaseSubModel):
                 "Volume-averaged hysteresis electrochemical heating [W.m-3]": Q_hys_vol_av,
                 "Hysteresis electrochemical heating per unit electrode-pair area [W.m-2]": Q_hys_Wm2,
                 "Hysteresis electrochemical heating [W]": Q_hys_W,
+                # Contact resistance
+                "Contact resistance heating [W.m-3]": Q_cr,
+                "X-averaged contact resistance heating [W.m-3]": Q_cr_av,
+                "Volume-averaged contact resistance heating [W.m-3]": Q_cr_vol_av,
+                "Contact resistance heating per unit electrode-pair area [W.m-2]": Q_cr_Wm2,
+                "Contact resistance heating [W]": Q_cr_W,
                 # Total
                 "Total heating [W.m-3]": Q,
                 "X-averaged total heating [W.m-3]": Q_av,

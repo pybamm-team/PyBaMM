@@ -12,7 +12,6 @@ from typing import Any
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import issparse, vstack
 
 import pybamm
@@ -194,6 +193,8 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
+        import sympy
+
         concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:
@@ -608,6 +609,11 @@ class ConcatenationVariable(Concatenation):
         print_name = print_name.removesuffix("_")
 
         self.print_name = print_name
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # The derivatives are not variables, so they make a plain concatenation
+        return concatenation(*[child.diff(variable) for child in self.children])
 
     bounds = pybamm.expression_tree.legacy_mutation.bounds_property
 

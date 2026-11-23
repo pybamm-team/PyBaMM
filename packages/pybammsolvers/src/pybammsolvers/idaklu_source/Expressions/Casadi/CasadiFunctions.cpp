@@ -29,6 +29,7 @@ SerializedCasadiFunctions serialize_casadi_functions(
   const casadi::Function &events,
   const casadi::Function &alg_res,
   const casadi::Function &alg_jac,
+  const casadi::Function &upsampling,
   const std::vector<casadi::Function*>& var_fcns,
   const std::vector<casadi::Function*>& dvar_dy_fcns,
   const std::vector<casadi::Function*>& dvar_dp_fcns)
@@ -43,6 +44,7 @@ SerializedCasadiFunctions serialize_casadi_functions(
   // A null function cannot be serialized; clone_casadi_function passes it through.
   if (!alg_res.is_null()) serialized.alg_res = alg_res.serialize();
   if (!alg_jac.is_null()) serialized.alg_jac = alg_jac.serialize();
+  if (!upsampling.is_null()) serialized.upsampling = upsampling.serialize();
 
   serialized.var_fcns.reserve(var_fcns.size());
   for (const auto *var : var_fcns) {
