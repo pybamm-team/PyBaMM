@@ -1694,9 +1694,13 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     }
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
-        """Area-weighted average of the owner-cell values over the faces of a
+        """Area-weighted average of the owner-cell values over every face of a
         boundary side (zeroth-order boundary value), one value per auxiliary
-        point; corner sides return the single closest boundary cell."""
+        point; corner sides return the single closest boundary cell.
+
+        The average includes faces under a coupled interface, which a
+        condition on a concatenated variable does not reach (see
+        :meth:`_bc_side_faces`)."""
         if isinstance(symbol, pybamm.BoundaryGradient):
             raise NotImplementedError(
                 "BoundaryGradient is not implemented for unstructured meshes; "
@@ -1717,8 +1721,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         owners = submesh.face_owner[face_indices]
         face_areas = submesh.face_areas[face_indices]
 
-        # A scalar per auxiliary point, matching the symbol's shape: total
-        # flux through the side is preserved when the value scales a flux
+        # Averaged over every face of the tag: as a flux scale it keeps the
+        # side's total flux only if the condition reaches all of those faces
         row = np.zeros(n)
         np.add.at(row, owners, face_areas / face_areas.sum())
         sub_matrix = csr_matrix(row.reshape(1, -1))

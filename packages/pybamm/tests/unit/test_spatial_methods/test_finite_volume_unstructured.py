@@ -1453,6 +1453,35 @@ class TestFiniteVolumeUnstructuredBehavior:
         with pytest.raises(pybamm.ShapeError, match="per-face"):
             method.laplacian(variable, values, {variable: bcs(np.ones(len(tag) + 1))})
 
+    def test_boundary_value_averages_whole_tag_under_coupled_interface(self):
+        # The value averages every face of the tag, including faces a
+        # concatenated variable's condition does not reach
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        assert FiniteVolumeUnstructured()._compute_pair_interface(
+            left, right, "test", "right"
+        )
+        tag = np.concatenate([left.boundary_faces["top"], left.boundary_faces["right"]])
+        left.boundary_faces["side"] = tag
+        method = _method_with_mesh(left)
+        variable = pybamm.Variable("u", domain="test")
+        field = left.cell_centroids[:, 0] + 2 * left.cell_centroids[:, 1]
+        values = pybamm.Vector(field, domain="test")
+
+        result = method.boundary_value_or_flux(
+            pybamm.BoundaryValue(variable, "side"), values
+        ).evaluate()
+
+        def average(faces):
+            areas = left.face_areas[faces]
+            return np.sum(areas * field[left.face_owner[faces]]) / areas.sum()
+
+        reached = method._bc_side_faces(
+            left, "side", {"side": None, "iface_right": None}
+        )
+        np.testing.assert_allclose(result, [[average(tag)]])
+        assert not np.isclose(average(tag), average(reached))
+
     def test_untagged_neighbour_outside_concatenation_keeps_bcs(self, caplog):
         # The untagged box is a discovered neighbour but not part of c, so
         # c's equations, including "top" under the box, must not change
