@@ -22,6 +22,7 @@ maxdepth: 2
 ---
 fundamentals/index
 fundamentals/battery_models
+fundamentals/options_migration
 fundamentals/public_api
 ```
 
