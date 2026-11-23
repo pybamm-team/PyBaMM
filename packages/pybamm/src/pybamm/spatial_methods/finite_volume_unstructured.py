@@ -1001,7 +1001,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     D_bnd = disc_D
                 else:
                     D_bnd = pybamm.Matrix(E_f) @ disc_D
-                bc_value = self._tile_bc_value(bc_value, n_bnd, repeats)
+                bc_value = self._tile_bc_value(
+                    self._side_bc_value(submesh, side, fi_arr, bc_value, repeats),
+                    n_bnd,
+                    repeats,
+                )
                 a_over_v = submesh.face_areas[fi_arr] / vol[bnd_own]
 
                 if bc_type == "Dirichlet":
@@ -1051,6 +1055,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             n_bnd = len(face_indices)
             if n_bnd == 0:
                 continue
+            bc_value = self._side_bc_value(
+                submesh, side, face_indices, bc_value, repeats
+            )
             owners = submesh.face_owner[face_indices]
             a_over_v = submesh.face_areas[face_indices] / submesh.cell_volumes[owners]
 
@@ -1105,6 +1112,55 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if not interior:
             return faces
         return faces[~np.isin(faces, np.concatenate(interior))]
+
+    @classmethod
+    def _side_bc_value(cls, submesh, side, faces, bc_value, repeats=1):
+        """The part of ``bc_value`` that applies to ``faces``, the faces of
+        ``side`` a condition reaches (see :meth:`_bc_side_faces`).
+
+        A per-face value sized to the whole tag keeps the entries of
+        ``faces``; scalars, per-point values and values sized to ``faces``
+        pass through.
+
+        Raises
+        ------
+        pybamm.ShapeError
+            If the value's length fits neither the tag nor ``faces``, or
+            fits both readings.
+        """
+        n_bnd = len(faces)
+        if cls._is_scalar_value(bc_value) or cls._is_per_point_value(
+            bc_value, n_bnd, repeats
+        ):
+            return bc_value
+        shape = getattr(bc_value, "shape_for_testing", None)
+        if shape is None:
+            return bc_value
+        size = int(np.prod(shape))
+        tag = submesh.boundary_faces[side]
+        n_tag = len(tag)
+        fits_faces = size in (n_bnd, n_bnd * repeats)
+        fits_tag = n_tag != n_bnd and size in (n_tag, n_tag * repeats)
+        if fits_faces and fits_tag:
+            raise pybamm.ShapeError(
+                f"Boundary condition on {side!r} has {size} entries, which "
+                f"fits both its {n_tag} tagged faces and the {n_bnd} it "
+                "reaches outside coupled interfaces; give a scalar or one "
+                "value per reached face"
+            )
+        if fits_faces:
+            return bc_value
+        if not fits_tag:
+            raise pybamm.ShapeError(
+                f"Boundary condition on {side!r} has {size} entries; a "
+                f"per-face value needs one per tagged face ({n_tag}) or per "
+                f"face outside coupled interfaces ({n_bnd}), times {repeats} "
+                "auxiliary points if it varies over them"
+            )
+        keep = csr_matrix(eye(n_tag, format="csr")[np.isin(tag, faces)])
+        if size != n_tag:
+            keep = cls._block_diagonal(keep, repeats)
+        return pybamm.Matrix(keep) @ bc_value
 
     @staticmethod
     def _boundary_faces_for_side(submesh, side):
@@ -1351,6 +1407,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             faces = self._bc_side_faces(submesh, side, bcs, interface_faces)
             if len(faces) == 0:
                 continue
+            bc_value = self._side_bc_value(submesh, side, faces, bc_value, repeats)
             owners = submesh.face_owner[faces]
             for k in range(d):
                 coeffs = coeff[owners, k, slot[faces]]

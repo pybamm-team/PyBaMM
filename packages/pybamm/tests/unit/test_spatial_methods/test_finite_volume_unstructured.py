@@ -1408,6 +1408,51 @@ class TestFiniteVolumeUnstructuredBehavior:
                 operator(with_tag).evaluate(), operator(coupled).evaluate(), atol=1e-12
             )
 
+    def test_per_face_value_on_tag_partly_under_coupled_interface(self):
+        # A per-face value sized to the tag as the mesh holds it gives its
+        # entries to the faces that stay outside the coupled interface
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        method = FiniteVolumeUnstructured()
+        assert method._compute_pair_interface(left, right, "test", "right")
+        tag = np.concatenate([left.boundary_faces["top"], left.boundary_faces["right"]])
+        left.boundary_faces["side"] = tag
+        kept = ~np.isin(tag, left.boundary_faces["iface_right"])
+        assert 0 < kept.sum() < len(tag)
+
+        method = _method_with_mesh(left)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = pybamm.Vector(left.cell_centroids[:, 0] ** 2, domain="test")
+        per_face = np.arange(1.0, len(tag) + 1)
+        coupled = {
+            "left": (pybamm.Scalar(1), "Dirichlet"),
+            "iface_right": (pybamm.Scalar(2), "Neumann"),
+        }
+
+        def bcs(value):
+            return {**coupled, "side": (pybamm.Vector(value), "Neumann")}
+
+        operators = (
+            lambda b: method.laplacian(variable, values, {variable: b}),
+            lambda b: method.div_D_grad(
+                div_symbol, variable, pybamm.Scalar(2), values, {variable: b}
+            ),
+            lambda b: method.gradient(variable, values, {variable: b}).children[0],
+        )
+        for operator in operators:
+            np.testing.assert_allclose(
+                operator(bcs(per_face)).evaluate(),
+                operator(bcs(per_face[kept])).evaluate(),
+                atol=1e-12,
+            )
+        # a variable on one domain keeps the whole tag, so it needs every entry
+        whole = {"left": (pybamm.Scalar(1), "Dirichlet"), **bcs(per_face)}
+        whole.pop("iface_right")
+        assert method.laplacian(variable, values, {variable: whole}).evaluate().shape
+        with pytest.raises(pybamm.ShapeError, match="per-face"):
+            method.laplacian(variable, values, {variable: bcs(np.ones(len(tag) + 1))})
+
     def test_untagged_neighbour_outside_concatenation_keeps_bcs(self, caplog):
         # The untagged box is a discovered neighbour but not part of c, so
         # c's equations, including "top" under the box, must not change
