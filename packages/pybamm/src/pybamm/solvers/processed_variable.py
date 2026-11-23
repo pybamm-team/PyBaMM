@@ -99,7 +99,7 @@ class ProcessedVariable(BaseProcessedVariable):
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.all_solution_sensitivities = solution._all_sensitivities
-        self._sensitivity_mismatch = getattr(solution, "_sensitivity_mismatch", None)
+        self._sensitivity_mismatch = solution._sensitivity_mismatch
 
         # Store time
         self.t_pts = solution.t
@@ -222,9 +222,10 @@ class ProcessedVariable(BaseProcessedVariable):
             self.hermite_interpolation
             and time_integral.sample_indices(self.t_pts) is None
         ):
-            # Interpolate the summand to the discrete times the solver did not stop at
+            # Interpolate the summand to the discrete times the solver did not stop
+            # at, placing any between sub-solutions as other reads do
             t = time_integral.sample_times(self.t_pts)
-            entries = self._observe_postfix(self._observe_hermite(t), t)
+            entries = self.observe_and_interp(t, np.nan)
         else:
             indices = time_integral.checked_sample_indices(
                 self._name, self.t_pts, "the solution has no Hermite interpolant"

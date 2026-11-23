@@ -52,11 +52,8 @@ class ObserverCache:
 
     @property
     def chain_rules(self) -> dict:
-        """The chain-rule functions built for sensitivities of the model's variables.
-
-        Filled by :meth:`pybamm.solvers.variable_observer.CasadiObserver.sensitivities`,
-        keyed by expression and input layout.
-        """
+        """The chain-rule functions for sensitivities of the model's variables,
+        keyed by expression and input layout."""
         if self._chain_rules is None:
             self._chain_rules = {}
         return self._chain_rules

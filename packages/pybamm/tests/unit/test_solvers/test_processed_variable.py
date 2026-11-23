@@ -2790,6 +2790,29 @@ class TestTimesBetweenSubSolutions:
         assert np.isnan(u(2.0))
 
     @pytest.mark.parametrize("route", ["hermite", "linear"])
+    def test_a_discrete_sum_takes_the_left_limit_in_a_roundoff_gap(self, route):
+        # The solve stops and restarts just either side of the switch at t = 3, a
+        # discrete time where the summand jumps from 0 to 1
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        z = pybamm.Variable("z")
+        model.rhs = {y: -y}
+        model.algebraic = {z: z - (pybamm.t > pybamm.InputParameter("p"))}
+        model.initial_conditions = {y: 1, z: 0}
+        times = np.array([1.0, 3.0, 4.0])
+        data = pybamm.DiscreteTimeData(times, np.zeros_like(times), "data")
+        model.variables = {"sum": pybamm.DiscreteTimeSum(z - data)}
+        pybamm.Discretisation().process_model(model)
+        # Hermite interpolation reads 4, which is not a solution time
+        t_interp = None if route == "hermite" else np.array([0, 1, 3, 4, 5])
+        solution = pybamm.IDAKLUSolver().solve(
+            model, [0, 5], t_interp=t_interp, inputs={"p": 3.0}
+        )
+
+        # z at t = 1, the left limit at t = 3, and t = 4
+        np.testing.assert_allclose(solution["sum"](), [0 + 0 + 1], atol=1e-8)
+
+    @pytest.mark.parametrize("route", ["hermite", "linear"])
     def test_a_time_before_the_start_is_rejected_in_any_order(self, route):
         solution = self._solve(1, 2, 1.0, route)
         with pytest.raises(ValueError, match=r"greater than or equal to the initial"):

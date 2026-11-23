@@ -8,16 +8,15 @@ from functools import cached_property
 import numpy as np
 
 import pybamm
+from pybamm.solvers.base_processed_variable import (
+    BaseProcessedVariable,
+    sensitivity_mismatch_message,
+)
 from pybamm.solvers.grid_interpolation import RectilinearGrid
 from pybamm.solvers.variable_observer import (
     SegmentSelector,
     fill_gaps,
     pack_sensitivity_dict,
-)
-
-from .base_processed_variable import (
-    BaseProcessedVariable,
-    sensitivity_mismatch_message,
 )
 
 

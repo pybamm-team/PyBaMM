@@ -481,11 +481,14 @@ class ProcessedVariableTimeIntegral:
 
 
 def _nearest_times(t_pts, times):
-    """The index of the nearest of ``t_pts`` to each of ``times``, and if it matches."""
+    """The index of the nearest of ``t_pts`` to each of ``times``, and if it matches.
+
+    A tie goes to the earlier time, the left limit at a discontinuity.
+    """
     upper = np.clip(np.searchsorted(t_pts, times), 0, len(t_pts) - 1)
     lower = np.clip(upper - 1, 0, len(t_pts) - 1)
     nearest = np.where(
-        np.abs(t_pts[lower] - times) < np.abs(t_pts[upper] - times), lower, upper
+        np.abs(t_pts[lower] - times) <= np.abs(t_pts[upper] - times), lower, upper
     )
     matched = np.isclose(t_pts[nearest], times, rtol=_TIME_RTOL, atol=_TIME_ATOL)
     return nearest, matched
