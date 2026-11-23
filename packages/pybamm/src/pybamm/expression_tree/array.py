@@ -143,7 +143,8 @@ class Array(pybamm.Symbol):
         self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
     ) -> pybamm.rust.Expr:
         entries = self.evaluate()
-        # A Rust sparse matrix only feeds a matrix product, so a value is dense
+        # The Rust sparse node is only valid as a matmul's left operand (see
+        # _to_rust_matmul_left), so a sparse constant used anywhere else goes dense
         if issparse(entries):
             entries = cast(csr_matrix, entries).toarray()
         entries = np.asarray(entries, dtype=float)

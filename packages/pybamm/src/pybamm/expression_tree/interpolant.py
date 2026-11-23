@@ -44,7 +44,8 @@ class Interpolant(pybamm.Function):
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
         Generally, it is best to set this to be False for 3D interpolation due to
-        the higher potential for errors in extrapolation.
+        the higher potential for errors in extrapolation. The CasADi and Rust
+        conversions ignore this setting.
     """
 
     __slots__ = (

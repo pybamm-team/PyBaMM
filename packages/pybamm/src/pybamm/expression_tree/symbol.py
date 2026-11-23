@@ -1505,7 +1505,12 @@ class Symbol:
     def _to_rust_matmul_left(
         self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
     ) -> pybamm.rust.Expr:
-        """Allocate this expression as the left operand of a matrix product."""
+        """
+        Allocate this expression as the left operand of a matrix product.
+
+        By default the operand is allocated as a value. :class:`pybamm.Array`
+        overrides this to allocate a sparse matrix node when its entries are sparse.
+        """
         return self._to_rust_inner(graph, rust_symbols)
 
     def _children_to_rust(
