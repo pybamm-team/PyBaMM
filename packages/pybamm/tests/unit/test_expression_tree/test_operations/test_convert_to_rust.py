@@ -679,8 +679,8 @@ def _parity_cases():
         ),
         "sparse_stack": (
             pybamm.SparseStack(
-                pybamm.Matrix(csr_matrix(np.array([[1.0, 0.0, 2.0]]))),
-                pybamm.Matrix(csr_matrix(np.array([[0.0, 3.0, 0.0]]))),
+                pybamm.Matrix(csr_matrix(np.array([[1.0], [0.0]]))),
+                pybamm.Matrix(csr_matrix(np.array([[0.0], [3.0], [2.0]]))),
             ),
             [{}],
         ),
@@ -834,9 +834,8 @@ class TestSparseMatrixToRust:
         [
             csc_matrix((1, 1)),
             csr_matrix(([2.0], ([1], [0])), shape=(3, 1)),
-            csr_matrix(([2.0, -1.0], ([0, 1], [1, 0])), shape=(2, 2)),
         ],
-        ids=["all-zero", "column", "square"],
+        ids=["all-zero", "column"],
     )
     def test_sparse_matrix_as_value(self, entries):
         g = ExprGraph()
@@ -907,8 +906,8 @@ class TestRustUnsupportedNodeErrors:
     def test_matmul_with_a_stacked_left_operand_message(self):
         # Only an Array lowers to a matrix node; a stack of them stays a value
         stack = pybamm.SparseStack(
-            pybamm.Matrix(csr_matrix(np.array([[1.0, 0.0, 2.0]]))),
-            pybamm.Matrix(csr_matrix(np.array([[0.0, 3.0, 0.0]]))),
+            pybamm.Matrix(np.array([[1.0, 0.0, 2.0]])),
+            pybamm.Matrix(np.array([[0.0, 3.0, 0.0]])),
         )
         graph = ExprGraph()
         expr = (stack @ pybamm.StateVector(slice(0, 3))).to_rust(graph, {})
@@ -916,6 +915,25 @@ class TestRustUnsupportedNodeErrors:
             NotImplementedError, match=r"constant matrix.*convert_to_format"
         ):
             graph.compile(expr, n_states=3)
+
+    @pytest.mark.parametrize(
+        "make_expr",
+        [
+            lambda matrix: matrix,
+            lambda matrix: (
+                pybamm.SparseStack(matrix, matrix) @ pybamm.StateVector(slice(0, 3))
+            ),
+        ],
+        ids=["value", "stacked-matmul-operand"],
+    )
+    def test_sparse_matrix_outside_a_matmul_raises(self, make_expr):
+        # Refused at lowering, before a dense rows * cols copy is made
+        matrix = pybamm.Matrix(csr_matrix(np.array([[1.0, 0.0, 2.0]])), name="stencil")
+        with pytest.raises(
+            NotImplementedError,
+            match=r"1x3 sparse matrix 'stencil'.*convert_to_format",
+        ):
+            make_expr(matrix).to_rust(ExprGraph(), {})
 
     def test_unsupported_base_symbol_message(self):
         sym = pybamm.SpatialVariable("x", domain=["negative electrode"])

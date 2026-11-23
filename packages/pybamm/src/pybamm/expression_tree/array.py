@@ -143,10 +143,18 @@ class Array(pybamm.Symbol):
         self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
     ) -> pybamm.rust.Expr:
         entries = self.evaluate()
-        # The Rust sparse node is only valid as a matmul's left operand (see
-        # _to_rust_matmul_left), so a sparse constant used anywhere else goes dense
+        # The Rust sparse node is only valid as a matmul's left operand, so a sparse
+        # column goes dense; a matrix would cost rows * cols and cannot compile
         if issparse(entries):
-            entries = cast(csr_matrix, entries).toarray()
+            sparse = cast(csr_matrix, entries)
+            rows, columns = sparse.shape
+            if columns > 1:
+                raise NotImplementedError(
+                    f"Rust conversion keeps a sparse matrix only as the left operand "
+                    f"of a matrix product, so the {rows}x{columns} sparse matrix "
+                    f"'{self.name}' cannot be lowered here. {self._RUST_FALLBACK_HINT}"
+                )
+            entries = sparse.toarray()
         entries = np.asarray(entries, dtype=float)
         if entries.ndim == 2 and entries.shape[1] > 1:
             return graph.dense_matrix(
