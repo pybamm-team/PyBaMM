@@ -1,5 +1,10 @@
 [build-system]
-requires = ["hatchling>=1.32.0", "hatch-vcs>=0.5.0"]
+requires = [
+    "hatchling>=1.32.0",
+    "hatch-vcs>=0.5.0",
+    "maturin>=1.14.1,<2.0",
+    "packaging>=24.2",
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -27,7 +32,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.12.0,<0.13.0",
+    "pybammsolvers>=0.13.0,<0.14.0",
     "black",
     "numpy>=2.0.0",
     "scipy>=1.11.4,!=1.18.0", # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
@@ -117,6 +122,10 @@ dev = [
     # ipykernel 7.4 fixes execute requests lost on the shell socket (ipykernel#1529)
     "ipykernel>=7.4.0",
     { include-group = "bench" },
+    # hatch_build.py's unit tests import it.
+    "hatchling>=1.32.0",
+    # `mypy.stubtest` of pybamm/rust/_core.pyi
+    "mypy>=1.14",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -154,6 +163,33 @@ version.source = "vcs"
 version.fallback-version = "0.0.0"
 build.targets.sdist.include = ["src/pybamm", "CITATION.cff"]
 build.hooks.vcs.version-file = "src/pybamm/_version.py"
+
+# Force-included directories ignore `exclude`: never point an entry at ../pybamm-rust.
+[tool.hatch.build.targets.sdist.force-include]
+"../pybamm-rust/Cargo.toml" = "pybamm-rust/Cargo.toml"
+"../pybamm-rust/Cargo.lock" = "pybamm-rust/Cargo.lock"
+"../pybamm-rust/pybamm-core/Cargo.toml" = "pybamm-rust/pybamm-core/Cargo.toml"
+"../pybamm-rust/pybamm-core/src" = "pybamm-rust/pybamm-core/src"
+# cargo requires every declared [[bench]] target, even for a lib-only build.
+"../pybamm-rust/pybamm-core/benches" = "pybamm-rust/pybamm-core/benches"
+"../pybamm-rust/pybamm-python/Cargo.toml" = "pybamm-rust/pybamm-python/Cargo.toml"
+"../pybamm-rust/pybamm-python/src" = "pybamm-rust/pybamm-python/src"
+
+# Runs hatch_build.py; `editable` is a version of the wheel target, so this covers it too.
+[tool.hatch.build.targets.wheel.hooks.custom]
+
+# Replaces uv's default, so list every build input; keep globs out of Cargo's target/.
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "hatch_build.py" },
+    { file = "../pybamm-rust/Cargo.toml" },
+    { file = "../pybamm-rust/Cargo.lock" },
+    { file = "../pybamm-rust/pybamm-core/Cargo.toml" },
+    { file = "../pybamm-rust/pybamm-python/Cargo.toml" },
+    { file = "../pybamm-rust/pybamm-core/src/**/*.rs" },
+    { file = "../pybamm-rust/pybamm-python/src/**/*.rs" },
+]
 
 # Monorepo tag scoping: PyBaMM releases are tagged `pybamm-v<CalVer>` (e.g.
 # pybamm-v27.1.0.0). Scope git-describe to that namespace so pybammsolvers tags
