@@ -407,7 +407,10 @@ class ProcessedVariableTimeIntegral:
         return var.create_copy(new_children)
 
     @staticmethod
-    def _check_supported(var: pybamm.Symbol, sum_node: pybamm.Symbol) -> None:
+    def _check_supported(
+        var: pybamm.Symbol,
+        sum_node: pybamm.ExplicitTimeIntegral | pybamm.DiscreteTimeSum,
+    ) -> None:
         """Raise unless ``sum_node``'s integrand is 0D or 1D and ``var`` keeps its shape."""
         integrand = sum_node.child
         shape = integrand.shape
