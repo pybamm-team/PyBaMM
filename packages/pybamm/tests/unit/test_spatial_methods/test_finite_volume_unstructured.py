@@ -27,6 +27,7 @@ from pybamm.meshes.unstructured_submesh import (
 from pybamm.spatial_methods.finite_volume_unstructured import (
     FiniteVolumeUnstructured,
 )
+from tests import assert_domain_equal
 
 # ======================================================================
 # Mesh helpers
@@ -1083,6 +1084,59 @@ class TestGradientSquared:
         u = np.ones(mesh.npts) * 42.0
         grad_sq = sum((G[k] @ u) ** 2 for k in range(mesh.dimension))
         np.testing.assert_allclose(grad_sq, 0.0, atol=1e-20)
+
+
+class TestConstantFoldedComponentDomains:
+    """Components that constant-fold (e.g. to zero) keep the symbol's domains."""
+
+    @pytest.fixture
+    def setup(self):
+        mesh = _make_quad_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        u = pybamm.Variable("u", domain="test")
+        bcs = {
+            u: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+            }
+        }
+        return method, mesh, u, bcs
+
+    @pytest.mark.parametrize("value", [1.0, 0.0])
+    def test_gradient_of_constant(self, setup, value):
+        method, mesh, u, bcs = setup
+        values = pybamm.Vector(np.full(mesh.npts, value), domain="test")
+        grad = method.gradient(u, values, bcs)
+        for comp in grad.components:
+            assert_domain_equal(comp.domains, u.domains)
+        # no BC on top/bottom, so the z-component of a constant field is zero
+        np.testing.assert_allclose(grad.components[1].evaluate(), 0.0, atol=1e-12)
+
+    def test_gradient_squared_of_constant(self, setup):
+        method, mesh, u, _ = setup
+        values = pybamm.Vector(np.zeros(mesh.npts), domain="test")
+        result = method.gradient_squared(u, values, {})
+        assert_domain_equal(result.domains, u.domains)
+
+    def test_divergence_of_zero_field(self, setup):
+        method, mesh, u, _ = setup
+        zero = pybamm.Vector(np.zeros(mesh.npts))
+        flux = pybamm.VectorField(zero, zero)
+        assert_domain_equal(method.divergence(u, flux, {}).domains, u.domains)
+
+    def test_binary_operator_folding_to_zero(self, setup):
+        method, mesh, u, _ = setup
+        y = pybamm.StateVector(slice(0, mesh.npts), domain="test")
+        zero = pybamm.Vector(np.zeros(mesh.npts), domain="test")
+        field = pybamm.VectorField(y, zero)
+        # zero + a domainless vector folds to the domainless operand
+        offset = pybamm.Vector(np.ones(mesh.npts))
+        result = method.process_binary_operators(
+            u + pybamm.Scalar(1), None, None, field, offset
+        )
+        for comp in result.components:
+            assert_domain_equal(comp.domains, u.domains)
+        np.testing.assert_allclose(result.components[1].evaluate(), 1.0)
 
 
 # ======================================================================
