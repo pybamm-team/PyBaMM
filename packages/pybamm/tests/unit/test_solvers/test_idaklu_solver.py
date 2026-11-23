@@ -1806,13 +1806,15 @@ class TestIDAKLUSolver:
             pybamm.IDAKLUSolver().solve(model, [0, 5])
 
     @staticmethod
-    def _current_jump_model(events, jump=1.5):
-        # I jumps from 0.5 to 2 at the breakpoint t = 0.2, and so does -q'
+    def _current_jump_model(events, jump=1.5, strict=False):
+        # I jumps from 0.5 to 2 at the breakpoint t = 0.2, and so does -q';
+        # with strict, it jumps just after 0.2
         model = pybamm.BaseModel()
         q = pybamm.Variable("q")
         current = pybamm.Variable("I")
         model.rhs = {q: -current}
-        model.algebraic = {current: current - (0.5 + jump * (pybamm.t >= 0.2))}
+        switch = (pybamm.t > 0.2) if strict else (pybamm.t >= 0.2)
+        model.algebraic = {current: current - (0.5 + jump * switch)}
         model.initial_conditions = {q: 1, current: 0.5}
         model.variables = {"I": current}
         model.events = [
@@ -1931,6 +1933,71 @@ class TestIDAKLUSolver:
             np.testing.assert_allclose(
                 np.ravel(final["I"].sensitivities["jump"])[-1], 1, rtol=1e-6
             )
+
+    @pytest.mark.parametrize(
+        ("output_variables", "options", "calculate_sensitivities"),
+        [
+            (None, None, False),
+            (["I"], None, False),
+            (None, {"hermite_reduction_factor": 2.0}, False),
+            (None, {"calc_ic": False}, False),
+            (None, None, True),
+            (["I"], None, True),
+        ],
+    )
+    def test_state_derivative_event_violated_when_starting_at_a_discontinuity(
+        self, output_variables, options, calculate_sensitivities
+    ):
+        # t > 0.2 adds a t_eval point a float after t0 = 0.2, which IDA reaches by
+        # a restart before its first step, and q' = -2 there violates q' > -1
+        model = self._current_jump_model(
+            {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1},
+            jump=pybamm.InputParameter("jump"),
+            strict=True,
+        )
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables, options=options)
+        solution = solver.solve(
+            model,
+            [0.2, 1],
+            inputs={"jump": 1.5},
+            calculate_sensitivities=calculate_sensitivities,
+        )
+        assert solution.termination == "event: dq/dt > -1"
+        # The event point follows t0, which keeps the state before the jump
+        np.testing.assert_array_equal(solution.t, [0.2, np.nextafter(0.2, 1)])
+        np.testing.assert_allclose(solution["I"](solution.t), [0.5, 2], rtol=1e-6)
+        np.testing.assert_allclose(solution.y_event.ravel(), [1, 2], rtol=1e-6)
+        if calculate_sensitivities:
+            np.testing.assert_allclose(
+                np.ravel(solution["I"].sensitivities["jump"]), [0, 1], atol=1e-6
+            )
+
+    @pytest.mark.parametrize(
+        ("output_variables", "options"),
+        [(None, None), (["I"], None), (None, {"hermite_reduction_factor": 2.0})],
+    )
+    def test_state_derivative_event_violated_at_a_breakpoint_replaces_it(
+        self, output_variables, options
+    ):
+        # pybamm adds no t_eval points around this jump just after 0.2, so IDA
+        # restarts at the breakpoint itself, where q' = -2 violates q' > -1
+        model = pybamm.BaseModel()
+        q = pybamm.Variable("q")
+        current = 0.5 + 1.5 * pybamm.maximum(pybamm.sign(pybamm.t - 0.2), 0)
+        model.rhs = {q: -current}
+        model.initial_conditions = {q: 1}
+        model.variables = {"I": current}
+        model.events = [pybamm.Event("dq/dt > -1", q.diff(pybamm.t) + 1)]
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables, options=options)
+        solution = solver.solve(model, np.array([0, 0.2, 1]))
+        assert solution.termination == "event: dq/dt > -1"
+        # The event point replaces the breakpoint saved before the restart
+        assert solution.t[-1] == 0.2
+        assert np.all(np.diff(solution.t) > 0)
+        np.testing.assert_allclose(solution.y_event.ravel(), [0.9], rtol=1e-6)
+        if output_variables is None:
+            np.testing.assert_allclose(solution.all_yps[-1][:, -1], [-2], rtol=1e-6)
 
     def test_state_derivative_event_with_inputs_threads_and_sensitivities(self):
         # y' = -k y < -0.5 until y = 0.5 / k, at t = ln(2 k) / k
