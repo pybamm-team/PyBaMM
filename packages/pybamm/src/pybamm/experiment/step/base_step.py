@@ -303,9 +303,8 @@ class BaseStep:
         """
         return {CURRENT_CONTROL: self.control_target_value(parameter_values)}
 
-    #: The scalar output the solver's ``upsampling_tolerance`` resolves. An
-    #: algebraic state adds no points, as the integrator already resolves it. If the
-    #: model has no such variable, its own ``upsampling_variable`` is used instead.
+    #: Variable that ``upsampling_tolerance`` resolves; the model's own
+    #: ``upsampling_variable`` is used if the model lacks it.
     upsampling_variable = "Voltage [V]"
 
     def get_control_residual(self, variables, target=None):
