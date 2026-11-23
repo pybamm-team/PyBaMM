@@ -68,6 +68,25 @@ class TestNotebookSessions:
 
         assert recorder.runs == [("pytest", "--nbmake", notebook)]
 
+    def test_pytest_flags_keep_the_default_notebooks(self, noxfile):
+        recorder = RecordingSession(["--collect-only", "-q"])
+
+        noxfile.run_examples(recorder)
+
+        expected = ("--collect-only", "-q", str(noxfile.EXAMPLES_DIR))
+        assert recorder.runs == [("pytest", "--nbmake", *expected)]
+
+    def test_selected_notebook_runs_without_the_smoke_notebooks(
+        self, noxfile, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "notebook.ipynb").touch()
+        recorder = RecordingSession(["notebook.ipynb"])
+
+        noxfile.run_examples(recorder)
+
+        assert recorder.runs == [("pytest", "--nbmake", "notebook.ipynb")]
+
     def test_examples_defaults_to_every_notebook(self, noxfile):
         recorder = RecordingSession([])
 

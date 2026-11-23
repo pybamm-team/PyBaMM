@@ -261,13 +261,16 @@ def run_examples_smoke(session: nox.Session) -> None:
 
 
 def _run_example_notebooks(session: nox.Session, *paths: Path) -> None:
-    missing = [str(path) for path in SMOKE_NOTEBOOKS if not path.is_file()]
-    if missing:
-        session.error(f"Missing smoke notebooks: {', '.join(missing)}")
+    # Paths after `--` replace the default notebooks; pytest flags alone keep them.
+    selected = any(Path(arg).exists() for arg in session.posargs)
+    if not selected:
+        missing = [str(path) for path in SMOKE_NOTEBOOKS if not path.is_file()]
+        if missing:
+            session.error(f"Missing smoke notebooks: {', '.join(missing)}")
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, extras=["all", "jax"], groups=["dev"])
-    targets = session.posargs or [str(path) for path in paths]
-    session.run("pytest", "--nbmake", *targets, external=True)
+    defaults = [] if selected else [str(path) for path in paths]
+    session.run("pytest", "--nbmake", *session.posargs, *defaults, external=True)
 
 
 @nox.session(name="scripts", default=False)

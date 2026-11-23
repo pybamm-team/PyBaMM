@@ -51,6 +51,7 @@ jobs:
       example_session: ${{ (github.event_name != 'pull_request' || steps.filter.outputs.examples == 'true') && 'examples' || 'examples-smoke' }}
       # Matrix entries for the scarce-pool targets: {target, pythons as a JSON string}.
       platforms: ${{ steps.route.outputs.platforms }}
+      unit_pythons: ${{ steps.route.outputs.unit_pythons }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -123,12 +124,14 @@ jobs:
               - 'packages/pybamm/{pyproject.toml,hatch_build.py,conftest.py,tests/conftest.py}'
               - 'packages/pybamm/src/pybamm/{__init__,config,pybamm_data,util,version}.py'
               - 'packages/pybamm/src/pybamm/{codegen,plotting,rust,solvers}/**'
+              - 'packages/pybamm/src/pybamm/expression_tree/array.py'
               - 'packages/pybamm/src/pybamm/expression_tree/operations/{evaluate_python,serialise*}.py'
               - 'packages/pybamm/src/pybamm/models/base_model.py'
               - 'packages/pybamm/src/pybamm/meshes/unstructured_submesh.py'
               - 'packages/pybamm/src/pybamm/parameters/process_parameter_data.py'
               - 'packages/pybamm/tests/unit/test_{codegen,plotting,serialisation,solvers}/**'
               - 'packages/pybamm/tests/unit/test_{hatch_build,pybamm_data,rust_*}.py'
+              - 'packages/pybamm/tests/unit/test_expression_tree/test_array.py'
               - 'packages/pybamm/tests/unit/test_expression_tree/test_operations/test_evaluate_python.py'
               - 'packages/pybamm/tests/unit/test_meshes/test_unstructured_submesh.py'
               - 'packages/pybamm/tests/unit/test_models/test_base_model.py'
@@ -158,18 +161,24 @@ jobs:
         run: |
           targets='["linux-arm64", "windows-x64", "macos-arm64"]'
           pythons='["3.11"]'
+          unit_pythons='["3.11", "3.15"]'
           if [ "$EVENT" = merge_group ]; then
             targets='[]'
           elif [ "$EVENT" = pull_request ] && [ "$PLATFORM_SENSITIVE" != true ] && [ "$SOLVER" != true ]; then
             targets='[]'
           elif [ "$EVENT" = push ] && [ "$VALIDATED" = true ]; then
             targets='[]'
+          elif [ "$EVENT" = push ]; then
+            # This commit bypassed the merge queue, so test the versions PRs skip.
+            pythons='["3.11", "3.15"]'
+            unit_pythons='["3.11", "3.12", "3.14", "3.15"]'
           fi
           platforms=$(jq -nc --argjson t "$targets" --argjson p "$pythons" '[$t[] | {target: ., pythons: ($p | tojson)}]')
           if [ "$SOLVER" = true ]; then
             platforms=$(jq -c '. + [{target: "macos-x64", pythons: "[]"}]' <<< "$platforms")
           fi
           echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
+          echo "unit_pythons=$unit_pythons" >> "$GITHUB_OUTPUT"
 
       # This job must succeed before the test matrix starts.
       - name: Check style before starting tests
@@ -293,8 +302,8 @@ jobs:
       target: linux-x64
       cache_wheels: true
 
-  # Test the oldest and newest supported versions here. Python 3.13 runs coverage.
-  # The nightly workflow tests every supported version.
+  # Oldest and newest Python, plus 3.12 and 3.14 on pushes that bypassed the merge queue.
+  # Python 3.13 runs coverage, and the nightly workflow tests every supported version.
   run_unit_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
@@ -305,7 +314,7 @@ jobs:
     with:
       sessions: unit
       target: linux-x64
-      pythons: '["3.11", "3.15"]'
+      pythons: ${{ needs.changes.outputs.unit_pythons }}
 
   # Scarce runner pools: advisory, and one matrix entry per target, so a shortage
   # in one pool delays only its own entry and never a merge.
