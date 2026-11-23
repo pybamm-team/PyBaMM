@@ -50,9 +50,9 @@ class BaseParticle(pybamm.BaseSubModel):
 
         # Account for stress-induced diffusion by defining a multiplicative
         # "stress factor"
-        stress_option = self.options.resolve(
-            "stress-induced diffusion", domain, self.phase
-        )
+        stress_option = getattr(getattr(self.options, domain), self.phase)[
+            "stress-induced diffusion"
+        ]
 
         if stress_option == "true":
             # Ai2019 eq [12]

@@ -472,6 +472,16 @@ class TestBaseBatteryModel:
                     "number of MSMR reactions": "1.5",
                 }
             )
+        for count in [2.7, True, None, (2.7, "4")]:
+            with pytest.raises(pybamm.OptionError, match=r"number of MSMR reactions"):
+                pybamm.BaseBatteryModel(
+                    {
+                        "open-circuit potential": "MSMR",
+                        "particle": "MSMR",
+                        "intercalation kinetics": "MSMR",
+                        "number of MSMR reactions": count,
+                    }
+                )
         # each electrode must be all-MSMR or not MSMR at all
         with pytest.raises(pybamm.OptionError, match=r"all of them must be 'MSMR' at"):
             pybamm.BaseBatteryModel(
@@ -684,7 +694,8 @@ class TestLegacyDependentDefaults:
                 "lithium plating": (("partially reversible", "none"), "none"),
             }
         )
-        assert options.negative["SEI"] == "constant"
+        assert options.negative.primary["SEI"] == "constant"
+        assert options.negative.secondary["SEI"] == "none"
         assert options.positive["SEI"] == "none"
         options = BatteryModelOptions(
             {"working electrode": "positive", "lithium plating": "partially reversible"}
@@ -1496,7 +1507,8 @@ class TestModelDefaultOptions:
                 "open-circuit potential": ("MSMR", "MSMR"),
             }
         )
-        assert model.options.negative["open-circuit potential"] == "MSMR"
+        # the model stores its own fixed value, not the equivalent one given
+        assert model.options["open-circuit potential"] == "MSMR"
 
     def test_subclass_inherits_fixed_options(self):
         class CustomSPM(pybamm.lithium_ion.SPM):
@@ -1504,6 +1516,21 @@ class TestModelDefaultOptions:
 
         model = CustomSPM(build=False)
         assert model.options["x-average side reactions"] == "true"
+
+    def test_custom_options_class_only_needs_views(self):
+        class CustomOptions(dict):
+            def __init__(self, base):
+                super().__init__(base.items())
+                self._base = base
+
+            negative = property(lambda self: self._base.negative)
+            positive = property(lambda self: self._base.positive)
+            phases = property(lambda self: self._base.phases)
+            electrode_types = property(lambda self: self._base.electrode_types)
+            whole_cell_domains = property(lambda self: self._base.whole_cell_domains)
+
+        options = {"SEI": "reaction limited", "SEI porosity change": "true"}
+        pybamm.lithium_ion.DFN(CustomOptions(BatteryModelOptions(options)))
 
     def test_fixed_options_reject_bad_shapes(self):
         with pytest.raises(pybamm.OptionError, match=r"particle size"):
@@ -1785,6 +1812,17 @@ class TestSavedOptions:
         options = BatteryModelOptions(self.LEGACY, legacy=True)
         assert options["particle mechanics"] == ("swelling only", "none")
         assert options.positive["stress-induced diffusion"] == "true"
+
+    def test_legacy_options_match_earlier_per_electrode_reads(self):
+        options = BatteryModelOptions(
+            {
+                "stress-induced diffusion": (("true", "false"), "false"),
+                "number of MSMR reactions": (("none", "none"), "none"),
+            },
+            legacy=True,
+        )
+        assert options["stress-induced diffusion"] == ("false", "false")
+        assert options["number of MSMR reactions"] == ("none", "none")
 
     def test_legacy_options_still_validate_values(self):
         with pytest.raises(pybamm.OptionError, match="not recognized"):

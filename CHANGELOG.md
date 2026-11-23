@@ -14,6 +14,12 @@
 - Conflicting values for a model's required options (e.g. lead-acid `"particle shape"`, lithium-metal DFN `"working electrode"`, `Yang2017` SEI and plating, non-default `BasicDFNHalfCell` options) raise an `OptionError`. To migrate, drop the conflicting option. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - A `(primary, secondary)` tuple on an electrode with one particle phase, including a half cell's unused negative entry, raises an `OptionError`. To migrate, give one value there or set `"particle phases"` to `"2"`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Without `"particle mechanics"`, a per-electrode `"loss of active material"` tuple sets mechanics per electrode, e.g. `("stress-driven", "none")` gives `("swelling only", "none")`. To migrate, pass `"particle mechanics"` explicitly. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- `pybamm.sympy` and `pybamm.special`, accidental re-exports of the `sympy` and `scipy.special` modules, have been removed; import those modules directly. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
+- PyBaMM no longer depends on pandas. `save_data(to_format="csv")` writes the same CSV with the standard library; install `pybamm[examples]` for the example notebooks and scripts, which read data with pandas. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
+- `save_data(to_format="csv")` compresses only as `.gz`, `.bz2` or `.xz`: a `.zip`, `.zst`, `.tar` or `.tar.gz`-style file name raises a `ValueError`, and URLs are no longer written through fsspec. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
+- PyBaMM no longer depends on xarray: `ProcessedVariable.xr_array_raw_initialized` is removed, bad interpolation queries raise `ValueError`, and a NaN only affects interpolation next to it. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
+- An interpolation axis of one point gives its value at that point, or everywhere with `fill_value="extrapolate"`, where xarray gave NaN except at the point of a 1D grid. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
+- Solutions saved by 26.10 or earlier load without xarray only through `pybamm.load`, which raises an `ImportError` if the loaded object keeps an xarray or pandas object it could not import. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 
 ## Deprecated
 
@@ -34,9 +40,12 @@
 - When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - Added `pybamm-core` (`packages/pybamm-rust`), a Rust expression compiler: an arena DAG with simplification, CSE and zero propagation, a typed IR, scalar and lane-batched interpreters, and forward-mode AD. CI runs `cargo test`, an MSRV check, `cargo fmt`, `cargo clippy` and CodeQL. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
 - `pybamm-core` evaluates transcendentals through the platform C library, as CasADi does: bitwise identical across evaluation paths, last-bit differences across platforms. `pow` is exact for exponents `0`, `1`, `2` and `-1`; `erf`, `asinh` and IEEE 754-2019 `minimum`/`maximum` use `libm`. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
+- `pybamm.UserSuppliedUnstructuredMesh` loads hexahedral mesh files with planar faces, such as structured gmsh meshes of thin pouch-cell layers, with quad boundary tags. Warped or collapsed hexahedra, mixed volume cell types and wedges, pyramids or polyhedra raise `GeometryError`. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 
 ## Bug fixes
 
+- `BasicDFNUnstructured` reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, instead of one corner cell's value, which depended on the in-plane mesh. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
+- Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
 - The DFN with a particle-size distribution now builds with `"SEI porosity change"` or `"lithium plating porosity change"`; the SEI concentration is now always size-averaged. SPM and MPM raise an `OptionError` for this combination. ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417), [#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
@@ -104,9 +113,14 @@
 - Models declare `fixed_options` and `default_options`, checked in one place and inherited, so an `SPM` subclass gets `"x-average side reactions": "true"`. Conflicting values raise an `OptionError` naming the model. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Particle mechanics submodels read `"particle size"` per electrode, so a one-electrode size distribution gets the size-distribution stress and crack equations there. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Saved battery models and complete built-in configs written before the per-electrode option checks keep their original validation rules when loaded. ([#5818](https://github.com/pybamm-team/PyBaMM/pull/5818))
+- `UnstructuredSubMesh.combine` and `compute_interface_data` size their node-welding tolerance by the shortest element edge, not the first edge, which on thin hexahedra exceeded the cell thickness and welded distinct layers together. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 
 ## Optimizations
 
+- Shortages of ARM Linux, Windows and macOS runners no longer block merges: only `linux-x64` jobs gate a merge or run in the merge queue, other targets are advisory and isolated per runner pool, and cached solver wheels restore on Ubuntu. ([#6071](https://github.com/pybamm-team/PyBaMM/pull/6071))
+- Reading a 0D variable at its stored times, `var()` or `var(solution.t)`, returns the stored values without importing xarray or interpolating through it. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
+- `import pybamm` is about six times faster, so importing and running a first DFN takes about a quarter of the time. Citations are parsed only when printed, and SymPy, Black, PostHog, pooch and most of SciPy load on first use. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
+- Interpolating a variable in space or time no longer builds an xarray `DataArray`; interpolation is 1.3 to 266 times faster, with at most a third of the peak memory, from QuickPlot sliders to large resampling. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - Pushes to `main` skip the test suite when the commit already passed the merge queue, and only rebuild the cached solver wheels and upload the Codecov baseline. Other pushes still run the full suite. ([#6027](https://github.com/pybamm-team/PyBaMM/pull/6027))
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))

@@ -40,7 +40,11 @@ class SPM(BaseModel):
 
         if (
             not isinstance(self, pybamm.lithium_ion.SPMe)
-            and "distribution" in self.options["particle size"]
+            and any(
+                getattr(self.options, domain)["particle size"] == "distribution"
+                for domain, electrode_type in self.options.electrode_types.items()
+                if electrode_type == "porous"
+            )
             and "true"
             in [
                 self.options["SEI porosity change"],
@@ -58,7 +62,7 @@ class SPM(BaseModel):
             pybamm.citations.register("Marquis2019")
 
         if any(
-            self.options.resolve(option, domain, phase) not in values
+            getattr(getattr(self.options, domain), phase)[option] not in values
             for option, values in [
                 ("SEI", ("none", "constant")),
                 ("lithium plating", ("none",)),

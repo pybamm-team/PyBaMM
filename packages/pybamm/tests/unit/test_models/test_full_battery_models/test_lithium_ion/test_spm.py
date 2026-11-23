@@ -62,6 +62,16 @@ class TestSPM(BaseUnitTestLithiumIon):
             with pytest.raises(pybamm.OptionError, match=r"distributions"):
                 model_class(options)
 
+    def test_half_cell_porosity_change_ignores_unused_particle_size(self):
+        pybamm.lithium_ion.SPM(
+            {
+                "working electrode": "positive",
+                "particle size": ("distribution", "single"),
+                "SEI porosity change": "true",
+                "surface form": "algebraic",
+            }
+        )
+
     def test_dependent_defaults_use_declared_options(self, monkeypatch):
         monkeypatch.setattr(
             battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", False

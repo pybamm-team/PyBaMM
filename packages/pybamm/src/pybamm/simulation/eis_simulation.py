@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import spsolve
 
 import pybamm
 
@@ -185,6 +184,8 @@ class EISSimulation(BaseSimulation):
         z : complex
             Complex impedance in Ohms.
         """
+        from scipy.sparse.linalg import spsolve
+
         A = (1.0j * 2 * np.pi * frequency) * M + neg_J
         x = spsolve(A, b)
         voltage, current = self._output_jacobian @ x

@@ -64,6 +64,8 @@ OptionPath = tuple[str, ...]
 
 def represents_positive_integer(s: Any) -> bool:
     """Check if a string represents a positive integer"""
+    if isinstance(s, bool) or not isinstance(s, (str, int)):
+        return False
     try:
         val = int(s)
     except ValueError:
@@ -443,13 +445,13 @@ def _apply_legacy_defaults(options: pybamm.FuzzyDict, supplied: set[str]) -> Non
     # derived from the SEI supplied, before plating adds its own "constant" SEI
     if any(sei != "none" for leaves in electrode_leaves("SEI") for sei in leaves):
         set_default("SEI film resistance", "distributed")
-    set_per_electrode_default(
-        "SEI",
-        [
-            "constant" if "partially reversible" in leaves else "none"
-            for leaves in electrode_leaves("lithium plating")
-        ],
-    )
+    sei = []
+    for leaves in electrode_leaves("lithium plating"):
+        defaults = tuple(
+            "constant" if leaf == "partially reversible" else "none" for leaf in leaves
+        )
+        sei.append(defaults[0] if len(set(defaults)) == 1 else defaults)
+    set_per_electrode_default("SEI", sei)
     if "SEI" in fired and "SEI film resistance" not in supplied:
         # pin it explicitly so migrating "SEI" alone can't let this fire later
         fired["SEI film resistance"] = options["SEI film resistance"]
@@ -1201,6 +1203,25 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "would normally be the negative electrode as the positive electrode."
             )
 
+        if legacy:
+            # earlier versions only validated the leaves, so a uniform per-phase
+            # tuple on an option that cannot vary by phase meant one value
+            for option in _PER_ELECTRODE_OPTIONS - _PER_PHASE_OPTIONS:
+                if isinstance(options[option], tuple):
+                    options[option] = tuple(
+                        leaf[0]
+                        if isinstance(leaf, tuple) and len(set(leaf)) == 1
+                        else leaf
+                        for leaf in options[option]
+                    )
+            # earlier versions read this per electrode, so a per-phase tuple
+            # never enabled it
+            if isinstance(options["stress-induced diffusion"], tuple):
+                options["stress-induced diffusion"] = tuple(
+                    "false" if isinstance(leaf, tuple) else leaf
+                    for leaf in options["stress-induced diffusion"]
+                )
+
         for option, value in options.items():
             for path, leaf in iter_option_leaves(option, value):
                 validate_option_value(option, leaf, self.possible_options[option], path)
@@ -1419,27 +1440,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the docstring for Options
         """
         print(self.__doc__)
-
-    def resolve(self, option: str, domain: str, phase: str | None = None) -> Any:
-        """Return an option's value for one electrode and, optionally, one phase.
-
-        Parameters
-        ----------
-        option : str
-            The option name.
-        domain : str
-            ``"negative"`` or ``"positive"``.
-        phase : str, optional
-            ``"primary"`` or ``"secondary"``.
-
-        Returns
-        -------
-        object
-            The resolved value.
-        """
-        return resolve_option(
-            option, self[option], domain, phase, self["working electrode"]
-        )
 
     @property
     def negative(self):

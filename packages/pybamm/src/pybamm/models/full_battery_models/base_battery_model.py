@@ -232,14 +232,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             supplied = dict(extra_options or {})
             self._check_fixed_options(supplied)
             model_legacy_defaults = self._dependent_default_options(
-                {**self.default_options, **self.fixed_options, **supplied}
+                {**self.default_options, **supplied, **self.fixed_options}
             )
             options = BatteryModelOptions(
                 {
                     **self.default_options,
                     **model_legacy_defaults,
-                    **self.fixed_options,
                     **supplied,
+                    **self.fixed_options,
                 },
                 legacy=isinstance(extra_options, LegacyOptions),
                 warn_legacy_defaults=False,

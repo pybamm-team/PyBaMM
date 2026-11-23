@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import pandas as pd
 import pytest
 from scipy.integrate import trapezoid
 
@@ -232,11 +231,7 @@ class TestSimulation:
 
         # test with drive cycle
         data_loader = pybamm.DataLoader()
-        drive_cycle = pd.read_csv(
-            data_loader.get_data("US06.csv"),
-            comment="#",
-            header=None,
-        ).to_numpy()
+        drive_cycle = np.loadtxt(data_loader.get_data("US06.csv"), delimiter=",")
         current_interpolant = pybamm.Interpolant(
             drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )
@@ -861,12 +856,10 @@ class TestSimulation:
         param = model.default_parameter_values
         # Import drive cycle from file
         data_loader = pybamm.DataLoader()
-        drive_cycle = pd.read_csv(
+        drive_cycle = np.loadtxt(
             pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
-            comment="#",
-            skip_blank_lines=True,
-            header=None,
-        ).to_numpy()
+            delimiter=",",
+        )
 
         current_interpolant = pybamm.Interpolant(
             drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t

@@ -340,7 +340,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 sei_on_cracks_option = getattr(self.options, domain)["SEI on cracks"]
                 phases = self.options.phases[domain]
                 for phase in phases:
-                    sei_option = self.options.resolve("SEI", domain, phase)
+                    sei_option = getattr(getattr(self.options, domain), phase)["SEI"]
                     if (
                         sei_option in ["none", "constant"]
                         or sei_on_cracks_option == "false"

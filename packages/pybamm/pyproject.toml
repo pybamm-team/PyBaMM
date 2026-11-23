@@ -31,10 +31,8 @@ dependencies = [
     "black",
     "numpy>=2.0.0",
     "scipy>=1.11.4,!=1.18.0", # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
-    "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
-    "pandas>=1.5.0",
     "pooch>=1.8.1",
     "posthog",
     "pyyaml",
@@ -49,8 +47,8 @@ Releases = "https://github.com/pybamm-team/PyBaMM/releases"
 Changelog = "https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-# For example notebooks
-examples = ["jupyter"]
+# For example notebooks and scripts, which read data with pandas
+examples = ["jupyter", "pandas>=1.5.0"]
 plot = [
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
     # on systems without an attached display, it should never be imported
