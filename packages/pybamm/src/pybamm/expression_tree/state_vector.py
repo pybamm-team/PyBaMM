@@ -477,7 +477,10 @@ class StateVectorDot(StateVectorBase):
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         if y_dot is None:
-            raise ValueError("Must provide a 'y_dot' for converting state vectors")
+            raise ValueError(
+                "Must provide a 'y_dot' for converting state vectors differentiated "
+                "in time, e.g. by `symbol.diff(pybamm.t)`"
+            )
         return casadi.vertcat(*[y_dot[y_slice] for y_slice in self.y_slices])
 
     def _jac(self, variable: pybamm.StateVector | pybamm.StateVectorDot):
