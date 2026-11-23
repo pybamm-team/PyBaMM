@@ -1473,9 +1473,7 @@ class TestFiniteVolumeUnstructuredBehavior:
 
         # len(tag) entries read as per tagged face or per reached face and point
         with pytest.raises(pybamm.ShapeError, match="fits both"):
-            side_value(
-                mesh, "side", faces, pybamm.Vector(np.ones(len(tag))), repeats=2
-            )
+            side_value(mesh, "side", faces, pybamm.Vector(np.ones(len(tag))), repeats=2)
 
     def test_boundary_value_averages_whole_tag_under_coupled_interface(self):
         # The value averages every face of the tag, including faces a
