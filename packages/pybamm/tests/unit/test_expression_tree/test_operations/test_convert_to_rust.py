@@ -881,7 +881,8 @@ class TestInterpolantToRust:
 
     @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
     def test_1d_extrapolate_false_extends(self, interpolator):
-        """Rust ignores extrapolate=False: a NaN would poison the solver residual."""
+        """Rust ignores extrapolate=False, extending the data as evaluate() does
+        with extrapolate=True: a NaN would poison the solver residual."""
         import pybamm
         from pybamm.rust import ExprGraph
 
