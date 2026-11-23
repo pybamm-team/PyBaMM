@@ -408,8 +408,7 @@ class Interpolant(pybamm.Function):
             raise NotImplementedError(
                 f"Rust conversion of 1D {self.interpolator} interpolation does "
                 f"not support y data with more than two dimensions "
-                f"(y.ndim={self.y.ndim}). Use a CasADi-backed model (set "
-                "`model.convert_to_format = 'casadi'`) for this model."
+                f"(y.ndim={self.y.ndim}). {self._RUST_FALLBACK_HINT}"
             )
         # Vector-valued y (n, m): one interpolant per column, in evaluate()'s order
         if self.dimension == 1 and self.interpolator == "linear":
@@ -478,9 +477,7 @@ class Interpolant(pybamm.Function):
         else:
             raise NotImplementedError(
                 f"Rust conversion is not implemented for {self.dimension}D "
-                f"{self.interpolator} interpolation. Use a CasADi-backed model "
-                "(set `model.convert_to_format = 'casadi'`) for models "
-                "using this interpolant."
+                f"{self.interpolator} interpolation. {self._RUST_FALLBACK_HINT}"
             )
 
     def _rust_table(self, build, *args):
@@ -490,9 +487,7 @@ class Interpolant(pybamm.Function):
         except ValueError as error:
             raise pybamm.ModelError(
                 f"Rust conversion cannot represent interpolant '{self.name}': "
-                f"{error}. Use a CasADi-backed model (set "
-                "`model.convert_to_format = 'casadi'`) for models using this "
-                "interpolant."
+                f"{error}. {self._RUST_FALLBACK_HINT}"
             ) from error
 
     def _nd_tensor_layout(self, coeff):
