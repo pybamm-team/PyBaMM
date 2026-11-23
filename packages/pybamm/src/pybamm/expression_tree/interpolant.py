@@ -438,9 +438,10 @@ class Interpolant(pybamm.Function):
             nseg = c.shape[1]
             deg = c.shape[0] - 1
             if deg > 3:
-                raise ValueError(
-                    f"Unexpected PPoly degree {deg} for {self.interpolator} "
-                    "interpolation (expected <= 3)"
+                raise pybamm.ModelError(
+                    f"Rust conversion cannot represent interpolant '{self.name}': "
+                    f"its {self.interpolator} spline has degree {deg}, above 3. "
+                    f"{self._RUST_FALLBACK_HINT}"
                 )
             child = converted_children[0]
             columns = []
