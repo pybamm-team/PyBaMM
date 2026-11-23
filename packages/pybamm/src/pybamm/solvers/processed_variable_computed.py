@@ -52,6 +52,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     # Defaults for a variable pickled before __init__ set these
     time_integral = None
     _unjoinable = False
+    _unreadable_message = None
     _interp_args = None
 
     def __init__(
@@ -150,7 +151,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # Not thread-safe: concurrent first reads may run initialise twice.
         # Instances are constructed and read on the same thread in the standard
         # solve flow, so callers parallelising reads must serialise them.
-        self._raise_if_unjoinable()
+        self._raise_if_unreadable()
         if not self._initialised:
             self._initialise_method()
             self._initialised = True
@@ -723,7 +724,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
         points, and n_p is the size of the input parameter
         """
-        self._raise_if_unjoinable()
+        self._raise_if_unreadable()
         # No sensitivities if there are no inputs
         if len(self.all_inputs[0]) == 0:
             return {}
@@ -830,7 +831,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             for time_integral in (self.time_integral, other.time_integral)
         )
 
-    def _raise_if_unjoinable(self):
+    def _raise_if_unreadable(self):
+        if self._unreadable_message is not None:
+            raise pybamm.SolverError(self._unreadable_message)
         if self._unjoinable:
             raise NotImplementedError(
                 "This variable joins solution segments (multi-step experiments or "

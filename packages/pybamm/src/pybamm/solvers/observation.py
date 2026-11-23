@@ -212,6 +212,9 @@ class OutputAssembly:
         sensitivity_names : list of str, optional
             Sensitivity-parameter names, in ``sensitivities``' column order.
 
+        A discrete-sum variable whose times are not all output times raises a
+        :class:`pybamm.SolverError` when read.
+
         Raises
         ------
         :class:`pybamm.SolverError`
@@ -235,19 +238,27 @@ class OutputAssembly:
                 entries = dense
             values = entries
             indices = None
+            unreadable = None
             if time_integral is not None:
                 # These rows are the integrand's trajectory, not the variable's.
-                indices = time_integral.checked_sample_indices(
-                    name,
-                    solution.t,
-                    "an output_variables solve keeps no states to interpolate",
-                )
-                # A segment that reached its final time leaves later times to the next
-                if solution.termination != "final time":
-                    time_integral.warn_times_after_end(name, solution.t[-1])
-                values = time_integral.postfix(
-                    entries[indices], solution.t[indices], solution.all_inputs[0]
-                )
+                try:
+                    indices = time_integral.checked_sample_indices(
+                        name,
+                        solution.t,
+                        "an output_variables solve keeps no states to interpolate",
+                    )
+                except pybamm.SolverError as error:
+                    # Raise on read, as a step keeps the solve's other variables
+                    unreadable = str(error)
+                    values = np.zeros(0)
+                else:
+                    # A segment that reached its final time leaves later times to
+                    # the next
+                    if solution.termination != "final time":
+                        time_integral.warn_times_after_end(name, solution.t[-1])
+                    values = time_integral.postfix(
+                        entries[indices], solution.t[indices], solution.all_inputs[0]
+                    )
             variable = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(name)],
                 [self._casadi_fns[name]],
@@ -255,9 +266,10 @@ class OutputAssembly:
                 solution,
                 time_integral=time_integral,
             )
+            variable._unreadable_message = unreadable
             variable._sensitivities = (
                 {}
-                if sensitivities is None
+                if sensitivities is None or unreadable is not None
                 else self._variable_sensitivities(
                     name,
                     entries,

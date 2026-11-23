@@ -1945,6 +1945,50 @@ class TestSolution:
         with pytest.raises(pybamm.SolverError, match=r"keeps no states"):
             solver.solve(model, [0, 5], t_interp=np.linspace(0, 5, 6), **solve_kwargs)
 
+    def test_discrete_time_sum_missing_its_times_raises_on_read_after_a_step(self):
+        # A step keeps the solve's other outputs; only the sum has no value
+        model = self._discrete_sum_model(np.linspace(0, 5, 11))
+        solver = pybamm.IDAKLUSolver(output_variables=["y", "sum"])
+        step = solver.step(
+            None,
+            model,
+            5,
+            t_interp=np.linspace(0, 5, 6),
+            inputs={"k": 0.3, "y0": 2.0, "y_min": 0.0},
+            calculate_sensitivities=["k"],
+        )
+
+        t = np.linspace(0, 5, 6)
+        np.testing.assert_allclose(step["y"](t), 2 * np.exp(-0.3 * t), rtol=1e-3)
+        with pytest.raises(pybamm.SolverError, match=r"keeps no states"):
+            step["sum"]()
+        with pytest.raises(pybamm.SolverError, match=r"keeps no states"):
+            step["sum"].sensitivities
+
+    def test_experiment_keeps_its_outputs_beside_a_discrete_sum(self):
+        # Each step starts at its own time, so its outputs miss the data times
+        model = pybamm.lithium_ion.SPM()
+        voltage = model.variables["Voltage [V]"]
+        data = pybamm.DiscreteTimeData(
+            np.array([100.0, 2000.0]), np.array([3.8, 3.7]), "data"
+        )
+        model.variables["sum"] = pybamm.DiscreteTimeSum((voltage - data) ** 2)
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C for 20 minutes", "Rest for 20 minutes"]
+        )
+        # output_variables needs a solver of its own
+        solver = pybamm.IDAKLUSolver(output_variables=["Voltage [V]", "sum"])
+        simulation = pybamm.Simulation(model, experiment=experiment, solver=solver)
+        solution = simulation.solve()
+
+        assert solution.t[-1] == pytest.approx(2400)
+        assert np.isfinite(solution["Voltage [V]"](np.array([600.0, 1800.0]))).all()
+        with pytest.raises(pybamm.SolverError, match=r"keeps no states"):
+            solution.cycles[0].steps[0]["sum"]()
+        # Joined over the steps, a discrete sum has no value either way
+        with pytest.raises(NotImplementedError, match=r"joins solution segments"):
+            solution["sum"]()
+
     @pytest.mark.parametrize("use_output_var", [False, True])
     def test_discrete_time_sum_over_event_terminated_solution(
         self, use_output_var, caplog

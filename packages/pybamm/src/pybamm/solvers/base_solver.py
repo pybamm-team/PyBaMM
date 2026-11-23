@@ -1228,6 +1228,10 @@ class BaseSolver:
             t_interp = np.asarray(t_interp, dtype=float)
             t_interp = np.where(t_interp == t_start, t_eval[0], t_interp)
 
+        # Fail before integrating if a discrete-sum output will miss its times
+        for name, time_integral in self._time_integral_vars.items():
+            time_integral.check_output_times(name, t_eval, t_interp)
+
         # Solve for the consistent initialization
         self._set_consistent_initialization(model, t_eval[0], model_inputs_list)
 
