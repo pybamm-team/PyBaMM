@@ -117,7 +117,7 @@ class TestMPM:
         model = pybamm.lithium_ion.MPM(
             {"particle size": ("distribution", "distribution")}, build=False
         )
-        assert model.options["particle size"] == ("distribution", "distribution")
+        assert model.options["particle size"] == "distribution"
         with pytest.raises(pybamm.OptionError, match="particle size"):
             pybamm.lithium_ion.MPM({"particle size": ("single", "distribution")})
 

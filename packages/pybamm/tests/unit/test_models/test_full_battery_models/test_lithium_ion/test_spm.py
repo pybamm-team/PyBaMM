@@ -55,6 +55,15 @@ class TestSPM(BaseUnitTestLithiumIon):
             with pytest.raises(pybamm.OptionError, match=r"distributions"):
                 model_class(options)
 
+    def test_half_cell_porosity_change_ignores_unused_particle_size(self):
+        pybamm.lithium_ion.SPM(
+            {
+                "working electrode": "positive",
+                "particle size": ("distribution", "single"),
+                "SEI porosity change": "true",
+            }
+        )
+
     def test_dependent_defaults_use_declared_options(self):
         class MySPM(pybamm.lithium_ion.SPM):
             default_options = {"intercalation kinetics": "asymmetric Butler-Volmer"}

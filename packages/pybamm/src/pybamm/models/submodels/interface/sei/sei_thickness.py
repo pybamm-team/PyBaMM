@@ -39,7 +39,7 @@ class SEIThickness(BaseModel):
         domain, Domain = self.domain_Domain
         phase_param = self.phase_param
         reaction_name = self.reaction_name
-        SEI_option = self.options.resolve("SEI", domain, self.phase)
+        SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
         crack_option = getattr(self.options, domain)["SEI on cracks"]
         if self.options["working electrode"] != "both" and domain == "negative":
             crack_option = "false"  # required if SEI on cracks is used for half-cells

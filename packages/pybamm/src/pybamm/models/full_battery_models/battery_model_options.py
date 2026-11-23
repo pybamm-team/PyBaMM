@@ -15,6 +15,8 @@ OptionPath = tuple[str, ...]
 
 def represents_positive_integer(s: Any) -> bool:
     """Check if a string represents a positive integer"""
+    if isinstance(s, bool) or not isinstance(s, (str, int)):
+        return False
     try:
         val = int(s)
     except ValueError:
@@ -1113,6 +1115,25 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "would normally be the negative electrode as the positive electrode."
             )
 
+        if legacy:
+            # earlier versions only validated the leaves, so a uniform per-phase
+            # tuple on an option that cannot vary by phase meant one value
+            for option in _PER_ELECTRODE_OPTIONS - _PER_PHASE_OPTIONS:
+                if isinstance(options[option], tuple):
+                    options[option] = tuple(
+                        leaf[0]
+                        if isinstance(leaf, tuple) and len(set(leaf)) == 1
+                        else leaf
+                        for leaf in options[option]
+                    )
+            # earlier versions read this per electrode, so a per-phase tuple
+            # never enabled it
+            if isinstance(options["stress-induced diffusion"], tuple):
+                options["stress-induced diffusion"] = tuple(
+                    "false" if isinstance(leaf, tuple) else leaf
+                    for leaf in options["stress-induced diffusion"]
+                )
+
         for option, value in options.items():
             for path, leaf in iter_option_leaves(option, value):
                 validate_option_value(option, leaf, self.possible_options[option], path)
@@ -1328,27 +1349,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the docstring for Options
         """
         print(self.__doc__)
-
-    def resolve(self, option: str, domain: str, phase: str | None = None) -> Any:
-        """Return an option's value for one electrode and, optionally, one phase.
-
-        Parameters
-        ----------
-        option : str
-            The option name.
-        domain : str
-            ``"negative"`` or ``"positive"``.
-        phase : str, optional
-            ``"primary"`` or ``"secondary"``.
-
-        Returns
-        -------
-        object
-            The resolved value.
-        """
-        return resolve_option(
-            option, self[option], domain, phase, self["working electrode"]
-        )
 
     @property
     def negative(self):

@@ -231,10 +231,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {
                     **self.default_options,
                     **self._dependent_default_options(
-                        {**self.default_options, **self.fixed_options, **supplied}
+                        {**self.default_options, **supplied, **self.fixed_options}
                     ),
-                    **self.fixed_options,
                     **supplied,
+                    **self.fixed_options,
                 },
                 legacy=isinstance(extra_options, LegacyOptions),
             )
