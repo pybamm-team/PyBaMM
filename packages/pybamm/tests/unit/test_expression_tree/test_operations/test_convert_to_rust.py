@@ -1,36 +1,36 @@
 import itertools
+from fractions import Fraction
 
+import casadi
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
 from scipy.sparse import csc_matrix, csr_matrix
+
+import pybamm
+from pybamm.rust import ExprGraph
+from tests import get_1p1d_discretisation_for_testing
 
 pytest_plugins = ["tests.conftest_rust"]
 
 
 class TestRustExprGraph:
     def test_import(self):
-        from pybamm.rust import Expr, ExprGraph  # noqa: F401
+        from pybamm.rust import Expr  # noqa: F401
 
     def test_scalar(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         s = g.scalar(3.14)
         result = g.eval_to_float(s, 0.0, [], [], [])
         assert result == pytest.approx(3.14)
 
     def test_time(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         t = g.time()
         result = g.eval_to_float(t, 2.5, [], [], [])
         assert result == pytest.approx(2.5)
 
     def test_state_vector(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         sv = g.state_vector(1, 3)
         y = np.array([10.0, 20.0, 30.0, 40.0])
@@ -38,8 +38,6 @@ class TestRustExprGraph:
         assert_array_almost_equal(result, [20.0, 30.0])
 
     def test_state_vector_dot(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         sv_dot = g.state_vector_dot(0, 2)
         y_dot = np.array([100.0, 200.0, 300.0])
@@ -47,24 +45,18 @@ class TestRustExprGraph:
         assert_array_almost_equal(result, [100.0, 200.0])
 
     def test_input_parameter(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         p = g.input_parameter("C_rate")
         result = g.eval_to_float(p, 0.0, [], [], [1.5])
         assert result == pytest.approx(1.5)
 
     def test_array(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.array(np.array([1.0, 2.0, 3.0]))
         result = g.eval_to_array(a, 0.0, np.array([]), np.array([]), [])
         assert_array_almost_equal(result, [1.0, 2.0, 3.0])
 
     def test_add_scalars(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.scalar(2.0)
         b = g.scalar(3.0)
@@ -73,8 +65,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(5.0)
 
     def test_add_dunder(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.scalar(2.0)
         b = g.scalar(3.0)
@@ -83,8 +73,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(5.0)
 
     def test_mul_dunder(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.scalar(4.0)
         b = g.scalar(5.0)
@@ -93,8 +81,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(20.0)
 
     def test_sub_dunder(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.scalar(10.0)
         b = g.scalar(3.0)
@@ -103,8 +89,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(7.0)
 
     def test_neg_dunder(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.scalar(5.0)
         b = -a
@@ -112,8 +96,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(-5.0)
 
     def test_truediv_dunder(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.scalar(10.0)
         b = g.scalar(4.0)
@@ -122,8 +104,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(2.5)
 
     def test_pow_dunder(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.scalar(3.0)
         b = g.scalar(2.0)
@@ -132,8 +112,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(9.0)
 
     def test_nested_expression(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         two = g.scalar(2.0)
         three = g.scalar(3.0)
@@ -144,8 +122,6 @@ class TestRustExprGraph:
         assert result == pytest.approx(19.0)
 
     def test_vector_add(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         a = g.array(np.array([1.0, 2.0, 3.0]))
         b = g.array(np.array([10.0, 20.0, 30.0]))
@@ -154,8 +130,6 @@ class TestRustExprGraph:
         assert_array_almost_equal(result, [11.0, 22.0, 33.0])
 
     def test_scalar_times_vector(self):
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         s = g.scalar(2.0)
         v = g.array(np.array([1.0, 2.0, 3.0]))
@@ -166,9 +140,6 @@ class TestRustExprGraph:
 
 class TestSymbolToRust:
     def test_scalar_to_rust(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         s = pybamm.Scalar(3.14)
         g = ExprGraph()
         rust_symbols = {}
@@ -177,9 +148,6 @@ class TestSymbolToRust:
         assert result == pytest.approx(s.evaluate())
 
     def test_array_to_rust(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         a = pybamm.Vector(np.array([1.0, 2.0, 3.0]))
         g = ExprGraph()
         rust_symbols = {}
@@ -189,9 +157,6 @@ class TestSymbolToRust:
         assert_array_almost_equal(result, expected.flatten())
 
     def test_state_vector_to_rust(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         sv = pybamm.StateVector(slice(1, 4))
         y = np.array([0.0, 10.0, 20.0, 30.0, 40.0])
         g = ExprGraph()
@@ -202,9 +167,6 @@ class TestSymbolToRust:
         assert_array_almost_equal(result, expected.flatten())
 
     def test_caching(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         s = pybamm.Scalar(3.14)
         g = ExprGraph()
         rust_symbols = {}
@@ -234,9 +196,6 @@ class TestRegPowerToRust:
         ],
     )
     def test_reg_power_scalar(self, x_val, exponent):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         p = pybamm.InputParameter("x")
         expr = pybamm.reg_power(p, exponent)
         g = ExprGraph()
@@ -246,9 +205,6 @@ class TestRegPowerToRust:
         assert result == pytest.approx(expected, rel=1e-12, abs=1e-15)
 
     def test_reg_power_with_scale(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         p = pybamm.InputParameter("x")
         expr = pybamm.reg_power(p, 0.7, scale=2.5)
         g = ExprGraph()
@@ -263,10 +219,6 @@ class TestRegPowerToRust:
     def test_reg_power_is_bitwise_identical_across_backends(self, exponent, scale):
         # These exponents use only operations IEEE 754 rounds correctly, so NumPy,
         # CasADi and Rust must agree bit for bit.
-        import casadi
-
-        import pybamm
-        from pybamm.rust import ExprGraph
 
         magnitudes = np.concatenate([[0.0, 5e-324], np.geomspace(1e-12, 2.0, 2000)])
         base = scale * np.concatenate([magnitudes, -magnitudes])
@@ -292,11 +244,6 @@ class TestRegPowerToRust:
 
     @pytest.mark.parametrize("exponent", [0.5, 2.0])
     def test_reg_power_with_zero_delta_matches_casadi(self, exponent):
-        import casadi
-
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         base = np.array([0.0, -4.0, 4.0])
         y = pybamm.StateVector(slice(0, base.size))
         expr = pybamm.RegPower(y, exponent, delta=0)
@@ -318,9 +265,6 @@ class TestRegPowerToRust:
 
 class TestIndexToRust:
     def test_index_vector_slice(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         v = pybamm.Vector(np.array([10.0, 20.0, 30.0, 40.0, 50.0]))
         expr_pybamm = pybamm.Index(v, slice(1, 3))
         g = ExprGraph()
@@ -331,9 +275,6 @@ class TestIndexToRust:
         assert_array_almost_equal(result, expected)
 
     def test_index_negative_last_element(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         v = pybamm.Vector(np.array([10.0, 20.0, 30.0, 40.0, 50.0]))
         expr_pybamm = pybamm.Index(v, -1)
         g = ExprGraph()
@@ -343,9 +284,6 @@ class TestIndexToRust:
         assert_array_almost_equal(result, expected)
 
     def test_index_step_raises(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         v = pybamm.Vector(np.array([10.0, 20.0, 30.0, 40.0, 50.0]))
         expr_pybamm = pybamm.Index(v, slice(0, 4, 2))
         g = ExprGraph()
@@ -353,9 +291,6 @@ class TestIndexToRust:
             expr_pybamm.to_rust(g, {})
 
     def test_index_over_negative_start_clamps(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         v = pybamm.Vector(np.array([10.0, 20.0, 30.0, 40.0, 50.0]))
         expr_pybamm = pybamm.Index(v, slice(-7, 5))
         g = ExprGraph()
@@ -367,9 +302,6 @@ class TestIndexToRust:
 
 class TestInterpolantToRust:
     def test_1d_linear(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         x = np.linspace(0, 1, 50)
         y = 2 * x
         sv = pybamm.StateVector(slice(0, 1))
@@ -384,9 +316,6 @@ class TestInterpolantToRust:
         assert_array_almost_equal(result, expected, decimal=5)
 
     def test_1d_linear_multiple_values(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         x = np.linspace(0, 1, 50)
         y = 2 * x
         sv = pybamm.StateVector(slice(0, 2))
@@ -401,9 +330,6 @@ class TestInterpolantToRust:
         assert_array_almost_equal(result, expected, decimal=5)
 
     def test_1d_linear_extrapolation_matches_evaluate(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         x = np.linspace(0.0, 1.0, 11)
         y = 3.0 * x + 1.0
         sv = pybamm.StateVector(slice(0, 2))
@@ -417,11 +343,6 @@ class TestInterpolantToRust:
         assert_array_almost_equal(result, expected, decimal=10)
 
     def test_1d_linear_repeated_knot_matches_casadi(self):
-        import casadi
-
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         # A step at t = 600, which CasADi takes as right-continuous
         x = np.array([0.0, 600.0, 600.0, 1200.0])
         interp = pybamm.Interpolant(x, np.array([1.0, 1.0, 2.0, 2.0]), pybamm.t)
@@ -437,9 +358,6 @@ class TestInterpolantToRust:
         assert result[3] == pytest.approx(2.0)
 
     def test_1d_linear_refused_table_raises_model_error(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         # The first segment extrapolates, so it may not have zero width
         x = np.array([0.0, 0.0, 1.0])
         interp = pybamm.Interpolant(x, np.array([1.0, 2.0, 3.0]), pybamm.t)
@@ -447,9 +365,6 @@ class TestInterpolantToRust:
             interp.to_rust(ExprGraph(), {})
 
     def _check_interp_parity(self, interpolator):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         # Non-uniform grid so coefficients are non-trivial.
         x = np.array([0.0, 0.5, 1.0, 2.0, 3.5, 5.0])
         y = np.array([0.0, 0.4, 1.1, 3.9, 12.0, 24.0])
@@ -472,9 +387,6 @@ class TestInterpolantToRust:
         self._check_interp_parity("pchip")
 
     def test_1d_cubic_vector_child(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         x = np.linspace(0.0, 4.0, 20)
         y = np.sin(x)
         sv = pybamm.StateVector(slice(0, 3))
@@ -491,8 +403,6 @@ class TestInterpolantToRust:
     def test_1d_extrapolate_false_extends(self, interpolator):
         """Rust ignores extrapolate=False, extending the data as evaluate() does
         with extrapolate=True: a NaN would poison the solver residual."""
-        import pybamm
-        from pybamm.rust import ExprGraph
 
         x = np.array([0.0, 0.5, 1.0, 2.0, 3.5, 5.0])
         y = np.array([0.0, 0.4, 1.1, 3.9, 12.0, 24.0])
@@ -517,9 +427,6 @@ class TestInterpolantToRust:
 
     @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
     def test_1d_vector_valued_y_matches_evaluate(self, interpolator):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         # Distinct nonlinear columns so a swapped or short table cannot cancel out.
         x = np.array([0.0, 0.5, 1.0, 2.0, 3.5, 5.0])
         y = np.column_stack([np.sin(x), np.cos(x), x**2])
@@ -536,11 +443,6 @@ class TestInterpolantToRust:
 
     @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
     def test_1d_vector_valued_y_jacobian_matches_casadi(self, interpolator):
-        import casadi
-
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         x = np.array([0.0, 0.5, 1.0, 2.0, 3.5, 5.0])
         y = np.column_stack([np.sin(x), np.cos(x), x**2])
         sv = pybamm.StateVector(slice(0, 1))
@@ -561,9 +463,6 @@ class TestInterpolantToRust:
         )
 
     def test_1d_y_with_more_than_two_dims_raises(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         x = np.linspace(0.0, 1.0, 5)
         y = np.ones((5, 2, 2))
         sv = pybamm.StateVector(slice(0, 1))
@@ -597,9 +496,6 @@ class TestInterpolantNDToRust:
         return np.vstack([ins, grid, np.asarray(outs)])
 
     def _check_parity(self, x, y, interpolator):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         ndim = len(x)
         svs = tuple(pybamm.StateVector(slice(i, i + 1)) for i in range(ndim))
         interp = pybamm.Interpolant(x, y, svs, interpolator=interpolator)
@@ -625,9 +521,6 @@ class TestInterpolantNDToRust:
 
     @pytest.mark.parametrize("interpolator", ["linear", "cubic"])
     def test_2d_vector_children(self, interpolator):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         X0, X1 = np.meshgrid(self.x0, self.x1, indexing="ij")
         y = X0**2 + X1
         sv0 = pybamm.StateVector(slice(0, 3))
@@ -644,9 +537,6 @@ class TestInterpolantNDToRust:
 
     @pytest.mark.parametrize("interpolator", ["linear", "cubic"])
     def test_2d_extrapolate_false_extends(self, interpolator):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         X0, X1 = np.meshgrid(self.x0, self.x1, indexing="ij")
         y = np.sin(X0) * np.exp(-0.3 * X1) + 0.1 * X0 * X1
         svs = (pybamm.StateVector(slice(0, 1)), pybamm.StateVector(slice(1, 2)))
@@ -673,9 +563,6 @@ class TestInterpolantNDToRust:
 
 class TestConcatenationToRust:
     def test_numpy_concatenation(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         v1 = pybamm.Vector(np.array([1.0, 2.0]))
         v2 = pybamm.Vector(np.array([3.0, 4.0, 5.0]))
         expr_pybamm = pybamm.NumpyConcatenation(v1, v2)
@@ -689,9 +576,6 @@ class TestConcatenationToRust:
     def test_domain_concatenation_repeated_over_a_secondary_domain(
         self, dual_backend_compare
     ):
-        import pybamm
-        from pybamm.rust import ExprGraph
-        from tests import get_1p1d_discretisation_for_testing
 
         disc = get_1p1d_discretisation_for_testing(zpts=4)
         secondary = {"secondary": "current collector"}
@@ -717,9 +601,6 @@ class TestConcatenationToRust:
 
 class TestVectorFieldToRust:
     def test_vector_field(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         v1 = pybamm.Vector(np.array([1.0, 2.0]))
         v2 = pybamm.Vector(np.array([3.0, 4.0]))
         expr_pybamm = pybamm.VectorField(v1, v2)
@@ -736,7 +617,6 @@ _Y = np.array([0.3, 1.2, 0.7, 2.1, 0.9, 1.6])
 def _parity_cases():
     """Lowered nodes on states or inputs, so constant folding cannot remove them,
     each with the points to check it at."""
-    import pybamm
 
     def y(start, stop):
         return pybamm.StateVector(slice(start, stop))
@@ -904,7 +784,6 @@ class TestRustCasadiParity:
         self, a, b, dual_backend_compare
     ):
         # evaluate() takes the floored remainder; Rust keeps CasADi's fmod
-        import pybamm
 
         expr = pybamm.Modulo(pybamm.InputParameter("a"), pybamm.InputParameter("b"))
         dual_backend_compare(expr, inputs={"a": a, "b": b}, check_evaluate=False)
@@ -912,8 +791,6 @@ class TestRustCasadiParity:
     @pytest.mark.parametrize(("a", "b"), [(3.0, 3.0), (3.0, 4.0)])
     def test_equality_matches_evaluate(self, a, b):
         # Equality has no CasADi form, so evaluate() is the only reference
-        import pybamm
-        from pybamm.rust import ExprGraph
 
         expr = pybamm.Equality(pybamm.InputParameter("a"), pybamm.InputParameter("b"))
         inputs = {"a": a, "b": b}
@@ -935,18 +812,12 @@ class TestSparseMatrixToRust:
         ids=["all-zero", "column", "square"],
     )
     def test_sparse_matrix_as_value(self, entries):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         expr = pybamm.Matrix(entries).to_rust(g)
         result = g.eval_to_array(expr, 0.0, np.array([]), np.array([]), [])
         np.testing.assert_array_equal(result, entries.toarray().ravel())
 
     def test_sparse_matrix_in_elementwise_product(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         mat = pybamm.Matrix(csr_matrix(([2.0], ([1], [0])), shape=(3, 1)))
         expr = mat * pybamm.StateVector(slice(0, 1))
         g = ExprGraph()
@@ -956,9 +827,6 @@ class TestSparseMatrixToRust:
         np.testing.assert_array_equal(result, [0.0, 6.0, 0.0])
 
     def test_sparse_matrix_as_matmul_operand_and_value(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         mat = pybamm.Matrix(csr_matrix(([2.0], ([1], [0])), shape=(3, 1)))
         sv = pybamm.StateVector(slice(0, 1))
         g = ExprGraph()
@@ -974,11 +842,6 @@ class TestSparseMatrixToRust:
         )
 
     def test_sparse_matmul_sums_rows_in_column_order(self):
-        from fractions import Fraction
-
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         # A stencil row stored out of column order; summing the two outer
         # entries first rounds differently, and breaks conservation
         a = 33.85469387755101
@@ -1007,9 +870,6 @@ class TestSparseMatrixToRust:
 
 class TestRustUnsupportedNodeErrors:
     def test_unsupported_4d_interpolant_message(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         x = tuple(np.linspace(0, 1, 5) for _ in range(4))
         z = np.zeros((5, 5, 5, 5))
         svs = tuple(pybamm.StateVector(slice(i, i + 1)) for i in range(4))
@@ -1018,9 +878,6 @@ class TestRustUnsupportedNodeErrors:
             interp.to_rust(ExprGraph(), {})
 
     def test_unsupported_base_symbol_message(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         sym = pybamm.SpatialVariable("x", domain=["negative electrode"])
         with pytest.raises(NotImplementedError, match=r"convert_to_format") as exc:
             sym.to_rust(ExprGraph(), {})
@@ -1028,18 +885,12 @@ class TestRustUnsupportedNodeErrors:
         assert "evaluator=" not in str(exc.value)
 
     def test_unsupported_generic_function_message(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         sv = pybamm.StateVector(slice(0, 1))
         fun = pybamm.Function(np.sin, sv)
         with pytest.raises(NotImplementedError, match=r"convert_to_format"):
             fun.to_rust(ExprGraph(), {})
 
     def test_specific_function_without_a_rust_form_message(self):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         fun = pybamm.SpecificFunction(np.abs, pybamm.StateVector(slice(0, 1)))
         with pytest.raises(NotImplementedError, match=r"no native Rust implementation"):
             fun.to_rust(ExprGraph(), {})
@@ -1057,9 +908,6 @@ class TestRustUnsupportedNodeErrors:
         ],
     )
     def test_unsupported_operator_message(self, name):
-        import pybamm
-        from pybamm.rust import ExprGraph
-
         y = pybamm.StateVector(slice(0, 2))
         field = pybamm.VectorField(y, pybamm.StateVector(slice(2, 4)))
         identity = pybamm.Matrix(np.eye(2))
@@ -1080,10 +928,6 @@ class TestRustUnsupportedNodeErrors:
 
 class TestCrossGraphGuard:
     def test_builder_rejects_foreign_expr(self):
-        import pytest
-
-        from pybamm.rust import ExprGraph
-
         g_a = ExprGraph()
         g_b = ExprGraph()
         a = g_a.scalar(2.0)
@@ -1092,10 +936,6 @@ class TestCrossGraphGuard:
             g_a.add(a, b)
 
     def test_dunder_rejects_foreign_expr(self):
-        import pytest
-
-        from pybamm.rust import ExprGraph
-
         g_a = ExprGraph()
         g_b = ExprGraph()
         a = g_a.scalar(2.0)
@@ -1104,10 +944,6 @@ class TestCrossGraphGuard:
             _ = a + b
 
     def test_compile_rejects_foreign_expr(self):
-        import pytest
-
-        from pybamm.rust import ExprGraph
-
         g_a = ExprGraph()
         g_b = ExprGraph()
         a = g_a.scalar(2.0)
@@ -1115,10 +951,6 @@ class TestCrossGraphGuard:
             g_b.compile(a)
 
     def test_compile_outputs_rejects_foreign_expr(self):
-        import pytest
-
-        from pybamm.rust import ExprGraph
-
         g_a = ExprGraph()
         g_b = ExprGraph()
         a = g_a.scalar(2.0)
@@ -1128,21 +960,12 @@ class TestCrossGraphGuard:
 
 class TestRustSubgradientParity:
     def _rust_jac_row(self, expr_pybamm, n, y):
-        import numpy as np
-
-        from pybamm.rust import ExprGraph
-
         g = ExprGraph()
         expr = expr_pybamm.to_rust(g, {})
         f = g.compile(expr, n_states=n)
         return f.jacobian("y")(0.0, y, np.array([])).toarray()
 
     def test_max_jacobian_matches_casadi(self):
-        import casadi
-        import numpy as np
-
-        import pybamm
-
         n = 4
         y = np.array([0.3, 0.9, 0.1, 0.5])  # unique argmax at index 1
         sv = pybamm.StateVector(slice(0, n))
@@ -1158,11 +981,6 @@ class TestRustSubgradientParity:
         np.testing.assert_allclose(rust_row, expected, rtol=1e-12, atol=1e-12)
 
     def test_min_jacobian_matches_casadi(self):
-        import casadi
-        import numpy as np
-
-        import pybamm
-
         n = 4
         y = np.array([0.3, 0.9, 0.1, 0.5])  # unique argmin at index 2
         sv = pybamm.StateVector(slice(0, n))
@@ -1179,10 +997,6 @@ class TestRustSubgradientParity:
 
     @pytest.mark.parametrize("operator", ["abs", "sign"])
     def test_derivative_at_zero_matches_casadi(self, operator):
-        import casadi
-
-        import pybamm
-
         y = np.array([0.0])
         sv = pybamm.StateVector(slice(0, 1))
         expr = abs(sv) if operator == "abs" else pybamm.sign(sv)
@@ -1196,7 +1010,6 @@ class TestRustSubgradientParity:
     @pytest.mark.parametrize("operator", ["minimum", "maximum"])
     def test_tied_binary_operands_take_the_left_derivative(self, operator):
         # As Symbol.jac does; CasADi's fmin and fmax split a tie evenly instead
-        import pybamm
 
         y = np.array([0.5, 0.5])
         left = pybamm.StateVector(slice(0, 1))
@@ -1211,7 +1024,6 @@ class TestRustSubgradientParity:
     @pytest.mark.parametrize("reduction", ["max", "min"])
     def test_tied_reduction_takes_the_first_occurrence(self, reduction):
         # CasADi's mmax and mmin split a tie evenly instead
-        import pybamm
 
         y = np.array([0.3, 0.5, 0.5, 0.3])
         if reduction == "min":
