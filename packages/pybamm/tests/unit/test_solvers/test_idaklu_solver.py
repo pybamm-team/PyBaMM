@@ -3995,6 +3995,35 @@ class TestIDAKLUSensitivityInitialConditions:
         np.testing.assert_array_equal(solution.t[-2:], [0.5, np.nextafter(0.5, 1)])
         self._assert_matches(solution, _coupled_dae_solution, self.inputs)
 
+    @pytest.mark.parametrize(
+        "t_end", [1.0, np.nextafter(0.5, 1)], ids=["steps", "jump"]
+    )
+    def test_init_all_y_ic_sensitivities_ignore_the_previous_solve(self, t_end):
+        # IDAS's staggered IDA_Y_INIT reads ypS from workspace that the last step,
+        # or the restart a float after a jump, leaves behind
+        model = _coupled_dae(10.0, switch=pybamm.t > 0.5)
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-8, atol=1e-10, options={"init_all_y_ic": True}
+        )
+        first, second = (
+            solver.solve(
+                model,
+                [0, t_end],
+                inputs=self.inputs,
+                calculate_sensitivities=True,
+            )
+            for _ in range(2)
+        )
+
+        for parameter in self.inputs:
+            np.testing.assert_allclose(
+                second["y"].sensitivities[parameter],
+                first["y"].sensitivities[parameter],
+                rtol=1e-10,
+                atol=1e-12,
+                err_msg=parameter,
+            )
+
     def test_interpolation_times_around_a_discontinuity(self):
         right = np.nextafter(0.5, 1)
         t_interp = np.array([0, 0.25, 0.5, right, 0.75, 1])

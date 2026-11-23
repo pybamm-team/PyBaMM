@@ -1072,11 +1072,12 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_val) {
+void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(
+  const sunrealtype& t_val, int ism) {
   DEBUG("IDAKLUSolver::ReinitializeIntegrator");
   CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp), "IDAReInit");
   if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, IDA_STAGGERED, yyS, yypS), "IDASensReInit");
+    CheckErrors(IDASensReInit(ida_mem, ism, yyS, yypS), "IDASensReInit");
     ApplySensitivityScales();
   }
 }
@@ -1179,8 +1180,10 @@ void IDAKLUSolverOpenMP<ExprSet>::CalcICWithIDAS(
   bool with_sensitivities) {
   DEBUG("IDAKLUSolver::CalcICWithIDAS");
 
-  // IDACalcIC starts from IDAS's copy of the vectors
-  ReinitializeIntegrator(t_val);
+  // IDACalcIC starts from IDAS's copy of the vectors. Under IDA_Y_INIT, IDAS's
+  // staggered IC reads ypS from leftover workspace; its simultaneous IC sets it
+  bool const simultaneous = with_sensitivities && icopt == IDA_Y_INIT;
+  ReinitializeIntegrator(t_val, simultaneous ? IDA_SIMULTANEOUS : IDA_STAGGERED);
   if (sensitivity && !with_sensitivities) {
     CheckErrors(IDASensToggleOff(ida_mem), "IDASensToggleOff");
   }

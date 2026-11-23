@@ -342,9 +342,10 @@ public:
   void SaveStats();
 
   /**
-   * @brief Set a consistent initialization for ODEs
+   * @brief Restart IDAS at t_val from yy, yyp, yyS and yypS
+   * @param ism The sensitivity method IDAS uses from here
    */
-  void ReinitializeIntegrator(const sunrealtype& t_val);
+  void ReinitializeIntegrator(const sunrealtype& t_val, int ism = IDA_STAGGERED);
 
   /**
    * @brief Hand IDAS the per-parameter scales held in sens_scales_.
