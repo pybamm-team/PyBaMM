@@ -364,6 +364,22 @@ class TestInterpolantToRust:
         with pytest.raises(pybamm.ModelError, match=r"repeat.*convert_to_format"):
             interp.to_rust(ExprGraph(), {})
 
+    def test_spline_above_cubic_raises_model_error(self, monkeypatch):
+        from scipy import interpolate
+
+        # scipy's cubic and pchip splines never exceed degree 3, so fake one
+        monkeypatch.setattr(
+            interpolate,
+            "CubicSpline",
+            lambda x, y, extrapolate: interpolate.PPoly(np.ones((5, x.size - 1)), x),
+        )
+        x = np.linspace(0.0, 1.0, 5)
+        interp = pybamm.Interpolant(
+            x, x**2, pybamm.StateVector(slice(0, 1)), interpolator="cubic"
+        )
+        with pytest.raises(pybamm.ModelError, match=r"degree 4.*convert_to_format"):
+            interp.to_rust(ExprGraph(), {})
+
     def _check_interp_parity(self, interpolator):
         # Non-uniform grid so coefficients are non-trivial.
         x = np.array([0.0, 0.5, 1.0, 2.0, 3.5, 5.0])
@@ -661,6 +677,13 @@ def _parity_cases():
             @ left,
             at_y,
         ),
+        "sparse_stack": (
+            pybamm.SparseStack(
+                pybamm.Matrix(csr_matrix(np.array([[1.0, 0.0, 2.0]]))),
+                pybamm.Matrix(csr_matrix(np.array([[0.0, 3.0, 0.0]]))),
+            ),
+            [{}],
+        ),
         "negate": (-left, at_y),
         "absolute_value": (abs(left - 1.0), at_y),
         "sign": (
@@ -687,6 +710,10 @@ def _parity_cases():
         "state_vector_multi_slice": (
             pybamm.StateVector(slice(0, 2), slice(4, 6)),
             at_y,
+        ),
+        "state_vector_dot": (
+            pybamm.StateVectorDot(slice(1, 4)),
+            [{"y_dot": np.arange(10.0, 16.0)}],
         ),
         "state_vector_dot_multi_slice": (
             pybamm.StateVectorDot(slice(0, 2), slice(4, 6)),
@@ -876,6 +903,19 @@ class TestRustUnsupportedNodeErrors:
         interp = pybamm.Interpolant(x, z, svs, interpolator="linear")
         with pytest.raises(NotImplementedError, match=r"convert_to_format"):
             interp.to_rust(ExprGraph(), {})
+
+    def test_matmul_with_a_stacked_left_operand_message(self):
+        # Only an Array lowers to a matrix node; a stack of them stays a value
+        stack = pybamm.SparseStack(
+            pybamm.Matrix(csr_matrix(np.array([[1.0, 0.0, 2.0]]))),
+            pybamm.Matrix(csr_matrix(np.array([[0.0, 3.0, 0.0]]))),
+        )
+        graph = ExprGraph()
+        expr = (stack @ pybamm.StateVector(slice(0, 3))).to_rust(graph, {})
+        with pytest.raises(
+            NotImplementedError, match=r"constant matrix.*convert_to_format"
+        ):
+            graph.compile(expr, n_states=3)
 
     def test_unsupported_base_symbol_message(self):
         sym = pybamm.SpatialVariable("x", domain=["negative electrode"])
