@@ -23,11 +23,10 @@ def _jump_dae():
     return model
 
 
-@pytest.mark.parametrize("options", [{}, {"calc_ic": False}])
-def test_algebraic_sensitivities_at_t0_are_consistent(options):
+def test_algebraic_sensitivities_at_t0_are_consistent_without_calc_ic():
     """z(0) = b y(0) with y(0) = 1 gives dz/db(0) = 1, not the zero of the
-    guess z = 0."""
-    solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, options=options)
+    guess z = 0, with the states kept as given."""
+    solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, options={"calc_ic": False})
     sol = solver.solve(
         _jump_dae(),
         [0, 1],

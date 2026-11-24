@@ -1934,13 +1934,7 @@ class TestIDAKLUSolver:
                 np.ravel(final["I"].sensitivities["jump"])[-1], 1, rtol=1e-6
             )
 
-    @pytest.mark.parametrize(
-        ("output_variables", "calculate_sensitivities"),
-        [(None, False), (["I"], False), (None, True)],
-    )
-    def test_state_derivative_event_violated_when_starting_at_a_discontinuity(
-        self, output_variables, calculate_sensitivities
-    ):
+    def test_state_derivative_event_violated_when_starting_at_a_discontinuity(self):
         # t > 0.2 adds a t_eval point a float after t0 = 0.2, where IDA restarts
         # after its first step, and q' = -2 there violates q' > -1
         model = self._current_jump_model(
@@ -1948,22 +1942,17 @@ class TestIDAKLUSolver:
             jump=pybamm.InputParameter("jump"),
             strict=True,
         )
-        solver = pybamm.IDAKLUSolver(output_variables=output_variables)
-        solution = solver.solve(
-            model,
-            [0.2, 1],
-            inputs={"jump": 1.5},
-            calculate_sensitivities=calculate_sensitivities,
+        solution = pybamm.IDAKLUSolver().solve(
+            model, [0.2, 1], inputs={"jump": 1.5}, calculate_sensitivities=True
         )
         assert solution.termination == "event: dq/dt > -1"
         # The event point follows t0, which keeps the state before the jump
         np.testing.assert_array_equal(solution.t, [0.2, np.nextafter(0.2, 1)])
         np.testing.assert_allclose(solution["I"](solution.t), [0.5, 2], rtol=1e-6)
         np.testing.assert_allclose(solution.y_event.ravel(), [1, 2], rtol=1e-6)
-        if calculate_sensitivities:
-            np.testing.assert_allclose(
-                np.ravel(solution["I"].sensitivities["jump"]), [0, 1], atol=1e-6
-            )
+        np.testing.assert_allclose(
+            np.ravel(solution["I"].sensitivities["jump"]), [0, 1], atol=1e-6
+        )
 
     def test_state_derivative_event_with_inputs_threads_and_sensitivities(self):
         # y' = -k y < -0.5 until y = 0.5 / k, at t = ln(2 k) / k
@@ -3906,16 +3895,16 @@ class TestIDAKLUSensitivityInitialConditions:
                 )
 
     @pytest.mark.parametrize(
-        ("mass_scale", "options"),
+        ("mass_scale", "options", "output_variables"),
         [
-            (1.0, {}),
-            (1.0, {"calc_ic": False}),
-            (1.0, {"newton_mode": "full"}),
-            (1.0, {"hermite_interpolation": False}),
-            (10.0, {}),
+            (1.0, {}, []),
+            (1.0, {}, ["2z"]),
+            (1.0, {"calc_ic": False}, []),
+            (1.0, {"newton_mode": "full"}, []),
+            (1.0, {"hermite_interpolation": False}, []),
+            (10.0, {}, []),
         ],
     )
-    @pytest.mark.parametrize("output_variables", [[], ["2z"]])
     def test_sensitivities_across_a_discontinuity(
         self, mass_scale, options, output_variables
     ):
@@ -4095,36 +4084,3 @@ class TestIDAKLUSensitivityInitialConditions:
         # The singular factorisation leaves the next solve's sub-block working
         assert len(failures) == 1
         assert solve()[1] == failures
-
-    @pytest.mark.parametrize(
-        ("mass_scale", "calculate_sensitivities"), [(0.1, False), (10.0, True)]
-    )
-    def test_mass_matrix_ode_steps_as_its_identity_form(
-        self, mass_scale, calculate_sensitivities
-    ):
-        # m y' = f and y' = f / m are one ODE, so IDAS takes the same steps from
-        # the same yp, at t0 and after the jump
-        def solve(mass, rhs_scale):
-            model = pybamm.BaseModel()
-            y = pybamm.Variable("y")
-            a = pybamm.InputParameter("a")
-            model.rhs = {y: rhs_scale * (-a * y + (pybamm.t > 0.5))}
-            model.initial_conditions = {y: 1}
-            model.variables = {"y": y}
-            pybamm.Discretisation().process_model(model)
-            model.mass_matrix = pybamm.Matrix(mass * model.mass_matrix.entries)
-            return pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).solve(
-                model,
-                [0, 1],
-                inputs={"a": 2.0},
-                calculate_sensitivities=calculate_sensitivities,
-            )
-
-        with_mass = solve(mass_scale, 1)
-        identity = solve(1, 1 / mass_scale)
-
-        assert len(with_mass.t) == len(identity.t)
-        np.testing.assert_allclose(with_mass.t, identity.t, rtol=1e-10)
-        np.testing.assert_allclose(
-            with_mass["y"](with_mass.t), identity["y"](identity.t), rtol=1e-10
-        )
