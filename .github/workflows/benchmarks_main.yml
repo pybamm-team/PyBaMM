@@ -141,6 +141,10 @@ jobs:
             --threshold-test percentage \
             --threshold-upper-boundary 0.02 \
             --threshold-max-sample-size 50 \
+            --threshold-measure peak-memory \
+            --threshold-test percentage \
+            --threshold-upper-boundary 0.05 \
+            --threshold-max-sample-size 50 \
             --thresholds-reset \
             --error-on-alert \
             --github-actions "$GITHUB_TOKEN" \

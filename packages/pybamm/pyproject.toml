@@ -103,6 +103,7 @@ bench = [
     "hypothesis",
     "pytest-benchmark>=5.3.0",
     # For memory benchmarking (Linux/macOS only)
+    "memray; sys_platform != 'win32'",
     "pytest-memray>=1.7.0; sys_platform != 'win32'",
 ]
 typecheck = ["pyrefly>=1.4.0"]
