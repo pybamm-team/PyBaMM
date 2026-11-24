@@ -14,8 +14,11 @@ eis_sim = pybamm.EISSimulation(model)
 solution = eis_sim.solve(frequencies)
 
 # The electrode impedances sum to the cell impedance.
-z_cell = solution["Cell impedance [Ohm]"]
+z_cell = solution.impedance
 z_positive = solution["Positive electrode impedance [Ohm]"]
 z_negative = solution["Negative electrode impedance [Ohm]"]
+print(
+    "Max |Z_pos + Z_neg - Z_cell|:", np.max(np.abs((z_positive + z_negative) - z_cell))
+)
 
 solution.nyquist_plot()

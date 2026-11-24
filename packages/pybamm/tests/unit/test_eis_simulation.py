@@ -580,27 +580,28 @@ class TestThreeElectrodeEIS:
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
         solution = pybamm.EISSimulation(model).solve(np.logspace(-2, 2, 5))
 
-        assert "Cell impedance [Ohm]" not in solution._data
         assert "Positive electrode impedance [Ohm]" not in solution._data
         assert "Negative electrode impedance [Ohm]" not in solution._data
 
     @pytest.mark.parametrize(
-        "model_class",
-        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
+        "model_class, rtol",
+        [
+            (pybamm.lithium_ion.SPM, 1e-10),
+            (pybamm.lithium_ion.SPMe, 1e-5),
+            (pybamm.lithium_ion.DFN, 1e-10),
+        ],
     )
-    def test_impedances_sum_to_cell_impedance(self, model_class):
+    def test_impedances_sum_to_cell_impedance(self, model_class, rtol):
         model = model_class(options={"surface form": "differential"})
         model.insert_reference_electrode()
         solution = pybamm.EISSimulation(model).solve(np.logspace(-2, 2, 5))
 
-        z_cell = solution["Cell impedance [Ohm]"]
         z_pos = solution["Positive electrode impedance [Ohm]"]
         z_neg = solution["Negative electrode impedance [Ohm]"]
 
         # SPMe's explicit potential expressions make the split approximate, so the
         # tolerance is looser than the exact split SPM and DFN give.
-        np.testing.assert_allclose(z_pos + z_neg, z_cell, rtol=1e-5)
-        np.testing.assert_allclose(solution.impedance, z_cell)
+        np.testing.assert_allclose(z_pos + z_neg, solution.impedance, rtol=rtol)
 
     def test_cell_impedance_matches_two_electrode_simulation(self):
         frequencies = np.logspace(-2, 2, 5)
@@ -628,8 +629,8 @@ class TestThreeElectrodeEIS:
             solutions.append(pybamm.EISSimulation(model).solve(frequencies))
 
         np.testing.assert_allclose(
-            solutions[0]["Cell impedance [Ohm]"],
-            solutions[1]["Cell impedance [Ohm]"],
+            solutions[0].impedance,
+            solutions[1].impedance,
             rtol=1e-8,
         )
         assert not np.allclose(

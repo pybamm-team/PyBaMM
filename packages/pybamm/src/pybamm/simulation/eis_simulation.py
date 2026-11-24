@@ -34,8 +34,7 @@ class EISSimulation(BaseSimulation):
     :meth:`pybamm.lithium_ion.BaseModel.insert_reference_electrode`, the solution
     additionally carries the impedance of each electrode present, named
     ``"Positive electrode impedance [Ohm]"`` and
-    ``"Negative electrode impedance [Ohm]"``, alongside
-    ``"Cell impedance [Ohm]"``.
+    ``"Negative electrode impedance [Ohm]"``, alongside ``solution.impedance``.
     """
 
     def __init__(
@@ -266,6 +265,8 @@ class EISSimulation(BaseSimulation):
 
         components = {}
         for index, label in enumerate(self._components):
+            if label == "Cell":
+                continue
             # The cell voltage is the positive minus the negative 3E potential, so
             # flipping the negative component makes the two components sum to the cell.
             sign = -1 if label == "Negative electrode" else 1
@@ -274,7 +275,7 @@ class EISSimulation(BaseSimulation):
         self._solution = pybamm.EISSolution(
             frequencies,
             impedance,
-            components=components if len(components) > 1 else None,
+            components=components or None,
         )
         self._solution.set_up_time = self.set_up_time
 

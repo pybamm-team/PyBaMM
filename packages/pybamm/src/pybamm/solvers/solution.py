@@ -362,9 +362,9 @@ class EISSolution(SolutionBase):
     impedance : np.ndarray
         Complex impedance values at each frequency.
     components : dict, optional
-        Named per-component impedances, e.g.
-        ``{"Cell impedance [Ohm]": ..., "Positive electrode impedance [Ohm]": ...}``,
-        made available alongside the cell impedance.
+        Named per-electrode impedances, e.g.
+        ``{"Positive electrode impedance [Ohm]": ..., "Negative electrode impedance [Ohm]": ...}``,
+        made available alongside ``solution.impedance``.
     """
 
     __slots__ = ()
@@ -408,7 +408,9 @@ class EISSolution(SolutionBase):
         Parameters
         ----------
         **kwargs
-            Keyword arguments forwarded to :func:`pybamm.nyquist_plot`.
+            Keyword arguments forwarded to :func:`pybamm.nyquist_plot`. When
+            per-electrode impedances are present, ``label`` is ignored because
+            each component is labeled automatically.
 
         Returns
         -------
@@ -417,28 +419,32 @@ class EISSolution(SolutionBase):
         """
         from pybamm.plotting.nyquist_plot import nyquist_plot
 
-        labels = [
-            label
-            for label in ("Cell", "Positive electrode", "Negative electrode")
-            if f"{label} impedance [Ohm]" in self._data
+        electrode_keys = [
+            key for key in self._data if key.endswith(" electrode impedance [Ohm]")
         ]
-        if len(labels) < 2:
+        if not electrode_keys:
             return nyquist_plot(self.impedance, **kwargs)
 
         plot_kwargs = dict(kwargs)
         ax = plot_kwargs.pop("ax", None)
         show_plot = plot_kwargs.pop("show_plot", True)
         plot_kwargs.pop("label", None)
-        fig = None
-        for label in labels:
-            fig_i, ax = nyquist_plot(
-                self._data[f"{label} impedance [Ohm]"],
+        fig, ax = nyquist_plot(
+            self.impedance,
+            ax=ax,
+            show_plot=False,
+            label="Cell",
+            **plot_kwargs,
+        )
+        for key in electrode_keys:
+            label = key.removesuffix(" impedance [Ohm]")
+            _, ax = nyquist_plot(
+                self._data[key],
                 ax=ax,
                 show_plot=False,
                 label=label,
                 **plot_kwargs,
             )
-            fig = fig or fig_i
         ax.legend()
 
         if show_plot:  # pragma: no cover
