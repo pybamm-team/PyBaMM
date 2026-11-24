@@ -3071,6 +3071,127 @@ class TestSimulationExperiment:
             rtol=1e-4,
         )
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_control_steps_rest_battery_models(self, experiment_model_mode):
+        # A control step that does not drive the current of a battery model rests
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=pybamm.Experiment(
+                [
+                    pybamm.step.control(
+                        {"Upper voltage cut-off [V]": 4.3}, duration=60
+                    ),
+                    "Discharge at 1C for 1 minute",
+                ]
+            ),
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+        np.testing.assert_allclose(
+            solution["Current [A]"](np.array([30, 90])), [0, 5], atol=1e-8
+        )
+
+    def test_control_steps_unified_substitutes_set_controls(self):
+        # Controls that every step sets to a value add no algebraic equations
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control({"Heating power [W]": 200}, duration=10),
+                pybamm.step.control({"Coolant temperature [K]": 290}, duration=10),
+                pybamm.step.control(
+                    {"Heating power [W]": lambda t: 10 * t}, duration=10
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        solution = sim.solve()
+        model = sim._built_experiment_model
+        assert model.algebraic == {}
+        assert model.switching_control_variables == set()
+        np.testing.assert_allclose(
+            solution["Heating power [W]"](np.array([5, 15, 25])),
+            [200, 100, 50],
+            rtol=1e-6,
+        )
+        np.testing.assert_allclose(
+            solution["Coolant temperature [K]"](np.array([5, 15, 25])),
+            [295, 290, 295],
+            rtol=1e-6,
+        )
+
+    def test_control_steps_unified_initial_guess_with_padding_rest(self):
+        # The padding rest runs first and holds the control at its parameter value
+        net_power = (self._net_power_residual, 50)
+        start_time = datetime(2026, 1, 1)
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control(
+                    {"Heating power [W]": 200}, duration=10, start_time=start_time
+                ),
+                pybamm.step.control(
+                    implicit={"Heating power [W]": net_power}, duration=10
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        model = sim._built_experiment_model
+        (variable,) = model.algebraic
+        # The initial condition is in units of the scale, the parameter value
+        guess = (
+            model.initial_conditions[variable].evaluate() * variable.scale.evaluate()
+        )
+        np.testing.assert_allclose(guess, 100)
+
+        # Without a padding rest, the first step's value is the guess
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control({"Heating power [W]": 200}, duration=10),
+                pybamm.step.control(
+                    implicit={"Heating power [W]": net_power}, duration=10
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        model = sim._built_experiment_model
+        (variable,) = model.algebraic
+        # The initial condition is in units of the scale, the parameter value
+        guess = (
+            model.initial_conditions[variable].evaluate() * variable.scale.evaluate()
+        )
+        np.testing.assert_allclose(guess, 200)
+
+    def test_control_steps_internal_inputs(self):
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=pybamm.Experiment(
+                [pybamm.step.control({"Heating power [W]": 200}, duration=10)]
+            ),
+        )
+        assert sim._is_internal_experiment_input("Experiment step value")
+        assert sim._is_internal_experiment_input(
+            "Experiment step value (Heating power [W])"
+        )
+        # A user input with a similar name is not internal
+        assert not sim._is_internal_experiment_input("Experiment step value (other)")
+
     def test_control_steps_errors(self):
         experiment = pybamm.Experiment(
             [pybamm.step.control({"Unread parameter": 1}, duration=10)]

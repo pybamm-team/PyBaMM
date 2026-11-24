@@ -658,6 +658,11 @@ class TestExperimentSteps:
         assert copied == a
         assert copied is not a
         assert copied.controls == a.controls
+        # Copies do not share their dicts
+        copied.input_explicit["A"] = 3
+        copied.targets["A"] = 3
+        assert a.input_explicit == {"A": 1}
+        assert a.targets == {"A": 1}
 
         # Steps that only differ in their targets share a control structure
         b = pybamm.step.ControlStep({"A": 2}, {"B": residual}, duration=20)
@@ -704,3 +709,13 @@ class TestExperimentSteps:
             pybamm.step.ControlStep({"A": np.array([[1, 1], [2, 2]])})
         with pytest.raises(TypeError, match=r"only 1 positional argument"):
             pybamm.step.ControlStep({"A": lambda t, y: t})
+        with pytest.raises(
+            ValueError, match=r"'Ambient temperature \[K\]' cannot be a"
+        ):
+            pybamm.step.ControlStep({"Ambient temperature [K]": 300})
+        with pytest.raises(
+            ValueError, match=r"'Ambient temperature \[K\]' cannot be a"
+        ):
+            pybamm.step.ControlStep(
+                implicit={"Ambient temperature [K]": lambda variables: 0}
+            )

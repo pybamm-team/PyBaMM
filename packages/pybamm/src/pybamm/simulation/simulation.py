@@ -9,6 +9,7 @@ import numpy as np
 
 import pybamm
 import pybamm.telemetry
+from pybamm.experiment.step import controls as controls_module
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.solvers.base_solver import process
 from pybamm.util import import_optional_dependency
@@ -245,10 +246,15 @@ class Simulation(BaseSimulation):
             return cls._STEP_VALUE_INPUT
         return f"{cls._STEP_VALUE_INPUT} ({control})"
 
-    @classmethod
-    def _is_internal_experiment_input(cls, name):
-        return name in cls._INTERNAL_EXPERIMENT_INPUTS or name.startswith(
-            f"{cls._STEP_VALUE_INPUT} ("
+    def _is_internal_experiment_input(self, name):
+        if name in self._INTERNAL_EXPERIMENT_INPUTS:
+            return True
+        # Only the value inputs of this experiment's controls, not any similar name
+        steps = self.experiment.steps if self.experiment is not None else []
+        return any(
+            name == self._step_value_input_name(control)
+            for step in steps
+            for control in step.controls
         )
 
     @staticmethod
@@ -293,9 +299,7 @@ class Simulation(BaseSimulation):
         if padding_rest_step is not None:
             upsampling_steps.append(padding_rest_step)
         names = [
-            pybamm.step.base_step._upsampling_variable_name(
-                step, self._model, variables
-            )
+            controls_module.upsampling_variable_name(step, self._model, variables)
             for step in upsampling_steps
         ]
         if all(name is None for name in names):
@@ -352,11 +356,15 @@ class Simulation(BaseSimulation):
             len(unique_steps) + 1 if self._experiment_includes_padding_rest else None
         )
 
-        # Each control gets one switched residual and, if a collapsible step drives
-        # it, one per-step value input
+        # Each control gets one switch over the steps and, if a collapsible step
+        # drives it, one per-step value input
         controls = list(
             dict.fromkeys(control for step in unique_steps for control in step.controls)
         )
+        is_battery_model = isinstance(self._model, pybamm.BaseBatteryModel)
+        if is_battery_model and self._CURRENT_CONTROL not in controls:
+            # Steps that do not drive the current of a battery model rest
+            controls.insert(0, self._CURRENT_CONTROL)
         value_inputs = {
             control: pybamm.InputParameter(self._step_value_input_name(control))
             for control in controls
@@ -372,26 +380,29 @@ class Simulation(BaseSimulation):
 
         @functools.cache
         def default(control):
-            return pybamm.step.base_step._default_control_value(
+            return controls_module.default_control_value(
                 self._model, parameter_values, control
             )
 
-        def hold_residual(control, step_name):
+        def hold_value(control, step_name):
             # A step that does not drive a control holds it at its parameter value
             if default(control) is None:
                 raise pybamm.ModelError(
                     f"Step '{step_name}' does not drive '{control}', which has no "
                     "value in the parameter values."
                 )
+            return default(control)
 
-            def residual(variables):
-                variable = pybamm.step.base_step._control_variable(variables, control)
-                return variable - default(control)
-
-            return residual
+        def hold_residual(control, step_name):
+            value = hold_value(control, step_name)
+            return lambda variables: (
+                controls_module.control_variable(variables, control) - value
+            )
 
         def control_builder(step, control):
             if control not in step.controls:
+                if control == self._CURRENT_CONTROL and is_battery_model:
+                    return rest_residual
                 return hold_residual(control, step)
             # Collapsible steps read their targets from the shared per-step inputs;
             # the rest bake their own targets in.
@@ -400,6 +411,32 @@ class Simulation(BaseSimulation):
                 control
             ]
 
+        def is_set(step, control):
+            return (
+                isinstance(step, pybamm.step.ControlStep)
+                and control in step.input_explicit
+            )
+
+        def set_value(step, control):
+            if control not in step.controls:
+                return hold_value(control, step)
+            if is_collapsible(step):
+                return value_inputs[control]
+            return step.targets[control]
+
+        # Controls that every step sets to a value are substituted, as in the legacy
+        # mode, so they do not add algebraic equations
+        set_controls = [
+            control
+            for control in controls
+            if control != self._CURRENT_CONTROL
+            and all(
+                is_set(step, control)
+                for step in unique_steps
+                if control in step.controls
+            )
+        ]
+
         new_model = self._model_with_experiment_controls().new_copy()
         new_parameter_values = parameter_values.copy()
         # Temperatures may change between steps, so the unified model must read the
@@ -407,30 +444,42 @@ class Simulation(BaseSimulation):
         if self._experiment_uses_ambient_input:
             new_parameter_values[self._AMBIENT_TEMPERATURE_INPUT] = "[input]"
 
-        # A battery model's external circuit owns the current; any other control,
-        # including the current of other models, becomes an algebraic variable
-        circuit_controls_current = self._CURRENT_CONTROL in controls and isinstance(
-            self._model, pybamm.BaseBatteryModel
+        rest_residual = pybamm.step.Rest(duration=1).get_control_residual
+        padding_rest_step = None
+        if self._experiment_includes_padding_rest:
+            padding_rest_step = pybamm.step.Rest(duration=1)
+
+        for control in set_controls:
+            values = [set_value(step, control) for step in unique_steps]
+            if padding_rest_step is not None:
+                values.append(hold_value(control, self._PADDING_REST_KEY))
+            new_parameter_values[control] = pybamm.Conditional(
+                pybamm.InputParameter(self._STEP_INDEX_INPUT), *values
+            )
+
+        # A battery model's external circuit owns the current; any other control
+        # that a step adjusts, including the current of other models, becomes an
+        # algebraic variable
+        circuit_controls_current = (
+            self._CURRENT_CONTROL in controls and is_battery_model
         )
         # Register the control variables before any residual is built, so that every
         # residual can read them
         variables = new_model.variables
         control_variables = {}
         for control in controls:
-            if control == self._CURRENT_CONTROL and circuit_controls_current:
+            if control in set_controls or (
+                control == self._CURRENT_CONTROL and circuit_controls_current
+            ):
                 continue
             name = "Current [A]" if control == self._CURRENT_CONTROL else control
-            control_variables[control] = (
-                pybamm.step.base_step._adjusted_control_variable(name, default(control))
+            control_variables[control] = controls_module.adjusted_control_variable(
+                name, default(control)
             )
             variables[name] = control_variables[control]
 
-        padding_rest_step = None
-        if self._experiment_includes_padding_rest:
-            padding_rest_step = pybamm.step.Rest(duration=1)
-
-        # One conditional control residual per control selects the active step's
-        # control law via the experiment step index input
+        # One conditional control residual per adjusted control selects the active
+        # step's control law via the experiment step index input
         switching_control_variables = set()
         if circuit_controls_current:
             step_control_builders = [
@@ -452,10 +501,12 @@ class Simulation(BaseSimulation):
                 new_parameter_values,
             )
             switching_control_variables.update(var.name for var in submodel.algebraic)
+        # The first active step is the padding rest, if any, which holds the controls
         first_step = self.experiment.steps[0]
         first_step_values = (
             {name: first_step.targets[name] for name in first_step.input_explicit}
             if isinstance(first_step, pybamm.step.ControlStep)
+            and padding_rest_step is None
             else {}
         )
         for control, variable in control_variables.items():
@@ -471,7 +522,7 @@ class Simulation(BaseSimulation):
             # Guess the value that the first step sets, if any, as a guess equal to
             # a state can make another step's residual independent of the control
             new_model.initial_conditions[variable] = (
-                pybamm.step.base_step._initial_control_guess(
+                controls_module.initial_control_guess(
                     default(control), first_step_values.get(control)
                 )
             )
@@ -667,7 +718,7 @@ class Simulation(BaseSimulation):
     def _check_model_reads_experiment_controls(self) -> None:
         # A battery step sets the current and, if it has a temperature, the ambient
         # temperature, and is ignored only if the model reads none of them
-        parameter_names = pybamm.step.base_step._control_parameters(self._model)
+        parameter_names = controls_module.control_parameters(self._model)
         steps_by_controls = {}
         for step in self.experiment.steps:
             if isinstance(step, pybamm.step.ControlStep):
@@ -708,7 +759,7 @@ class Simulation(BaseSimulation):
         The model with each control of the experiment, other than the current, as a
         variable, so that the solution of every step has it.
         """
-        parameters = pybamm.step.base_step._control_parameters(self._model)
+        parameters = controls_module.control_parameters(self._model)
         controls = {
             control: parameters[control]
             for step in self.experiment.steps
@@ -734,7 +785,7 @@ class Simulation(BaseSimulation):
         self._check_model_reads_experiment_controls()
         self._experiment_uses_ambient_input = (
             self._AMBIENT_TEMPERATURE_INPUT
-            in pybamm.step.base_step._control_parameters(self._model)
+            in controls_module.control_parameters(self._model)
         )
 
         if (

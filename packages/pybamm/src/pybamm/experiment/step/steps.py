@@ -9,18 +9,22 @@ from .base_step import (
     BaseStepExplicit,
     BaseStepImplicit,
     ControlKind,
-    _adjusted_control_variable,
     _check_drive_cycle,
     _check_function_of_time,
     _constant_value,
-    _control_variable,
     _convert_electric,
-    _default_control_value,
     _drive_cycle_interpolant,
     _examples,
-    _initial_control_guess,
     _step_time,
     _value_identity,
+)
+from .controls import (
+    AMBIENT_TEMPERATURE_CONTROL,
+    CURRENT_CONTROL,
+    adjusted_control_variable,
+    control_variable,
+    default_control_value,
+    initial_control_guess,
 )
 
 
@@ -499,12 +503,16 @@ class ControlStep(BaseStep):
     """
     Step that drives model parameters, its controls. It sets each control to a value
     (explicit), or adjusts it so that a residual is zero (implicit). Controls it does
-    not drive keep their parameter values.
+    not drive keep their parameter values, except that on battery models the current
+    is zero (the step rests) unless the step drives ``"Current function [A]"``.
+    ``"Ambient temperature [K]"`` cannot be a control; use ``temperature`` instead.
 
     Values and targets can be a number, a 2-column array of times and values (as a
     drive cycle), or a function of the time since the start of the step. Steps of the
     same structure whose values and targets are numbers share one branch of the
-    unified experiment model.
+    unified experiment model. Residual functions are part of that structure and are
+    compared by identity, so define each residual function once and reuse it, rather
+    than creating a new one (e.g. a ``lambda``) for every step.
 
     Subclasses can override :meth:`control_residuals` to define their own control laws.
 
@@ -551,6 +559,11 @@ class ControlStep(BaseStep):
         both = sorted(explicit.keys() & implicit.keys())
         if both:
             raise ValueError(f"Controls {both} cannot be both set and adjusted")
+        if AMBIENT_TEMPERATURE_CONTROL in explicit.keys() | implicit.keys():
+            raise ValueError(
+                f"'{AMBIENT_TEMPERATURE_CONTROL}' cannot be a control, set it with "
+                "the step's 'temperature' argument instead"
+            )
         self.residual_functions = {}
         input_targets = dict(explicit)
         for name, residual in implicit.items():
@@ -633,8 +646,12 @@ class ControlStep(BaseStep):
 
     def copy(self):
         # A shallow copy keeps the processed targets and supports subclasses with
-        # other arguments
-        return copy.copy(self)
+        # other arguments; the dicts are copied so that the copies do not share them
+        new_step = copy.copy(self)
+        for name in ("input_explicit", "input_implicit", "input_targets", "targets"):
+            setattr(new_step, name, dict(getattr(self, name)))
+        new_step.residual_functions = dict(self.residual_functions)
+        return new_step
 
     def is_implicit(self):
         return bool(self.input_implicit)
@@ -673,7 +690,7 @@ class ControlStep(BaseStep):
             The residual of each control in :attr:`controls`, keyed by control name.
         """
         residuals = {
-            name: _control_variable(variables, name) - targets[name]
+            name: control_variable(variables, name) - targets[name]
             for name in self.input_explicit
         }
         for name, function in self.residual_functions.items():
@@ -684,16 +701,20 @@ class ControlStep(BaseStep):
         return residuals
 
     def set_up(self, new_model, new_parameter_values):
+        if CURRENT_CONTROL not in self.controls and isinstance(
+            new_model, pybamm.BaseBatteryModel
+        ):
+            new_parameter_values[CURRENT_CONTROL] = 0
         for name in self.input_explicit:
             new_parameter_values[name] = self.targets[name]
 
         variables = new_model.variables
         control_variables = {}
         for name in self.input_implicit:
-            default = _default_control_value(new_model, new_parameter_values, name)
-            control_variables[name] = _adjusted_control_variable(name, default)
+            default = default_control_value(new_model, new_parameter_values, name)
+            control_variables[name] = adjusted_control_variable(name, default)
             new_model.initial_conditions[control_variables[name]] = (
-                _initial_control_guess(default)
+                initial_control_guess(default)
             )
             variables[name] = control_variables[name]
         residuals = self.get_control_residuals(variables)

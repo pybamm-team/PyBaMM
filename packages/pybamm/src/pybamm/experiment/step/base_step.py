@@ -12,6 +12,7 @@ import numpy as np
 
 import pybamm
 
+from .controls import CURRENT_CONTROL, upsampling_variable_name
 from .step_termination import _read_termination
 
 
@@ -23,9 +24,6 @@ class ControlKind(StrEnum):
     POWER = "power"
     RESISTANCE = "resistance"
 
-
-#: The parameter that battery steps drive.
-CURRENT_CONTROL = "Current function [A]"
 
 _examples = """
 
@@ -473,7 +471,7 @@ class BaseStep:
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
         )
-        upsampling_variable = _upsampling_variable_name(
+        upsampling_variable = upsampling_variable_name(
             self, model, processed_model.variables
         )
         if upsampling_variable is not None:
@@ -678,66 +676,6 @@ def _constant_value(parameter_values, target):
         return None
     processed = parameter_values.process_symbol(pybamm.convert_to_symbol(target))
     return float(processed.evaluate()) if processed.is_constant() else None
-
-
-def _control_parameters(model):
-    """The model's parameters that a step can drive, keyed by name."""
-    return {
-        parameter.name: parameter
-        for parameter in model.parameters
-        if isinstance(parameter, pybamm.Parameter | pybamm.FunctionParameter)
-    }
-
-
-def _upsampling_variable_name(step, model, variables):
-    """
-    Name of the variable to upsample during ``step``: the step's own, else the
-    model's ``upsampling_variable``, else the voltage, or ``None`` if ``variables``
-    has none of them.
-    """
-    names = (
-        step.upsampling_variable,
-        getattr(model, "upsampling_variable", None),
-        "Voltage [V]",
-    )
-    return next(
-        (name for name in names if name is not None and name in variables), None
-    )
-
-
-def _control_variable(variables, control):
-    """The variable that a control becomes when it is adjusted."""
-    if control == CURRENT_CONTROL:
-        return variables["Current [A]"]
-    return variables[control]
-
-
-def _default_control_value(model, parameter_values, control):
-    """The value of a control in ``parameter_values``, or ``None`` if it has none."""
-    try:
-        return parameter_values.process_symbol(_control_parameters(model)[control])
-    except KeyError:
-        return None
-
-
-def _adjusted_control_variable(control, default):
-    """Variable of an adjusted control, scaled by its default value if constant."""
-    scale = 1
-    if default is not None and default.is_constant():
-        scale = abs(float(default.evaluate())) or 1
-    return pybamm.Variable(control, scale=scale)
-
-
-def _initial_control_guess(default, value=None):
-    """
-    Initial guess for an adjusted control: ``value`` if it is a number, else its
-    default value if it is constant.
-    """
-    if isinstance(value, numbers.Number):
-        return pybamm.Scalar(value)
-    if default is not None and default.is_constant():
-        return default
-    return pybamm.Scalar(0)
 
 
 def _step_time():
