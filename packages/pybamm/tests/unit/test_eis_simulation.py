@@ -582,7 +582,7 @@ class TestThreeElectrodeEIS:
 
         assert "Cell impedance [Ohm]" not in solution._data
         assert "Positive electrode impedance [Ohm]" not in solution._data
-        assert "Negative electrode impedance [Ohm]" not in solution._datas
+        assert "Negative electrode impedance [Ohm]" not in solution._data
 
     @pytest.mark.parametrize(
         "model_class",
