@@ -7,6 +7,8 @@ from tests import get_mesh_for_testing
 if pybamm.has_jax():
     import jax
 
+    from pybamm.solvers import jax_bdf_solver
+
 
 @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
 class TestJaxBDFSolver:
@@ -175,3 +177,20 @@ class TestJaxBDFSolver:
         )
 
         np.testing.assert_allclose(y[:, 0].reshape(-1), np.exp(-0.1 * t_eval))
+
+    def test_initialisation_far_from_consistent(self):
+        def fun(y, t):
+            return jax.numpy.stack([-0.1 * y[0], y[1] ** 3 - 8.0 * y[0] ** 3])
+
+        # the consistent value is 2.0; a Jacobian frozen at the guess 1.0 diverges
+        y0 = jax.numpy.array([1.0, 1.0])
+        mass = np.diag([1.0, 0.0])
+
+        state = jax.jit(
+            lambda y: jax_bdf_solver._bdf_init(
+                fun, jax.jacfwd(fun), mass, 0.0, y, 0.1, 1e-8, 1e-8
+            )
+        )(y0)
+
+        np.testing.assert_allclose(state.D[0], [1.0, 2.0], rtol=1e-8)
+        assert not state.consistent_y0_failed
