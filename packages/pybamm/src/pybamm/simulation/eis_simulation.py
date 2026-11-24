@@ -125,24 +125,27 @@ class EISSimulation(BaseSimulation):
             model.get_processed_variable("Voltage [V]"),
             model.get_processed_variable("Current [A]"),
         )
-        # Only the equations and voltage/current reach the impedance, so inputs
-        # used elsewhere (e.g. other output variables) get a placeholder
-        equations = [
-            model.concatenated_rhs,
-            model.concatenated_algebraic,
-            model.concatenated_initial_conditions,
-            outputs,
-        ]
-        unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
-        used = {symbol.name for symbol in unpacker.unpack_list_of_symbols(equations)}
-        placeholders = {
-            symbol.name: np.nan
-            for symbol in model.input_parameters
-            if symbol.name not in used
-        }
-        inputs_dict = pybamm.BaseSolver.set_up_model_inputs(
-            model, placeholders | (inputs_dict or {})
-        )
+        # Compile and evaluate against only the inputs the compiled functions read,
+        # so inputs used elsewhere (e.g. other output variables) never shift them
+        if getattr(self, "_input_names_model", None) is not model:
+            unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+            symbols = unpacker.unpack_list_of_symbols(
+                [
+                    model.concatenated_rhs,
+                    model.concatenated_algebraic,
+                    model.concatenated_initial_conditions,
+                    outputs,
+                    *(event.expression for event in model.events),
+                ]
+            )
+            self._input_names = sorted({symbol.name for symbol in symbols})
+            self._input_names_model = model
+        inputs = pybamm.ParameterValues.check_parameter_values(inputs_dict or {})
+        missing = [name for name in self._input_names if name not in inputs]
+        if missing:
+            missing_str = ", ".join(f"'{name}'" for name in missing)
+            raise pybamm.SolverError(f"No value provided for input: [{missing_str}].")
+        inputs_dict = {name: inputs[name] for name in self._input_names}
 
         # Convert inputs to casadi format for Jacobian evaluation
         if model.convert_to_format == "casadi":

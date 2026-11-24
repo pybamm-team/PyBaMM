@@ -2304,11 +2304,12 @@ class BaseSolver:
 
     @staticmethod
     def set_up_model_inputs(model: pybamm.BaseModel, inputs: dict) -> dict:
-        """Validate and order the input parameter values for a model.
+        """Set up and order the input parameter values for a model.
 
-        Inputs the model does not use are dropped. Inputs the model uses only for
-        observing the solution get a placeholder value if missing, which disables
-        ``solution.observe``.
+        Inputs the model does not use are dropped. Values are not type-checked. If
+        an input used only for observing the solution is missing, it gets a
+        placeholder value and ``solution.observe`` is permanently disabled on
+        ``model``, even if a later call supplies the input.
 
         Parameters
         ----------
