@@ -457,9 +457,8 @@ class Simulation(BaseSimulation):
                 pybamm.InputParameter(self._STEP_INDEX_INPUT), *values
             )
 
-        # A battery model's external circuit owns the current; any other control
-        # that a step adjusts, including the current of other models, becomes an
-        # algebraic variable
+        # A battery model's circuit owns the current; other adjusted controls are
+        # algebraic variables
         circuit_controls_current = (
             self._CURRENT_CONTROL in controls and is_battery_model
         )

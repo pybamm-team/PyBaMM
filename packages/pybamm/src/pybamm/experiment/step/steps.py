@@ -501,18 +501,15 @@ class CustomStepImplicit(BaseStepImplicit):
 
 class ControlStep(BaseStep):
     """
-    Step that drives model parameters, its controls. It sets each control to a value
-    (explicit), or adjusts it so that a residual is zero (implicit). Controls it does
-    not drive keep their parameter values, except that on battery models the current
-    is zero (the step rests) unless the step drives ``"Current function [A]"``.
-    ``"Ambient temperature [K]"`` cannot be a control; use ``temperature`` instead.
+    Step that sets model parameters (its controls) to values (explicit), or adjusts
+    them so that residuals are zero (implicit). Other controls keep their parameter
+    values, but on battery models an undriven current is zero.
+    ``"Ambient temperature [K]"`` cannot be a control; use ``temperature``.
 
-    Values and targets can be a number, a 2-column array of times and values (as a
-    drive cycle), or a function of the time since the start of the step. Steps of the
-    same structure whose values and targets are numbers share one branch of the
-    unified experiment model. Residual functions are part of that structure and are
-    compared by identity, so define each residual function once and reuse it, rather
-    than creating a new one (e.g. a ``lambda``) for every step.
+    Values and targets can be a number, a 2-column array of times and values, or a
+    function of the time since the start of the step. Steps that differ only in
+    numeric values and targets share one branch of the unified experiment model.
+    Residual functions are compared by identity, so reuse one function across steps.
 
     Subclasses can override :meth:`control_residuals` to define their own control laws.
 
