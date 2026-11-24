@@ -395,6 +395,14 @@ class StateVector(StateVectorBase):
             raise ValueError("Must provide a 'y' for converting state vectors")
         return casadi.vertcat(*[y[y_slice] for y_slice in self.y_slices])
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        exprs = [graph.state_vector(s.start, s.stop) for s in self._y_slices]
+        if len(exprs) == 1:
+            return exprs[0]
+        return graph.concat(exprs)
+
     def _jac(self, variable: pybamm.StateVector | pybamm.StateVectorDot):
         if isinstance(variable, pybamm.StateVector):
             return self._jac_same_vector(variable)
@@ -482,6 +490,14 @@ class StateVectorDot(StateVectorBase):
                 "in time, e.g. by `symbol.diff(pybamm.t)`"
             )
         return casadi.vertcat(*[y_dot[y_slice] for y_slice in self.y_slices])
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        exprs = [graph.state_vector_dot(s.start, s.stop) for s in self._y_slices]
+        if len(exprs) == 1:
+            return exprs[0]
+        return graph.concat(exprs)
 
     def _jac(self, variable: pybamm.StateVector | pybamm.StateVectorDot):
         if isinstance(variable, pybamm.StateVectorDot):
