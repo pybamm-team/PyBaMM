@@ -6,6 +6,7 @@ from tests import get_mesh_for_testing
 
 if pybamm.has_jax():
     import jax
+    import jax.extend
 
     from pybamm.solvers import jax_bdf_solver
 
@@ -194,3 +195,32 @@ class TestJaxBDFSolver:
 
         np.testing.assert_allclose(state.D[0], [1.0, 2.0], rtol=1e-8)
         assert not state.consistent_y0_failed
+
+    def test_step_loop_has_one_factorisation_site(self):
+        # vmap makes a cond with a batched predicate a select that runs both
+        # branches, so each factorisation site in the step loop runs every attempt
+        def fun(y, t, k):
+            return -k * y
+
+        def solve(k):
+            return pybamm.jax_bdf_integrate(
+                fun, jax.numpy.ones(2), jax.numpy.linspace(0.0, 1.0, 5), k
+            )
+
+        def count_lu(jaxpr):
+            n = 0
+            for eqn in jaxpr.eqns:
+                n += eqn.primitive.name == "lu"
+                for param in eqn.params.values():
+                    for sub in param if isinstance(param, tuple | list) else [param]:
+                        if isinstance(sub, jax.extend.core.ClosedJaxpr):
+                            n += count_lu(sub.jaxpr)
+                        elif isinstance(sub, jax.extend.core.Jaxpr):
+                            n += count_lu(sub)
+            return n
+
+        jaxpr = jax.make_jaxpr(jax.vmap(solve))(jax.numpy.array([0.5, 1.0]))
+
+        # one in _bdf_init and one in the step loop (an ODE, so no consistent
+        # initialisation)
+        assert count_lu(jaxpr.jaxpr) == 2

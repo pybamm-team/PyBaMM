@@ -167,6 +167,7 @@ if pybamm.has_jax():
             "n_steps",
             "consistent_y0_failed",
             "step_failed",
+            "lu_stale",
         ],
     )
 
@@ -247,6 +248,7 @@ if pybamm.has_jax():
             newton_tol=newton_tol,
             consistent_y0_failed=jnp.logical_not(converged),
             step_failed=jnp.array(False),
+            lu_stale=jnp.array(False),
             order=1,
             h=h,
             n_equal_steps=0,
@@ -420,11 +422,19 @@ if pybamm.has_jax():
 
     def _update_step_size_and_lu(state, factor):
         """
-        Update step size and recompute LU decomposition.
+        Update step size and mark the LU decomposition for recomputation.
         """
         state = _update_step_size(state, factor)
+        return state._replace(
+            lu_stale=True, n_lu_decompositions=state.n_lu_decompositions + 1
+        )
+
+    def _update_lu(state):
+        """
+        Recompute the LU decomposition of M - c * J.
+        """
         LU = jax.scipy.linalg.lu_factor(state.M - state.c * state.J)
-        return state._replace(LU=LU, n_lu_decompositions=state.n_lu_decompositions + 1)
+        return state._replace(LU=LU, lu_stale=False)
 
     def _update_step_size(state, factor):
         """
@@ -470,11 +480,10 @@ if pybamm.has_jax():
         following the scipy bdf implementation rather than J(t_n, y_n) as per [1]
         """
         J = jac(state.y0, state.t + state.h)
-        LU = jax.scipy.linalg.lu_factor(state.M - state.c * J)
         return state._replace(
             J=J,
             n_jacobian_evals=state.n_jacobian_evals + 1,
-            LU=LU,
+            lu_stale=True,
             n_lu_decompositions=state.n_lu_decompositions + 1,
         )
 
@@ -589,6 +598,10 @@ if pybamm.has_jax():
 
         def step_iteration(while_state):
             state, updated_jacobian, n_rejections = while_state
+
+            # Factorise here, once, rather than in the conds that change c or J:
+            # under vmap a cond with a batched predicate runs both branches
+            state = jax.lax.cond(state.lu_stale, _update_lu, lambda s: s, state)
 
             # Solve BDF equation using Newton iteration
             converged, n_iter, y, d, state = _newton_iteration(state, fun)
