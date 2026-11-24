@@ -891,8 +891,8 @@ class Serialise:
         if not discretisation:
             return
         if "geometry" in discretisation:
-            model._default_geometry = dict(
-                Serialise.load_custom_geometry(discretisation["geometry"])
+            model._default_geometry = Serialise.load_custom_geometry(
+                discretisation["geometry"]
             )
         if "var_pts" in discretisation:
             model._default_var_pts = Serialise.load_var_pts(discretisation["var_pts"])
