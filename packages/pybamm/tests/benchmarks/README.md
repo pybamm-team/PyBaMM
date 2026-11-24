@@ -90,12 +90,19 @@ Bencher's free plan caps each job at 5 minutes; the core suite takes about 4.
 
 #### Registry bandwidth
 
-Bencher implements an image bandwidth quota, so the image is kept small to fit it:
+Bencher's registry allows each organisation 10 GiB of image traffic a day. Once it is
+used up, both CI's pushes and the runner's pulls fail with a 429. To fit it:
 
-- It installs only pybamm's runtime dependencies and the `bench` group, with
-  zstd-compressed layers (about 210 MiB).
-- pybamm's source is the last layer and the layers below it are cached, so a commit that
-  leaves `uv.lock` and the solver alone uploads about 2 MiB.
+- The image installs only pybamm's runtime dependencies and the `bench` group, with
+  zstd-compressed layers (about 200 MiB).
+- pybamm's source is the last layer. CI builds with `SOURCE_DATE_EPOCH` and
+  `rewrite-timestamp=true`, and the `apt` step deletes its logs, so a layer rebuilt
+  from the same inputs is byte-identical to the one in the registry even after the
+  Actions cache has evicted it. A commit that leaves `uv.lock` and the solver alone
+  uploads about 3 MiB.
+- Only PRs into `main` run on Bencher. A stacked PR runs on its first push after it is
+  retargeted to `main`.
+- A tracking run skips a commit that a newer push, or closing the PR, has superseded.
 
 Add new benchmark-only dependencies to the `bench` group, not `dev`, or the image can't
 import them.

@@ -22,7 +22,9 @@ ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 # uncompiled path without it, making the compiled benchmarks measure nothing.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 gcc libc6-dev \
-    && rm -rf /var/lib/apt/lists/*
+    # Logs and ldconfig's cache hold the build time, which would change the layer
+    && rm -rf /var/lib/apt/lists/* /var/log/apt /var/log/alternatives.log \
+       /var/log/dpkg.log /var/cache/ldconfig/aux-cache
 
 # No telemetry (the runner has no network) and no baked-in bytecode
 ENV VIRTUAL_ENV=/opt/venv \
