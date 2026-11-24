@@ -246,6 +246,28 @@ class TestJaxSolver:
             )
             assert len(solution_sens.sensitivities) == 0
 
+    def test_solve_with_new_t_eval(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "jax"
+        var = pybamm.Variable("var")
+        model.rhs = {var: pybamm.t}
+        model.initial_conditions = {var: 0}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        for method in ["RK45", "BDF"]:
+            solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
+            for t_end in [1, 2]:
+                t_eval = np.linspace(0, t_end, 10)
+                solution = solver.solve(model, t_eval)
+                np.testing.assert_allclose(
+                    solution.all_ys[0][0], t_eval**2 / 2, rtol=1e-6
+                )
+
+            t_eval = np.arange(4)
+            y = solver.get_solve(model, t_eval)(model.y0, {})
+            np.testing.assert_allclose(y[0], t_eval**2 / 2, rtol=1e-6)
+
     def test_model_solver_multiple_inputs_jax_format(self, subtests):
         # Create model
         model = pybamm.BaseModel()
