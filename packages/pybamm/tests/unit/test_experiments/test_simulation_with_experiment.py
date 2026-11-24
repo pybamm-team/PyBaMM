@@ -3228,6 +3228,27 @@ class TestSimulationExperiment:
         ):
             sim.solve()
 
+        # In unified mode, a control that a step holds must be a scalar
+        control = "Negative particle diffusivity [m2.s-1]"
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control({control: 3e-14}, duration=60),
+                "Discharge at 2 A for 1 minute",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"does not drive 'Negative particle diffusivity \[m2.s-1\]', "
+            r"whose parameter value is not a scalar",
+        ):
+            sim.build_for_experiment()
+
         # Control steps are restricted from being input parameters
         parameter_values = self._cooled_body_parameter_values()
         parameter_values["Heating power [W]"] = "[input]"
