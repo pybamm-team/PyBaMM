@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc fc6afd0373771469220a9e47b281f78c5e79208224feb66daf251380e3107990 # shrinks to case = TangentCase { arena: Arena { nodes: [Scalar(0.5), Neg(NodeId(0)), Arctan(NodeId(1))] }, root: NodeId(2), y: [0.1, 0.1], seeds: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, -1.0], [-0.2784313725490196, -1.0]], n_states: 2 }

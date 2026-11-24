@@ -21,6 +21,8 @@ class SPMe(SPM):
 
     """
 
+    fixed_options = {}
+
     def __init__(
         self, options=None, name="Single Particle Model with electrolyte", build=True
     ):

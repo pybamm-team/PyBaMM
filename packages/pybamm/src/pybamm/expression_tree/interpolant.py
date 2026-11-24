@@ -10,7 +10,6 @@ from typing import Any
 import casadi
 import numpy as np
 import numpy.typing as npt
-from scipy import interpolate
 
 import pybamm
 
@@ -74,6 +73,8 @@ class Interpolant(pybamm.Function):
         entries_string: str | None = None,
         _num_derivatives: int = 0,
     ):
+        from scipy import interpolate
+
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
             raise ValueError(f"interpolator '{interpolator}' not recognised")
@@ -303,6 +304,8 @@ class Interpolant(pybamm.Function):
         return result
 
     def _cubic_to_casadi(self, converted_children):
+        from scipy import interpolate
+
         if self.dimension == 1:
             # A cubic differentiated three or more times gives a degree-0
             # (piecewise-constant) spline, which CasADi mis-evaluates at the
@@ -334,6 +337,8 @@ class Interpolant(pybamm.Function):
             return LUT(casadi.hcat(converted_children).T).T
 
     def _pchip_to_casadi(self, converted_children):
+        from scipy import interpolate
+
         x_np = np.asarray(self.x[0], dtype=np.float64)
         y_np = np.asarray(self.y, dtype=np.float64)
         d_np = interpolate.PchipInterpolator(x_np, y_np).derivative()(x_np)

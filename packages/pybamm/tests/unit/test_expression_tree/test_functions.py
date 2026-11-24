@@ -60,6 +60,13 @@ class TestFunction:
         ):
             func.diff(a)
 
+        # a function of the states depends on time through them
+        derivative = pybamm.exp(a).diff(pybamm.t)
+        np.testing.assert_allclose(
+            derivative.evaluate(y=np.array([1.0]), y_dot=np.array([2.0])),
+            [[2 * np.exp(1)]],
+        )
+
     def test_exceptions(self):
         a = pybamm.Variable("a", domain="something")
         b = pybamm.Variable("b", domain="something else")
@@ -97,6 +104,18 @@ class TestFunction:
         # Test Function
         value = 10
         assert pybamm.Function(np.log, value).to_equation() == value
+
+        # Test RegPower, against its own evaluation either side of zero
+        x = pybamm.Symbol("x")
+        for scale in [None, 2.0]:
+            equation = pybamm.RegPower(x, 0.5, scale=scale, delta=0.1).to_equation()
+            for value in [-3.0, -0.01, 0.0, 0.05, 4.0]:
+                expected = pybamm.RegPower(
+                    pybamm.Scalar(value), 0.5, scale=scale, delta=0.1
+                ).evaluate()
+                assert float(equation.subs(sympy.Symbol("x"), value)) == pytest.approx(
+                    float(expected), rel=1e-12, abs=1e-15
+                )
 
     def test_to_from_json_error(self):
         a = pybamm.Symbol("a")

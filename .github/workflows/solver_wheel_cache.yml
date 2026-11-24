@@ -1,0 +1,30 @@
+# Keeps main's solver-wheel cache, which pull requests restore, warm for every
+# scarce target. A hit costs one Ubuntu job per target; a miss builds natively.
+name: Solver wheel cache
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+# Never cancel: a later merge would restart a build still waiting for a scarce
+# runner, leaving the cache cold.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  wheels:
+    name: ${{ matrix.target }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [linux-arm64, windows-x64, macos-arm64, macos-x64]
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      target: ${{ matrix.target }}
+      cache_wheels: true

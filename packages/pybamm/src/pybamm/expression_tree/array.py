@@ -3,15 +3,19 @@
 #
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from pybammsolvers import idaklu
 from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sympy
 
 
 class Array(pybamm.Symbol):
@@ -170,6 +174,8 @@ class Array(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Array:
         """Returns the value returned by the node when evaluated."""
+        import sympy
+
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 
