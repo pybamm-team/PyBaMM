@@ -525,6 +525,7 @@ class TestRustSolverGuards:
         from pybamm.solvers.base_solver import BaseSolver, process
 
         model = _toy_dae("rust")
+        model.calculate_sensitivities = ["a"]
         vars_ = BaseSolver._get_vars_for_processing(model, {"a": 0.5})
 
         def no_lowering(*args, **kwargs):  # pragma: no cover
@@ -533,6 +534,22 @@ class TestRustSolverGuards:
         monkeypatch.setattr(rust_lowering, "rust_graph_with_inputs", no_lowering)
         with pytest.raises(pybamm.SolverError, match=r"return_jacp_stacked"):
             process(model.concatenated_rhs, "RHS", vars_, return_jacp_stacked=True)
+
+    def test_return_jacp_stacked_without_sensitivities_compiles(self):
+        # Output variables always pass return_jacp_stacked, with or without sensitivities
+        from pybamm.solvers.base_solver import BaseSolver, process
+
+        model = _toy_dae("rust")
+        model.calculate_sensitivities = []
+        vars_ = BaseSolver._get_vars_for_processing(model, {"a": 0.5})
+        func, _, jacp, _ = process(
+            model.concatenated_rhs, "RHS", vars_, return_jacp_stacked=True
+        )
+
+        assert jacp is None
+        # -2 u + a v at u = 3, v = 4, a = 0.5
+        value = func(0.0, np.array([3.0, 4.0]), np.array([0.5]))
+        np.testing.assert_allclose(np.ravel(value), [-4.0], rtol=0, atol=0)
 
 
 class TestRustAlgebraicMinimize:

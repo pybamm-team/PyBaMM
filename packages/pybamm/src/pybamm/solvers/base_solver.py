@@ -2598,7 +2598,7 @@ def process(
         from pybamm.solvers.rust_evaluator import RustEvaluator
         from pybamm.solvers.rust_lowering import reject_y_dot, rust_graph_with_inputs
 
-        if return_jacp_stacked:
+        if return_jacp_stacked and model.calculate_sensitivities:
             raise pybamm.SolverError(
                 "return_jacp_stacked is not supported for convert_to_format='rust'. "
                 "Use the per-parameter tuple returned by jacp instead."
