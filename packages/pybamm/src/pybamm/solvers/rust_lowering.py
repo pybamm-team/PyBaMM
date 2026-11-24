@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -12,7 +12,8 @@ import pybamm
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from pybamm.rust import CompiledFunction, ExprGraph
+    from pybamm.rust import CompiledFunction, CompiledModel, Expr, ExprGraph
+    from pybamm.solvers.rust_evaluator import RustEvaluator
 
 
 def rust_input_parameter_widths(model: pybamm.BaseModel) -> dict[str, int]:
@@ -92,20 +93,20 @@ class RustModelLowering:
         self.input_name_order = list(inputs_dict)
         self.graph = rust_graph_with_inputs(model, self.input_name_order)
         self._symbols: dict = {}
-        self._state_residual = None
-        self._output_exprs: list = []
+        self._state_residual: Expr | None = None
+        self._output_exprs: list[Expr] = []
         self._output_lens: list[int] = []
-        self._event_exprs: list = []
-        self._upsampling_expr = None
-        self._algebraic_expr = None
+        self._event_exprs: list[Expr] = []
+        self._upsampling_expr: Expr | None = None
+        self._algebraic_expr: Expr | None = None
         self._algebraic_var_indices: list[int] = []
         self._sens_param_indices: list[int] = []
 
-    def lower(self, symbol: pybamm.Symbol):
+    def lower(self, symbol: pybamm.Symbol) -> Expr:
         """Lower one symbol into this graph, reusing already-lowered subtrees."""
         return symbol.to_rust(self.graph, self._symbols)
 
-    def state_residual(self, algebraic_only: bool = False):
+    def state_residual(self, algebraic_only: bool = False) -> Expr:
         """Lower the right-hand side, concatenated with the algebraic block."""
         model = self.model
         if algebraic_only:
@@ -119,7 +120,7 @@ class RustModelLowering:
         self._state_residual = self.lower(residual)
         return self._state_residual
 
-    def algebraic_block(self):
+    def algebraic_block(self) -> tuple[Expr | None, list[int]]:
         """Lower the algebraic sub-block used by the Newton initialisation."""
         model = self.model
         if model.len_alg == 0:
@@ -128,7 +129,12 @@ class RustModelLowering:
         self._algebraic_var_indices = list(range(model.len_rhs, model.len_rhs_and_alg))
         return self._algebraic_expr, self._algebraic_var_indices
 
-    def outputs(self, output_variables, time_integral_vars: dict | None = None):
+    def outputs(
+        self,
+        output_variables: Iterable[str],
+        time_integral_vars: dict[str, pybamm.ProcessedVariableTimeIntegral]
+        | None = None,
+    ) -> tuple[list[Expr], list[int]]:
         """Lower the requested output variables; lengths are flattened component counts.
 
         A name in ``time_integral_vars`` lowers its ``sum_node``, summed post-solve.
@@ -159,7 +165,7 @@ class RustModelLowering:
             self._output_lens.append(int(np.prod(shape)) if shape else 1)
         return self._output_exprs, self._output_lens
 
-    def upsampling(self, name: str, symbol: pybamm.Symbol):
+    def upsampling(self, name: str, symbol: pybamm.Symbol) -> Expr:
         """Lower ``symbol``, the upsampling output read from the variable ``name``.
 
         Raises
@@ -178,7 +184,7 @@ class RustModelLowering:
         self._upsampling_expr = self.lower(symbol)
         return self._upsampling_expr
 
-    def termination_events(self):
+    def termination_events(self) -> list[Expr]:
         """Lower every termination event expression, for root-finding.
 
         Raises
@@ -203,7 +209,7 @@ class RustModelLowering:
         self._event_exprs = [self.lower(event.expression) for event in events]
         return self._event_exprs
 
-    def rhs_evaluator(self):
+    def rhs_evaluator(self) -> RustEvaluator:
         """Build an evaluator for the differential block alone, over this graph."""
         from pybamm.solvers.rust_evaluator import RustEvaluator
 
@@ -214,7 +220,7 @@ class RustModelLowering:
         )
         return RustEvaluator(compiled, "func")
 
-    def algebraic_evaluators(self):
+    def algebraic_evaluators(self) -> tuple[RustEvaluator, RustEvaluator]:
         """Build ``func`` and ``jac`` evaluators for the algebraic block alone."""
         from pybamm.solvers.rust_evaluator import RustEvaluator
 
@@ -225,7 +231,11 @@ class RustModelLowering:
         )
         return RustEvaluator(compiled, "func"), RustEvaluator(compiled, "jac")
 
-    def bind_generic_evaluators(self, rust_model, root_method=None) -> None:
+    def bind_generic_evaluators(
+        self,
+        rust_model: CompiledModel,
+        root_method: pybamm.BaseSolver | None = None,
+    ) -> None:
         """Serve ``rhs_eval`` and ``terminate_events_eval`` from this lowering.
 
         A DAE also gets ``algebraic_eval`` and ``jac_algebraic_eval`` when
@@ -248,7 +258,9 @@ class RustModelLowering:
                 self.algebraic_evaluators()
             )
 
-    def sensitivity_indices(self, sensitivity_names):
+    def sensitivity_indices(
+        self, sensitivity_names: Iterable[str] | None
+    ) -> tuple[list[int], list[str]]:
         """Map sensitivity names to graph input indices.
 
         Raises
@@ -265,8 +277,11 @@ class RustModelLowering:
                 f"Sensitivities were requested for {unknown}, but the model's "
                 f"inputs are {self.input_name_order}"
             )
-        # The graph numbers the inputs, which registration ordered as the solver's
-        indices = [self.graph.input_index(name) for name in sensitivity_names]
+        # The graph numbers the inputs, which registration ordered as the solver's;
+        # every name is registered, as checked above
+        indices = [
+            cast(int, self.graph.input_index(name)) for name in sensitivity_names
+        ]
         self._sens_param_indices = indices
         return indices, sensitivity_names
 
@@ -286,7 +301,7 @@ class RustModelLowering:
             mass.indices.astype(np.int64),
         )
 
-    def compile(self):
+    def compile(self) -> CompiledModel:
         """Compile everything lowered so far into a ``CompiledModel``."""
         from pybamm.rust import CompiledModel
 
