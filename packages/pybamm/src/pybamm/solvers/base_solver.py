@@ -2372,6 +2372,21 @@ class BaseSolver:
                 f"Required inputs: [{ip_str}].\n"
             )
 
+        if model.convert_to_format == "rust":
+            # The dummy is one value, but the Rust backend packs each input at its width.
+            widths = rust_input_parameter_widths(model)
+            vector_inputs = sorted(
+                name
+                for name in input_parameters
+                if inputs.get(name) is None and widths.get(name, 1) > 1
+            )
+            if vector_inputs:
+                raise pybamm.SolverError(
+                    f"No value provided for vector input(s): {vector_inputs}. "
+                    "With convert_to_format='rust', every vector input needs a value "
+                    "of its expected size, even one that only variables use."
+                )
+
         # Next, check the full set of specified input parameters that are required for
         # the model to be observable.
         missing_inputs = []
@@ -2392,19 +2407,6 @@ class BaseSolver:
 
             if name not in inputs_in_model:
                 inputs_in_model[name] = value
-
-        if model.convert_to_format == "rust":
-            # The dummy is one value, but the Rust backend packs each input at its width
-            widths = rust_input_parameter_widths(model)
-            vector_inputs = sorted(
-                missing for missing in missing_inputs if widths.get(missing, 1) > 1
-            )
-            if vector_inputs:
-                raise pybamm.SolverError(
-                    f"No value provided for vector input(s): {vector_inputs}. "
-                    "With convert_to_format='rust', every vector input needs a value "
-                    "of its expected size, even one that only variables use."
-                )
 
         if solution_is_observable and missing_inputs:
             missing_inputs_str = ", ".join(f"'{n}'" for n in missing_inputs)

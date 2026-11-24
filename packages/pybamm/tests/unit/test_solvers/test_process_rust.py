@@ -517,8 +517,12 @@ class TestRustSolverGuards:
             match=r"No value provided for vector input\(s\): \['b'\]",
         ):
             solver.solve(model, [0])
+        # The refused call must not have disabled observability
+        enabled = pybamm.ModelSolutionObservability.ENABLED
+        assert model.solution_observable_status == enabled
         solution = solver.solve(model, [0], inputs={"b": np.array([1.0, 2.0])})
         np.testing.assert_allclose(solution.y, 1.0, rtol=1e-6, atol=1e-6)
+        assert model.solution_observable_status == enabled
 
     def test_return_jacp_stacked_is_rejected_before_compiling(self, monkeypatch):
         from pybamm.solvers import rust_lowering
