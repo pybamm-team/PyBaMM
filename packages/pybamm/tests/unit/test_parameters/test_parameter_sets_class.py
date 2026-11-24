@@ -41,9 +41,11 @@ class TestParameterSets:
             for entry in pybamm.parameter_sets.get_entries(group)
             if entry.name == name
         )
-        malformed = importlib.metadata.EntryPoint("Other", "invalid target @@", group)
+        other = importlib.metadata.EntryPoint(
+            "Other", "other_package.module:get_parameter_values", group
+        )
         mocker.patch.object(
-            importlib.metadata, "entry_points", return_value=[bundled, malformed]
+            importlib.metadata, "entry_points", return_value=[bundled, other]
         )
         bpx_spec = mocker.sentinel.bpx_spec if bpx_version is not None else None
         mocker.patch.object(entry_points, "find_spec", return_value=bpx_spec)
