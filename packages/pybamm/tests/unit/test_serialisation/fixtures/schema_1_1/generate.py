@@ -49,5 +49,6 @@ with tempfile.TemporaryDirectory() as tmp:
             target.write_bytes(lzma.compress(content, preset=9 | lzma.PRESET_EXTREME))
         else:
             target = out / f"{name}.json"
-            target.write_bytes(content)
+            # the end-of-file pre-commit hook requires a trailing newline
+            target.write_bytes(content + b"\n")
         print(f"wrote {target.name} ({target.stat().st_size} bytes)")
