@@ -42,8 +42,10 @@ class BaseMechanics(pybamm.BaseSubModel):
         options: dict[str, Any],
         phase: str = "primary",
     ) -> None:
-        self.size_distribution = options["particle size"] == "distribution"
         super().__init__(param, domain, options=options, phase=phase)
+        self.size_distribution = (
+            getattr(self.options, self.domain)["particle size"] == "distribution"
+        )
 
     def _build_var_name(
         self, quantity: str, unit: str = "", averaged: bool = False
