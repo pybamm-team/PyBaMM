@@ -642,7 +642,9 @@ def _sweep_sensitivities(
     input_names = cf.input_names
     sensitivities = np.empty((n_t * out_len, len(sens_names)))
     for k, name in enumerate(sens_names):
-        vy_k = np.ascontiguousarray(dy_dp[:, k].reshape(n_t, n_states).T)
+        # Column-major (n_states, n_t), which Rust borrows; a C-order transpose costs a
+        # strided copy here and another as Rust gathers its columns
+        vy_k = np.ascontiguousarray(dy_dp[:, k]).reshape(n_t, n_states).T
         if name in input_names:
             vp = np.zeros(cf.vp_len)
             vp[input_names.index(name)] = 1.0

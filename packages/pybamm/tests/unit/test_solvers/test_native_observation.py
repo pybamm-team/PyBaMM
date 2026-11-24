@@ -151,6 +151,30 @@ class TestNativeChainRuleKernel:
                 block = S[j * out_len : (j + 1) * out_len, k]
                 np.testing.assert_allclose(block, oracle, rtol=1e-12, atol=1e-12)
 
+    def test_hands_rust_column_major_directions(self):
+        # Rust borrows an F-contiguous direction; any other layout it gathers again
+        _, cf = _make_var_fn()
+        ts, ys, dy_dp, p, _, _, n_p = self._trajectory()
+        f_contiguous = []
+
+        class RecordingFunction:
+            output_len = cf.output_len
+            input_names = cf.input_names
+            vp_len = cf.vp_len
+
+            def jvp_trajectory(self, ts, ys, p, vy, vp=None):
+                f_contiguous.append(vy.flags.f_contiguous)
+                return cf.jvp_trajectory(ts, ys, p, vy, vp=vp)
+
+        recorded = chain_rule_sensitivities(
+            RecordingFunction(), ts, ys, p, dy_dp, ["a", "b"]
+        )
+
+        assert f_contiguous == [True] * n_p
+        np.testing.assert_array_equal(
+            recorded, chain_rule_sensitivities(cf, ts, ys, p, dy_dp, ["a", "b"])
+        )
+
     def test_preserves_zero_derivative_width(self):
         g = ExprGraph()
         cv = g.array(np.array([1.0, 2.0, 3.0]))
