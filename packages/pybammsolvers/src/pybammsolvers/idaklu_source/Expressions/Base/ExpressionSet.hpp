@@ -19,8 +19,8 @@ public:
     const int jac_times_cjmass_nnz,
     const int jac_bandwidth_lower,
     const int jac_bandwidth_upper,
-    const np_array_int &jac_times_cjmass_rowvals_arg,  // cppcheck-suppress unusedStructMember
-    const np_array_int &jac_times_cjmass_colptrs_arg,  // cppcheck-suppress unusedStructMember
+    const np_array_int &jac_times_cjmass_rowvals_arg,
+    const np_array_int &jac_times_cjmass_colptrs_arg,
     const int inputs_length,
     Expression* jac_action,
     Expression* mass_action,
@@ -66,18 +66,27 @@ public:
   Expression *events = nullptr;
   Expression *alg_res = nullptr;
   Expression *alg_jac = nullptr;
+  // g(t, y, p) -> the scalar upsampled output
+  Expression *upsampling_fcn = nullptr;
 
-  // `cppcheck-suppress unusedStructMember` is used because codacy reports
-  // these members as unused, but they are inherited through variadics
-  std::vector<Expression*> var_fcns;  // cppcheck-suppress unusedStructMember
-  std::vector<Expression*> dvar_dy_fcns;  // cppcheck-suppress unusedStructMember
-  std::vector<Expression*> dvar_dp_fcns;  // cppcheck-suppress unusedStructMember
+  std::vector<Expression*> var_fcns;
+  std::vector<Expression*> dvar_dy_fcns;
+  std::vector<Expression*> dvar_dp_fcns;
 
-  std::vector<int64_t> jac_times_cjmass_rowvals;  // cppcheck-suppress unusedStructMember
-  std::vector<int64_t> jac_times_cjmass_colptrs;  // cppcheck-suppress unusedStructMember
-  std::vector<sunrealtype> inputs;  // cppcheck-suppress unusedStructMember
+  std::vector<int64_t> jac_times_cjmass_rowvals;
+  std::vector<int64_t> jac_times_cjmass_colptrs;
+  std::vector<sunrealtype> inputs;
 
   SetupOptions setup_opts;
+
+  // While set, a sensitivity residual with a NaN or inf entry returns a
+  // recoverable failure
+  bool reject_nonfinite_sensitivities = false;  // cppcheck-suppress unusedStructMember
+
+  // Which events read yp, their fourth input; empty if none does
+  std::vector<bool> events_read_yp;
+  // The IDA memory, for its step count
+  void *ida_mem = nullptr;
 
   virtual sunrealtype *get_tmp_state_vector() = 0;
   virtual sunrealtype *get_tmp_sparse_jacobian_data() = 0;

@@ -8,6 +8,10 @@ import pybamm
 
 
 class TestFiniteVolume2D:
+    def test_deprecated(self):
+        with pytest.warns(DeprecationWarning, match=r"FiniteVolume2D is deprecated"):
+            pybamm.FiniteVolume2D()
+
     def test_node_to_edge_to_node(self, mesh_2d):
         # Create discretisation
         mesh = mesh_2d
@@ -309,13 +313,18 @@ class TestFiniteVolume2D:
             eqn_disc.evaluate(None, LR.flatten())
             eqn_disc.evaluate(None, TB.flatten())
 
-        for eqn in [
-            var * pybamm.Magnitude(pybamm.grad(var), "lr"),
-            pybamm.Magnitude(pybamm.grad(var), "lr") * var,
-        ]:
-            eqn_disc = disc.process_symbol(eqn)
-            eqn_disc.evaluate(None, LR.flatten())
-            eqn_disc.evaluate(None, TB.flatten())
+        for index in [0, 1]:
+            component = pybamm.Component(pybamm.grad(var), index)
+            edge_shape = disc.process_symbol(component).shape
+            for eqn in [
+                var * component,
+                component * var,
+                var * (2 * component),
+            ]:
+                eqn_disc = disc.process_symbol(eqn)
+                assert eqn_disc.shape == edge_shape
+                eqn_disc.evaluate(None, LR.flatten())
+                eqn_disc.evaluate(None, TB.flatten())
 
     def test_upwind_downwind_2d(self, mesh_2d):
         """
@@ -639,6 +648,55 @@ class TestFiniteVolume2D:
         )
         # Verify it's a VectorField
         assert isinstance(result_both_ghost, pybamm.VectorField)
+
+    def test_upwind_downwind_2d_boundary_values(self, mesh_2d):
+        spatial_method = pybamm.FiniteVolume2D()
+        spatial_method.build(mesh_2d)
+        disc = pybamm.Discretisation(mesh_2d, {"negative electrode": spatial_method})
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        submesh = mesh_2d["negative electrode"]
+        n_lr, n_tb = submesh.npts_lr, submesh.npts_tb
+        y = np.arange(1, n_lr * n_tb + 1, dtype=float)
+        y_grid = y.reshape(n_tb, n_lr)
+
+        def dirichlet(value):
+            if np.ndim(value) == 0:
+                return (pybamm.Scalar(value), "Dirichlet")
+            return (pybamm.Vector(value), "Dirichlet")
+
+        # Constant boundary values, and values varying along each boundary
+        for lr_value, tb_value in [
+            (7.0, 9.0),
+            (-np.arange(1.0, n_tb + 1), -np.arange(1.0, n_lr + 1)),
+        ]:
+            lr_bc, tb_bc = dirichlet(lr_value), dirichlet(tb_value)
+            bcs = {var: {"left": lr_bc, "right": lr_bc, "bottom": tb_bc, "top": tb_bc}}
+
+            upwind = spatial_method.upwind_or_downwind(
+                var, var_disc, bcs, "upwind", "upwind"
+            )
+            downwind = spatial_method.upwind_or_downwind(
+                var, var_disc, bcs, "downwind", "downwind"
+            )
+
+            # lr faces, row by row: the inflow face is the boundary value itself
+            lr_faces = upwind.lr_field.evaluate(None, y).reshape(n_tb, n_lr + 1)
+            np.testing.assert_array_equal(lr_faces[:, 0], lr_value)
+            np.testing.assert_array_equal(lr_faces[:, 1:], y_grid)
+            lr_faces = downwind.lr_field.evaluate(None, y).reshape(n_tb, n_lr + 1)
+            np.testing.assert_array_equal(lr_faces[:, -1], lr_value)
+            np.testing.assert_array_equal(lr_faces[:, :-1], y_grid)
+
+            # tb faces: upwinding uses the bottom value, downwinding the top one
+            tb_faces = upwind.tb_field.evaluate(None, y).reshape(n_tb + 1, n_lr)
+            np.testing.assert_array_equal(tb_faces[0], tb_value)
+            np.testing.assert_array_equal(tb_faces[1:], y_grid)
+            tb_faces = downwind.tb_field.evaluate(None, y).reshape(n_tb + 1, n_lr)
+            np.testing.assert_array_equal(tb_faces[-1], tb_value)
+            np.testing.assert_array_equal(tb_faces[:-1], y_grid)
 
     def test_2d_concatenations(self, mesh_2d):
         # Create discretisation
@@ -1121,6 +1179,36 @@ class TestFiniteVolume2D:
 
         roundtripped = pickle.loads(pickle.dumps(grad_disc))
         np.testing.assert_array_equal(roundtripped.lr_field.evaluate(None, y), expected)
+
+    def test_edge_direction(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_var = pybamm.grad(var)
+        edge_direction = pybamm.FiniteVolume2D._edge_direction
+
+        assert edge_direction(pybamm.Component(grad_var, 0)) == "lr"
+        assert edge_direction(pybamm.Component(grad_var, 1)) == "tb"
+        with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+            magnitude = pybamm.Magnitude(grad_var, "tb")
+        assert edge_direction(magnitude) == "tb"
+        for index in [2, -1]:
+            with pytest.raises(
+                pybamm.DiscretisationError, match=r"not a 2D lr/tb direction"
+            ):
+                edge_direction(pybamm.Component(grad_var, index))
+
+    def test_edge_direction_of_compound_operands(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_var = pybamm.grad(var)
+        edge_direction = pybamm.FiniteVolume2D._edge_direction
+
+        assert edge_direction(2 * pybamm.Component(grad_var, 0)) == "lr"
+        assert edge_direction(pybamm.NodeToEdge2D(var, "tb") + 1) == "tb"
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"single lr/tb edge direction"
+        ):
+            edge_direction(pybamm.Norm(grad_var))
 
     def test_delta_function(self, mesh_2d):
         # Create discretisation

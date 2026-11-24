@@ -3,13 +3,13 @@
 #
 
 
+import copy
 import os
 import re
 import warnings
 
 import casadi
 import numpy as np
-import pandas as pd
 import pytest
 
 import pybamm
@@ -22,6 +22,116 @@ from tests import shared
 
 
 class TestParameterValues:
+    @pytest.mark.parametrize("pair_type", [tuple, list])
+    def test_citation_metadata_pairs(self, pair_type):
+        pybamm.citations._reset()
+        metadata = ["Chen2020", pair_type(["Nyman2008", "Electrolyte transport"])]
+        original = copy.deepcopy(metadata)
+        parameters = pybamm.ParameterValues({"citations": metadata})
+        assert metadata == original
+        assert pybamm.citations._citation_tags["Chen2020"] == {"ParameterValues"}
+        assert pybamm.citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
+        parameters["citations"].append("Marquis2019")
+        assert metadata == original
+        if pair_type is list:
+            parameters["citations"][1][1] = "Changed reason"
+            assert metadata == original
+
+    @pytest.mark.parametrize("pair_type", [tuple, list])
+    @pytest.mark.parametrize(
+        "members",
+        [
+            [],
+            ["Nyman2008"],
+            ["Nyman2008", "reason", "extra"],
+            [1, "reason"],
+            ["Nyman2008", 1],
+            [None, "reason"],
+            ["Nyman2008", None],
+            [[], "reason"],
+            ["Nyman2008", {}],
+        ],
+    )
+    def test_invalid_citation_pair(self, pair_type, members):
+        with pytest.raises(ValueError, match=r"Invalid citation.*expected"):
+            pybamm.ParameterValues({"citations": [pair_type(members)]})
+
+    @pytest.mark.parametrize("citation", [None, 1, {}, {"key": "Nyman2008"}])
+    def test_invalid_citation_metadata(self, citation):
+        with pytest.raises(ValueError, match=r"Invalid citation.*expected"):
+            pybamm.ParameterValues({"citations": [citation]})
+
+    @pytest.mark.parametrize(
+        "copy_parameters", [lambda p: p.copy(), pybamm.ParameterValues]
+    )
+    def test_named_citation_reason_copy(self, copy_parameters):
+        parameters = pybamm.ParameterValues("Chen2020")
+        original = copy.deepcopy(parameters["citations"])
+        pybamm.citations._reset()
+        copied = copy_parameters(parameters)
+        copy_parameters(copied)
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
+        copied["citations"].append("Marquis2019")
+        assert parameters["citations"] == original
+
+    def test_named_citation_metadata(self, monkeypatch):
+        metadata = ["Chen2020", ["Nyman2008", "Custom reason"]]
+        original = copy.deepcopy(metadata)
+        monkeypatch.setattr(
+            type(pybamm.parameter_sets),
+            "__getitem__",
+            lambda self, name: {"citations": metadata},
+        )
+        parameters = pybamm.ParameterValues("Chen2020")
+        assert metadata == original
+        pybamm.citations._reset()
+        copied = parameters.copy()
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
+        assert pybamm.citations._citation_tags["Nyman2008"] == {"Custom reason"}
+        copied["citations"][1][1] = "Changed reason"
+        assert parameters["citations"][1][1] == "Custom reason"
+        assert metadata == original
+
+    def test_simulation_citation_reason(self):
+        parameters = pybamm.ParameterValues("Chen2020")
+        pybamm.citations._reset()
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=parameters,
+        )
+        simulation.build()
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
+
+    @pytest.mark.parametrize(
+        "metadata",
+        [
+            ["Chen2020"],
+            [("Nyman2008", "Electrolyte transport")],
+            ["Chen2020", ("Nyman2008", "Electrolyte transport")],
+        ],
+    )
+    def test_citation_reasons(self, metadata):
+        citations = pybamm.citations
+        citations._reset()
+        values = {"Some parameter [m]": 1, "citations": metadata}
+        original = metadata.copy()
+        parameters = pybamm.ParameterValues(values)
+        assert values == {"Some parameter [m]": 1, "citations": original}
+        assert parameters["citations"] == original
+        if "Chen2020" in metadata:
+            assert citations._citation_tags["Chen2020"] == {"ParameterValues"}
+        if ("Nyman2008", "Electrolyte transport") in metadata:
+            assert citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
+
+    def test_named_set_citation_reason(self):
+        citations = pybamm.citations
+        citations._reset()
+        parameters = pybamm.ParameterValues("Chen2020")
+        assert isinstance(parameters["citations"], list)
+        assert "Chen2020" in parameters["citations"]
+        assert all(isinstance(citation, str) for citation in parameters["citations"])
+        assert citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
+
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
@@ -112,6 +222,65 @@ class TestParameterValues:
         # test deleting a parameter
         del param["a"]
         assert "a" not in param
+
+    def test_update_strict(self):
+        param = pybamm.ParameterValues("Chen2020")
+        current = param["Current function [A]"]
+        param.update({"Negative particle radius [m]": 1e-5}, strict=True)
+        assert param["Negative particle radius [m]"] == pytest.approx(1e-5)
+
+        with pytest.raises(
+            KeyError,
+            match=r"'Negative particle radiuss \[m\]' \(best matches: "
+            r"\['Negative particle radius \[m\]'",
+        ):
+            param.update(
+                {
+                    "Current function [A]": 2.0,
+                    "Negative particle radiuss [m]": 2e-5,
+                },
+                strict=True,
+            )
+        # a failed strict update writes nothing, not even the valid key before the typo
+        assert "Negative particle radiuss [m]" not in param
+        assert param["Current function [A]"] == pytest.approx(current)
+        assert param["Negative particle radius [m]"] == pytest.approx(1e-5)
+
+        # strict accepts a ParameterValues whose keys all exist
+        param.update(pybamm.ParameterValues(param), strict=True)
+
+        # the default still adds new parameters
+        param.update({"Negative particle radiuss [m]": 2e-5})
+        assert param["Negative particle radiuss [m]"] == pytest.approx(2e-5)
+
+        # an existing list parameter is stored as indexed keys and passes
+        param.update({"Foo [V]": [1, 2]})
+        param.update({"Foo [V]": [3, 4]}, strict=True)
+        assert param["Foo (0) [V]"] == 3
+        assert param["Foo (1) [V]"] == 4
+
+        # an unknown name with an empty list expands to no keys but still raises
+        current = param["Current function [A]"]
+        with pytest.raises(KeyError, match=r"'Negative particle radiusss \[m\]'"):
+            param.update(
+                {
+                    "Current function [A]": 2.0,
+                    "Negative particle radiusss [m]": [],
+                },
+                strict=True,
+            )
+        assert param["Current function [A]"] == pytest.approx(current)
+        assert "Negative particle radiusss [m]" not in param
+
+        # an empty list for an existing list parameter changes nothing
+        param.update({"Foo [V]": []}, strict=True)
+        assert param["Foo (0) [V]"] == 3
+
+        # a name with no close match is reported without an empty match list
+        with pytest.raises(KeyError) as excinfo:
+            param.update({"zzzz": 1.0}, strict=True)
+        assert "'zzzz'" in str(excinfo.value)
+        assert "best matches" not in str(excinfo.value)
 
     def test_deprecated_parameter_raises_error(self):
         # Guard: deprecated parameter detection must work (388d1366f)
@@ -764,7 +933,7 @@ class TestParameterValues:
         filename, name = pybamm.parameters.process_parameter_data._process_name(
             name, path, ".csv"
         )
-        raw_df = pd.read_csv(filename)
+        raw_data = np.loadtxt(filename, delimiter=",", skiprows=1)
 
         # It's also helpful to check the casadi conversion here aswell
         # We check elsewhere but this helps catch additional bugs
@@ -773,7 +942,7 @@ class TestParameterValues:
         casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
 
         # check that passing the input columns give the correct output
-        for values in raw_df.values:
+        for values in raw_data:
             y = np.array([values[0], values[1], values[2]])
             f = values[3]
             casadi_sol = casadi_f(y)
@@ -810,10 +979,10 @@ class TestParameterValues:
         filename, name = pybamm.parameters.process_parameter_data._process_name(
             name, path, ".csv"
         )
-        raw_df = pd.read_csv(filename)
+        raw_data = np.loadtxt(filename, delimiter=",", skiprows=1)
 
         # check that passing the input columns give the correct output
-        for values in raw_df.values:
+        for values in raw_data:
             y = np.array([values[0], values[1]])
             f = values[2]
 
@@ -1187,6 +1356,26 @@ class TestParameterValues:
 
         # Verify result is a symbol
         assert isinstance(result, pybamm.Symbol)
+
+    @pytest.mark.parametrize("expression_function", [False, True])
+    def test_process_function_parameter_constant_derivative_keeps_shape(
+        self, expression_function
+    ):
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        # f(x) does not depend on time, so its time derivative is 0 over x
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        value = (
+            ExpressionFunctionParameter("f", 2 * x, "f", ["x"])
+            if expression_function
+            else (lambda x: 2 * x)
+        )
+        derivative = pybamm.FunctionParameter("f", {"x": x}).diff(pybamm.t)
+        result = pybamm.ParameterValues({"f": value}).process_symbol(derivative)
+        assert result.domains == x.domains
+        assert result.shape_for_testing == x.shape_for_testing
 
     def test_expression_function_parameter_rebinds_metadata_leaf_domains(self):
         from pybamm.expression_tree.operations.serialise import (

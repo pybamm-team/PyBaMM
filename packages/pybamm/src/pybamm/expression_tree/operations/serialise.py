@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import importlib
 import inspect
 import json
@@ -8,11 +9,11 @@ import numbers
 import re
 import warnings
 import zlib
+from collections.abc import Mapping
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-import black
 import numpy as np
 
 import pybamm
@@ -76,6 +77,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
         """
         Creates python source code for the function.
         """
+        import black
+
         src = f"def {self.func_name}({', '.join(self.func_args)}):\n"
 
         # Fix printing of parameters so they print as Parameter('name'). Do this on a
@@ -140,7 +143,7 @@ class Serialise:
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
-        variables: None = None,
+        variables: Mapping[str, pybamm.Symbol] | None = None,
     ) -> dict:
         """Converts a discretised model to a JSON-serialisable dictionary.
 
@@ -154,7 +157,7 @@ class Serialise:
         mesh : :class:`pybamm.Mesh` (optional)
             The mesh the model has been discretised over. Not necessary to solve
             the model when read in, but required to use pybamm's plotting tools.
-        variables: None (optional)
+        variables: dict (optional)
             This parameter is deprecated and enabled by default.
 
         Returns
@@ -200,6 +203,12 @@ class Serialise:
             "_solution_observable": model._solution_observable.name,
         }
 
+        if isinstance(model, pybamm.BaseBatteryModel):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                saved_options_format,
+            )
+
+            model_json["options_format"] = saved_options_format(model.options)
         if mesh:
             model_json["mesh"] = encode(mesh)
 
@@ -217,7 +226,7 @@ class Serialise:
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
-        variables: None = None,
+        variables: Mapping[str, pybamm.Symbol] | None = None,
         filename: str | None = None,
     ):
         """Saves a discretised model to a JSON file.
@@ -232,7 +241,7 @@ class Serialise:
         mesh : :class:`pybamm.Mesh` (optional)
             The mesh the model has been discretised over. Not neccesary to solve
             the model when read in, but required to use pybamm's plotting tools.
-        variables: None (optional)
+        variables: dict (optional)
             This parameter is deprecated and enabled by default.
         filename: str (optional)
             The desired name of the JSON file. If no name is provided, one will be
@@ -304,6 +313,8 @@ class Serialise:
 
         recon_model_dict = {
             "name": model_data["name"],
+            "pybamm_version": model_data.get("pybamm_version"),
+            "options_format": model_data.get("options_format"),
             "options": self._convert_options(model_data["options"]),
             "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
             "concatenated_rhs": self._decode_model_node(model_data["concatenated_rhs"]),
@@ -544,6 +555,12 @@ class Serialise:
         discretisation = Serialise._serialise_discretisation(model)
         if discretisation:
             model_content["discretisation"] = discretisation
+        if isinstance(model, pybamm.BaseBatteryModel):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                saved_options_format,
+            )
+
+            model_content["options_format"] = saved_options_format(model.options)
 
         SCHEMA_VERSION = "1.1"
         model_json = {
@@ -593,9 +610,9 @@ class Serialise:
         >>> import pybamm
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
-        >>> Serialise.save_custom_model(model, "basicdfn_model.json")
+        >>> Serialise.save_custom_model(model, "basicdfn_saved.json")
         >>> # Or with compression:
-        >>> Serialise.save_custom_model(model, "basicdfn_model.json", compress=True)
+        >>> Serialise.save_custom_model(model, "basicdfn_saved.json", compress=True)
 
         """
         try:
@@ -1416,7 +1433,7 @@ class Serialise:
                 compressed_bytes = base64.b64decode(compressed_b64)
                 json_str = zlib.decompress(compressed_bytes).decode("utf-8")
                 data = json.loads(json_str)
-            except (KeyError, zlib.error, base64.binascii.Error) as e:
+            except (KeyError, zlib.error, binascii.Error) as e:
                 raise ValueError(f"Failed to decompress model data: {e}") from e
 
         # Validate outer structure
@@ -1462,7 +1479,18 @@ class Serialise:
         # the setter, so it matches the restored options.
         opts = model_data.get("options", {})
         if opts is not None:
-            model.options = Serialise._convert_options(opts)
+            opts = Serialise._convert_options(opts)
+            if isinstance(model, pybamm.BaseBatteryModel):
+                from pybamm.models.full_battery_models.battery_model_options import (
+                    restore_saved_options,
+                )
+
+                opts = restore_saved_options(
+                    opts,
+                    data.get("pybamm_version"),
+                    model_data.get("options_format"),
+                )
+            model.options = opts
 
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]
@@ -1613,7 +1641,8 @@ class Serialise:
 
         - If a value is a dict with a "$type" (kernel) or legacy "type" key,
           deserialize it as a PyBaMM symbol.
-        - Otherwise (float, int, bool, str, list, dict-without-type), leave it as-is.
+        - Decode list items using the parameter-value decoder.
+        - Otherwise (float, int, bool, str, dict-without-type), leave it as-is.
         """
         with open(filename) as f:
             raw_dict = json.load(f)
@@ -1623,7 +1652,10 @@ class Serialise:
             if isinstance(val, dict) and ("$type" in val or "type" in val):
                 deserialized[key] = convert_symbol_from_json(val)
 
-            elif isinstance(val, (list, numbers.Number | bool, str, dict)):
+            elif isinstance(val, list):
+                deserialized[key] = pybamm.deserialize_parameter_value(val)
+
+            elif isinstance(val, (numbers.Number | bool, str, dict)):
                 deserialized[key] = val
 
             else:

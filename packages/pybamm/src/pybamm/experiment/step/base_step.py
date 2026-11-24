@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import numbers
+import os
+import sys
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
+from warnings import catch_warnings, filterwarnings, warn
 
 import numpy as np
 
@@ -11,7 +15,7 @@ import pybamm
 from .step_termination import _read_termination
 
 
-class ControlKind(str, Enum):
+class ControlKind(StrEnum):
     """The control-law shape of a step (the quantity its residual fixes)."""
 
     CURRENT = "current"
@@ -202,6 +206,24 @@ class BaseStep:
             direction = self.value_based_charge_or_discharge()
         self.direction = direction
 
+        # A voltage termination without an operator takes its sign from the step
+        # direction, so without a charge or discharge direction it is ignored
+        for term in self.termination:
+            if (
+                isinstance(term, pybamm.step.VoltageTermination)
+                and term.operator is None
+                and self.direction not in ["charge", "discharge"]
+            ):
+                warn(
+                    f"The voltage termination at {term.value} V is ignored because "
+                    "this step is neither a charge nor a discharge, so it is not "
+                    "known whether the voltage should rise or fall to it. Add an "
+                    f"operator, e.g. 'until > {term.value} V' or "
+                    f"'until < {term.value} V'.",
+                    UserWarning,
+                    stacklevel=_user_stacklevel(),
+                )
+
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
         if tags is None:
@@ -230,18 +252,21 @@ class BaseStep:
         :class:`pybamm.Step`
             A copy of the step.
         """
-        return self.__class__(
-            self.input_value,
-            duration=self.input_duration,
-            termination=self.termination,
-            period=self.period,
-            temperature=self.temperature,
-            tags=self.tags,
-            start_time=self.start_time,
-            description=self.description,
-            direction=self.direction,
-            skip_ok=self.skip_ok,
-        )
+        # The original step already warned about an ignored voltage termination
+        with catch_warnings():
+            filterwarnings("ignore", "The voltage termination at", UserWarning)
+            return self.__class__(
+                self.input_value,
+                duration=self.input_duration,
+                termination=self.termination,
+                period=self.period,
+                temperature=self.temperature,
+                tags=self.tags,
+                start_time=self.start_time,
+                description=self.description,
+                direction=self.direction,
+                skip_ok=self.skip_ok,
+            )
 
     def __str__(self):
         if self.description is not None:
@@ -295,6 +320,10 @@ class BaseStep:
     #: Control-law shape (a :class:`ControlKind`); steps sharing it and differing only in
     #: their target value collapse to one unified-mode branch.
     control_kind = None
+
+    #: The scalar output the solver's ``upsampling_tolerance`` resolves. An
+    #: algebraic state adds no points, as the integrator already resolves it.
+    upsampling_variable = "Voltage [V]"
 
     def get_control_residual(self, variables, target=None):
         """Control residual. ``target`` is the per-step input that collapsible steps
@@ -457,11 +486,13 @@ class BaseStep:
             new_parameter_values["Ambient temperature [K]"] = self.temperature
 
         # Parameterise the model
-        return new_parameter_values.process_model(
+        processed_model = new_parameter_values.process_model(
             new_model,
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
         )
+        processed_model.upsampling_variable = self.upsampling_variable
+        return processed_model
 
     def get_termination_events(self, variables):
         events = []
@@ -544,7 +575,7 @@ class BaseStep:
     ):
         """Record all the args for repr and hash"""
         repr_args = f"{value}, duration={duration}"
-        hash_args = f"{value}"
+        hash_args = _value_identity(value)
         if termination:
             repr_args += f", termination={termination}"
             hash_args += f", termination={termination}"
@@ -645,6 +676,18 @@ _type_to_units = {
 }
 
 
+def _user_stacklevel():
+    """Stack level of the first frame outside PyBaMM, so that a warning raised while
+    building a step points at the user's code whichever subclass built it."""
+    pybamm_dir = os.path.dirname(pybamm.__file__)
+    level = 1
+    frame = sys._getframe(1)
+    while frame is not None and frame.f_code.co_filename.startswith(pybamm_dir):
+        frame = frame.f_back
+        level += 1
+    return level
+
+
 def _constant_value(parameter_values, target):
     """Numeric value of ``target`` if it is a state/time-independent constant (after
     parameter substitution), else ``None``. ``target`` may be ``None`` (custom steps),
@@ -653,6 +696,15 @@ def _constant_value(parameter_values, target):
         return None
     processed = parameter_values.process_symbol(pybamm.convert_to_symbol(target))
     return float(processed.evaluate()) if processed.is_constant() else None
+
+
+def _value_identity(value) -> str:
+    """Text that identifies a step value, with arrays identified by their contents."""
+    # numpy shortens the repr of large arrays, which would merge different drive cycles
+    if isinstance(value, np.ndarray):
+        digest = hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
+        return f"array(shape={value.shape}, dtype={value.dtype}, sha256={digest})"
+    return f"{value}"
 
 
 def get_unit_from(a_string: str) -> str:
@@ -684,13 +736,19 @@ def _convert_time_to_seconds(time_and_units):
             "time units must be 'seconds', 'minutes' or 'hours'. "
             f"For example: {_examples}"
         )
+    # Strings like "-5 minutes" must fail like the number -300 does
+    if time_in_seconds <= 0:
+        raise ValueError("time must be positive")
     return time_in_seconds
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
     """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
     # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, int | float) or temperature_and_units is None:
+    if (
+        isinstance(temperature_and_units, numbers.Number)
+        or temperature_and_units is None
+    ):
         return temperature_and_units
 
     # Split number and units

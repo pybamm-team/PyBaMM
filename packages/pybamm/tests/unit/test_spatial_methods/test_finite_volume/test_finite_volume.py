@@ -60,7 +60,37 @@ class TestFiniteVolume:
         with pytest.raises(ValueError, match=r"method"):
             fin_vol.shift(c, "shift key", "bad method")
 
-    @pytest.mark.parametrize("method", ["arithmetic", "harmonic"])
+    def test_node_to_edge_series_is_reciprocal_harmonic_of_reciprocal(self):
+        # on a non-uniform mesh, so the series and arithmetic weights differ
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        geometry = {
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(
+                pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+            )
+        }
+        n = 16
+        mesh = pybamm.Mesh(geometry, submesh_types, {r: n})
+        fin_vol = pybamm.FiniteVolume()
+        fin_vol.build(mesh)
+        w = pybamm.StateVector(slice(0, n), domain=["negative particle"])
+        y_test = 1 + np.arange(n) ** 2
+
+        series = fin_vol.node_to_edge(w, method="series").evaluate(None, y_test)
+        harmonic = fin_vol.node_to_edge(1 / w, method="harmonic").evaluate(None, y_test)
+        arithmetic = fin_vol.node_to_edge(w, method="arithmetic").evaluate(None, y_test)
+        np.testing.assert_allclose(series[1:-1], 1 / harmonic[1:-1], rtol=1e-12)
+        assert np.abs(series[1:-1] - arithmetic[1:-1]).max() > 1
+
+        with pytest.raises(ValueError, match=r"series mean only maps nodes to edges"):
+            fin_vol.edge_to_node(
+                pybamm.StateVector(slice(0, n + 1), domain=["negative particle"]),
+                method="series",
+            )
+
+    @pytest.mark.parametrize("method", ["arithmetic", "harmonic", "series"])
     def test_node_to_edge_exterior_matches_boundary_value(self, method):
         # On a non-uniform mesh the exterior edge values must agree with
         # boundary_value. A flux written as `D * grad(c)` takes D to the edges
@@ -689,14 +719,14 @@ class TestFiniteVolume:
         assert disc_upwind.size == nodes.size + 1
         assert disc_downwind.size == nodes.size + 1
 
-        y_test = 2 * np.ones_like(nodes)
+        # The inflow face takes the Dirichlet value itself
+        y_test = nodes**2
         np.testing.assert_array_equal(
-            disc_upwind.evaluate(y=y_test),
-            np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
+            disc_upwind.evaluate(y=y_test), np.concatenate([[5], y_test])[:, np.newaxis]
         )
         np.testing.assert_array_equal(
             disc_downwind.evaluate(y=y_test),
-            np.concatenate([2 * np.ones(n), np.array([4])])[:, np.newaxis],
+            np.concatenate([y_test, [3]])[:, np.newaxis],
         )
 
         # Remove boundary conditions and check error is raised
@@ -716,6 +746,45 @@ class TestFiniteVolume:
             disc.process_symbol(upwind)
         with pytest.raises(pybamm.ModelError, match=r"Dirichlet boundary conditions"):
             disc.process_symbol(downwind)
+
+    def test_upwind_downwind_auxiliary_domains(self):
+        mesh = get_p2d_mesh_for_testing()
+        sp_meth = pybamm.FiniteVolume()
+        sp_meth.build(mesh)
+        disc = pybamm.Discretisation(
+            mesh,
+            {"macroscale": pybamm.FiniteVolume(), "negative particle": sp_meth},
+        )
+
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        bc_var = pybamm.Variable("bc_var", domain=["negative electrode"])
+        disc.set_variable_slices([var, bc_var])
+        disc_var = pybamm.StateVector(*disc.y_slices[var])
+        disc_bc_var = pybamm.StateVector(*disc.y_slices[bc_var])
+
+        n_prim = mesh["negative particle"].npts
+        n_sec = mesh["negative electrode"].npts
+        y_var = np.arange(1, n_prim * n_sec + 1, dtype=float)
+        y_bc = -np.arange(1, n_sec + 1, dtype=float)
+        y_test = np.concatenate([y_var, y_bc])
+        y_var = y_var.reshape(n_sec, n_prim)
+
+        # Symbolic boundary value, one per secondary point, and a constant one
+        for value, expected in [(disc_bc_var, y_bc), (pybamm.Scalar(7), 7)]:
+            bcs = {var: {"left": (value, "Dirichlet"), "right": (value, "Dirichlet")}}
+            for direction in ["upwind", "downwind"]:
+                faces = sp_meth.upwind_or_downwind(var, disc_var, bcs, direction)
+                faces = faces.evaluate(None, y_test).reshape(n_sec, n_prim + 1)
+                if direction == "upwind":
+                    inflow, interior = faces[:, 0], faces[:, 1:]
+                else:
+                    inflow, interior = faces[:, -1], faces[:, :-1]
+                np.testing.assert_array_equal(inflow, expected)
+                np.testing.assert_array_equal(interior, y_var)
 
     def test_grad_div_with_bcs_on_tab(self):
         # Create discretisation
@@ -951,3 +1020,279 @@ class TestFiniteVolume:
 
         m = mesh["negative electrode"].npts
         np.testing.assert_array_equal(inner_disc.evaluate(y=y), np.zeros((n * m, 1)))
+
+
+def _face_method_cases():
+    domain = ["negative electrode"]
+    u = pybamm.Variable("u", domain=domain)
+    w = pybamm.Variable("w", domain=domain)
+    grad_u, grad_w = pybamm.grad(u), pybamm.grad(w)
+    harmonic = {
+        "w * grad(u)": grad_u,
+        "w * (grad(u) - grad(w))": pybamm.Subtraction(grad_u, grad_w),
+        "w * (2 * grad(u))": pybamm.Multiplication(pybamm.Scalar(2), grad_u),
+        "w * (2 * (grad(u) - grad(w)))": pybamm.Multiplication(
+            pybamm.Scalar(2), pybamm.Subtraction(grad_u, grad_w)
+        ),
+        "w * ((grad(u) - grad(w)) / 2)": pybamm.Division(
+            pybamm.Subtraction(grad_u, grad_w), pybamm.Scalar(2)
+        ),
+        "w * ((w * grad(u)) / w - grad(w))": pybamm.Subtraction(
+            pybamm.Division(pybamm.Multiplication(w, grad_u), w), grad_w
+        ),
+        "w * (grad(u) / w - grad(w))": pybamm.Subtraction(
+            pybamm.Division(grad_u, w), grad_w
+        ),
+        "w * -(w * grad(u) + grad(w) * w)": pybamm.Negate(
+            pybamm.Addition(
+                pybamm.Multiplication(w, grad_u), pybamm.Multiplication(grad_w, w)
+            )
+        ),
+    }
+    arithmetic = {
+        "w * (grad(u) + w)": pybamm.Addition(grad_u, w),
+        "w * (grad(u) * grad(w))": pybamm.Multiplication(grad_u, grad_w),
+        "w * ((grad(u) - grad(w)) / w)": pybamm.Division(
+            pybamm.Subtraction(grad_u, grad_w), w
+        ),
+        # a factor of an already formed flux, such as t_plus * i_e
+        "w * (w * grad(u))": pybamm.Multiplication(w, grad_u),
+        "w * (grad(u) / w)": pybamm.Division(grad_u, w),
+        "w * (w * (w * grad(u)))": pybamm.Multiplication(
+            w, pybamm.Multiplication(w, grad_u)
+        ),
+        "w * (w * (grad(u) - grad(w)))": pybamm.Multiplication(
+            w, pybamm.Subtraction(grad_u, grad_w)
+        ),
+        "w * upwind(u)": pybamm.upwind(u),
+    }
+    return [
+        pytest.param(pybamm.Multiplication(w, edge), edge, method, id=name)
+        for method, cases in [("harmonic", harmonic), ("arithmetic", arithmetic)]
+        for name, edge in cases.items()
+    ] + [
+        pytest.param(
+            pybamm.Addition(w, pybamm.Subtraction(grad_u, grad_w)),
+            pybamm.Subtraction(grad_u, grad_w),
+            "arithmetic",
+            id="w + (grad(u) - grad(w))",
+        ),
+        pytest.param(
+            pybamm.Division(pybamm.Subtraction(grad_u, grad_w), w),
+            pybamm.Subtraction(grad_u, grad_w),
+            "series",
+            id="(grad(u) - grad(w)) / w",
+        ),
+        pytest.param(
+            pybamm.Multiplication(grad_u, w), grad_u, "harmonic", id="grad(u) * w"
+        ),
+        # a divisor of a gradient is a resistance, and a sum has no coefficient
+        pytest.param(pybamm.Division(grad_u, w), grad_u, "series", id="grad(u) / w"),
+        pytest.param(
+            pybamm.Division(w, grad_u), grad_u, "arithmetic", id="w / grad(u)"
+        ),
+        pytest.param(
+            pybamm.Division(pybamm.Multiplication(w, grad_u), w),
+            pybamm.Multiplication(w, grad_u),
+            "arithmetic",
+            id="(w * grad(u)) / w",
+        ),
+        pytest.param(
+            pybamm.Addition(w, grad_u), grad_u, "arithmetic", id="w + grad(u)"
+        ),
+        pytest.param(
+            pybamm.Subtraction(grad_u, w), grad_u, "arithmetic", id="grad(u) - w"
+        ),
+    ]
+
+
+class TestFaceCoefficientAveraging:
+    @staticmethod
+    def _two_material_slab(flux, harmonic_flux_coefficients=True, uneven=False):
+        """Residual of div(flux(D, t, u, v)) at the exact steady profile of a slab
+        whose diffusivity D jumps on the electrode/separator face. ``t`` is a
+        node-valued factor that alternates between 1 and -1, and v = 0. If
+        ``uneven``, the cells on either side of the face differ in width."""
+        if uneven:
+            x_n, x_s = (
+                pybamm.standard_spatial_vars.x_n,
+                pybamm.standard_spatial_vars.x_s,
+            )
+            geometry = {
+                "negative electrode": {x_n: {"min": 0, "max": 0.3}},
+                "separator": {x_s: {"min": 0.3, "max": 1.0}},
+            }
+            submesh = pybamm.Uniform1DSubMesh
+            mesh = pybamm.Mesh(
+                pybamm.Geometry(geometry),
+                {"negative electrode": submesh, "separator": submesh},
+                {x_n: 3, x_s: 11},
+            )
+        else:
+            mesh = get_mesh_for_testing(xpts=7)
+        method = pybamm.FiniteVolume(
+            {"harmonic flux coefficients": harmonic_flux_coefficients}
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": method, "separator": method}
+        )
+        domain = ["negative electrode", "separator"]
+        u = pybamm.Variable("u", domain=domain)
+        v = pybamm.Variable("v", domain=domain)
+        t = pybamm.Variable("t", domain=domain)
+        disc.set_variable_slices([u, v, t])
+        bcs = {"left": (pybamm.Scalar(0), "Dirichlet")}
+        disc.bcs = {
+            u: {**bcs, "right": (pybamm.Scalar(1), "Dirichlet")},
+            v: {**bcs, "right": (pybamm.Scalar(0), "Dirichlet")},
+        }
+        D1, D2 = 1.0, 25.0
+        # an input scale keeps simplification from distributing D over a sum
+        D = pybamm.InputParameter("scale") * pybamm.concatenation(
+            pybamm.PrimaryBroadcast(pybamm.Scalar(D1), "negative electrode"),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(D2), "separator"),
+        )
+
+        # piecewise linear, with the series-resistance flux through the face
+        x = mesh[domain].nodes
+        interface, length = mesh["negative electrode"].edges[-1], mesh[domain].edges[-1]
+        q = 1 / (interface / D1 + (length - interface) / D2)
+        u_exact = np.where(x < interface, q * x / D1, 1 - q * (length - x) / D2)
+        t_values = (-1.0) ** np.arange(len(x))
+        y = np.concatenate([u_exact, np.zeros_like(x), t_values])[:, np.newaxis]
+        return disc.process_symbol(pybamm.div(flux(D, t, u, v))).evaluate(
+            y=y, inputs={"scale": 1}
+        )
+
+    @pytest.mark.parametrize(
+        "flux",
+        [
+            pytest.param(lambda D, t, u, v: D * pybamm.grad(u), id="D * grad(u)"),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) - pybamm.grad(v)),
+                id="D * (grad(u) - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: (2 * pybamm.grad(v) - pybamm.grad(u)) * (-D),
+                id="(2 grad(v) - grad(u)) * (-D)",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) + 3 * pybamm.grad(v) / 2),
+                id="D * (grad(u) + 3 grad(v) / 2)",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) / (t * t) - pybamm.grad(v)),
+                id="D * (grad(u) / t**2 - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (t**2 * pybamm.grad(u) / t**4 - pybamm.grad(v)),
+                id="D * (t**2 * grad(u) / t**4 - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (2 * (pybamm.grad(u) - pybamm.grad(v))),
+                id="D * (2 (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * ((pybamm.grad(u) - pybamm.grad(v)) / 2),
+                id="D * ((grad(u) - grad(v)) / 2)",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("uneven", [False, True])
+    def test_two_material_slab_is_exact(self, flux, uneven):
+        np.testing.assert_allclose(
+            self._two_material_slab(flux, uneven=uneven), 0, rtol=1e-10, atol=1e-10
+        )
+
+    def test_harmonic_flux_coefficients_is_off_by_default(self):
+        assert pybamm.FiniteVolume().options["harmonic flux coefficients"] is False
+        # a single gradient's coefficient is harmonic either way
+        single = self._two_material_slab(
+            lambda D, t, u, v: D * pybamm.grad(u), harmonic_flux_coefficients=False
+        )
+        np.testing.assert_allclose(single, 0, rtol=1e-10, atol=1e-10)
+        combination = self._two_material_slab(
+            lambda D, t, u, v: D * (pybamm.grad(u) - pybamm.grad(v)),
+            harmonic_flux_coefficients=False,
+        )
+        assert np.abs(combination).max() > 1
+
+    @pytest.mark.parametrize("uneven", [False, True])
+    @pytest.mark.parametrize(
+        ("flux", "harmonic_flux_coefficients"),
+        [
+            pytest.param(
+                lambda D, t, u, v: pybamm.grad(u) / (1 / D),
+                False,
+                id="grad(u) / (1 / D)",
+            ),
+            pytest.param(
+                lambda D, t, u, v: pybamm.grad(u) / (1 / D),
+                True,
+                id="grad(u) / (1 / D), harmonic flux coefficients",
+            ),
+            # a divisor of a gradient sum takes the series mean only with the option
+            pytest.param(
+                lambda D, t, u, v: (pybamm.grad(u) - pybamm.grad(v)) / (1 / D),
+                True,
+                id="(grad(u) - grad(v)) / (1 / D), harmonic flux coefficients",
+            ),
+        ],
+    )
+    def test_two_material_slab_divided_by_resistivity_is_exact(
+        self, flux, harmonic_flux_coefficients, uneven
+    ):
+        # 1 / D is a resistivity, so a face sees the cells' resistances in series
+        residual = self._two_material_slab(
+            flux,
+            harmonic_flux_coefficients=harmonic_flux_coefficients,
+            uneven=uneven,
+        )
+        np.testing.assert_allclose(residual, 0, rtol=1e-10, atol=1e-10)
+
+    @pytest.mark.parametrize("value", ["true", 1, None])
+    def test_harmonic_flux_coefficients_must_be_a_bool(self, value):
+        with pytest.raises(pybamm.OptionError, match="harmonic flux coefficients"):
+            pybamm.FiniteVolume({"harmonic flux coefficients": value})
+
+    def test_two_material_slab_arithmetic_mean_is_not_exact(self):
+        # a node-valued term (zero here) makes D an arithmetic-mean factor
+        residual = self._two_material_slab(
+            lambda D, t, u, v: D * (pybamm.grad(u) - pybamm.grad(v) + v)
+        )
+        assert np.abs(residual).max() > 1
+
+    @pytest.mark.parametrize(
+        "flux",
+        [
+            pytest.param(
+                lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v))),
+                id="t * (D * (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: t * (D * pybamm.grad(u)), id="t * (D * grad(u))"
+            ),
+        ],
+    )
+    def test_sign_changing_factor_of_a_flux_is_finite(self, flux):
+        # the harmonic mean of t = 1, -1 divides by zero where the cells on
+        # both sides of a face are equal, as they are within each domain here
+        residual = self._two_material_slab(flux)
+        assert np.all(np.isfinite(residual))
+
+    @pytest.mark.parametrize(("bin_op", "edge_child", "expected"), _face_method_cases())
+    def test_face_coefficient_method(self, bin_op, edge_child, expected):
+        assert (
+            pybamm.FiniteVolume._face_coefficient_method(bin_op, edge_child) == expected
+        )
+        # with the option off only a coefficient or divisor of a bare gradient
+        # is harmonic or series
+        expected_off = (
+            expected if isinstance(edge_child, pybamm.Gradient) else "arithmetic"
+        )
+        assert (
+            pybamm.FiniteVolume._face_coefficient_method(
+                bin_op, edge_child, gradient_combinations=False
+            )
+            == expected_off
+        )

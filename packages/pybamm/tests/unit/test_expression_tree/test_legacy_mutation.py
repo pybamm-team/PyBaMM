@@ -414,7 +414,7 @@ class TestLegacyMutation:
         assert binary.children == [child, pybamm.Scalar(2)]
         assert json.loads(json.dumps(names)) == names
         for sequence in (names, binary.children, binary.children[0].domains):
-            assert pickle.loads(pickle.dumps(sequence)) == sequence  # nosec B301
+            assert pickle.loads(pickle.dumps(sequence)) == sequence
             assert copy.deepcopy(sequence) == sequence
             assert type(copy.copy(sequence)) is type(sequence)
 

@@ -208,6 +208,7 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         zone_model: Callable[[dict], pybamm.BaseModel] | None = None,
         coating: str = "double-sided",
     ) -> None:
+        pybamm_model_zoo.require(SLUG)
         if num_subdivisions is None:
             num_subdivisions = num_physical_layers
         if num_physical_layers < 2:

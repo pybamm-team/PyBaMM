@@ -31,13 +31,22 @@ without it, run ``git submodule update --init``.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM supports versions 3.10 — 3.14)
+- Python 3 (PyBaMM supports versions 3.11 — 3.15)
 - The Python headers file for your current Python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
+- A Rust toolchain (``cargo`` 1.89 or newer), for the Rust compute core — install via `rustup <https://rustup.rs>`__.
 - ``graphviz`` (optional), if you wish to build the documentation locally.
 - ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
+
+.. note::
+
+   PyBaMM's wheels on PyPI bundle a prebuilt Rust extension, so ``pip install pybamm``
+   needs no Rust toolchain. Building from source or from the source distribution
+   compiles it, which requires ``cargo`` 1.89 or newer, the minimum Rust version the
+   crates declare. To force a prebuilt wheel, use
+   ``pip install --only-binary pybamm pybamm``.
 
 You can install the above with
 
@@ -46,18 +55,20 @@ You can install the above with
 	.. code:: bash
 
 		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake make pandoc
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-	Where ``X`` is the version sub-number.
+	Where ``X`` is the version sub-number. Rust comes from rustup because the
+	distribution's ``cargo`` package may be older than 1.89.
 
 .. tab:: MacOS
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran graphviz libomp cmake pandoc
+		brew install python openblas gcc gfortran graphviz libomp cmake pandoc rust
 
 .. note::
 
-    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc``.
+    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc``, and Rust through `rustup <https://rustup.rs>`__.
 
     On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
@@ -103,6 +114,9 @@ You should now have everything ready to build and install PyBaMM successfully.
    ``SUNDIALS_ROOT`` and ``SuiteSparse_ROOT``. The manual ``pip`` install below
    and the released ``pip install pybamm`` both pull a prebuilt
    ``pybammsolvers`` wheel from PyPI, so they skip this build entirely.
+
+   Every install from this checkout, the manual ``pip`` install included, also
+   compiles PyBaMM's Rust extension, so it needs ``cargo`` 1.89 or newer.
 
 Using ``uv`` (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -268,6 +282,7 @@ Doctests, examples, and coverage
 
 - ``nox -s examples``: Run the Jupyter notebooks in ``docs/source/examples/notebooks/``.
 - ``nox -s examples -- <path-to-notebook-1.ipynb> <path-to_notebook-2.ipynb>``: Run specific Jupyter notebooks.
+- ``nox -s examples-smoke``: Run three getting-started notebooks as a quick check of simulations, parameters and experiments.
 - ``nox -s scripts``: Run the example scripts in ``examples/scripts/``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
@@ -294,6 +309,6 @@ Troubleshooting
 not being used when I run my Python script.
 
 **Solution:** Make sure you have installed PyBaMM in editable mode.
-If using ``uv``, run ``uv sync`` (editable by default). If using ``pip``,
+If using ``uv``, run ``uv sync --extra all --group dev`` (editable by default). If using ``pip``,
 use the ``-e`` flag: ``pip install -e ./packages/pybamm``. This sets the installed location
 of the source files to your current directory.

@@ -16,9 +16,6 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
         options = {}
         self.run_basic_processing_test(options)
 
-    def test_sensitivities(self):
-        pass  # skip this test
-
     def test_charge(self):
         pass  # skip this test
 

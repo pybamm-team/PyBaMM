@@ -29,8 +29,7 @@ public:
   IDAKLUSolverOpenMP_KLU(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
     Base::LS = SUNLinSol_KLU(Base::yy, Base::J, Base::sunctx);
-    // AMD (0) instead of the SUNDIALS default COLAMD (1)
-    SUNLinSol_KLUSetOrdering(Base::LS, 0);
+    configure_klu(Base::LS, Base::setup_opts.klu_pivot_tolerance);
     Base::Initialize();
   }
 };

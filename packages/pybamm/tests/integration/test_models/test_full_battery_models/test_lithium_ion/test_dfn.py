@@ -47,6 +47,21 @@ class TestDFN(BaseIntegrationTestLithiumIon):
         # nothing consumes lithium, so LLI must stay at zero
         np.testing.assert_allclose(sol["LLI [%]"](sol.t), 0, atol=1e-8)
 
+    def test_quartic_profile_particle_stoichiometry_bounded(self):
+        model = pybamm.lithium_ion.DFN({"particle": "quartic profile"})
+        param = pybamm.ParameterValues("Chen2020")
+        param["Current function [A]"] = -1
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 60], initial_soc=0.5)
+        t = np.linspace(0, 60, 7)
+        for domain in ["negative", "positive"]:
+            stoichiometry = sol[f"{domain.capitalize()} particle stoichiometry"](
+                t=t,
+                x=sim.mesh[f"{domain} electrode"].nodes,
+                r=sim.mesh[f"{domain} particle"].nodes,
+            )
+            assert np.all((stoichiometry >= 0) & (stoichiometry <= 1))
+
     def test_cycling_extreme_conditions(self):
         # test cycling with difficult conditions: full discharge and very low
         # current cutoff. This exercises the regularised expressions (RegPower,
@@ -279,3 +294,49 @@ class TestDFNWithSizeDistribution:
             model, parameter_values=parameter_values, var_pts=self.var_pts
         )
         modeltest.test_all(skip_output_tests=True)
+
+    @pytest.mark.parametrize(
+        ("particle_size", "porosity_options"),
+        [
+            (("single", "distribution"), {"SEI porosity change": "true"}),
+            (("single", "distribution"), {"lithium plating porosity change": "true"}),
+            (
+                ("distribution", "single"),
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+        ],
+    )
+    def test_reaction_driven_porosity(self, particle_size, porosity_options):
+        options = {
+            "particle size": particle_size,
+            "SEI": "solvent-diffusion limited",
+            "lithium plating": "irreversible",
+            **porosity_options,
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        parameter_values = pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("OKane2022")
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, var_pts=self.var_pts
+        )
+        solution = sim.solve([0, 3600])
+
+        t = solution.t
+        eps_n = solution["X-averaged negative electrode porosity"](t)
+        assert np.all(eps_n[1:] < parameter_values["Negative electrode porosity"])
+        np.testing.assert_allclose(
+            solution["X-averaged positive electrode porosity"](t),
+            parameter_values["Positive electrode porosity"],
+            rtol=1e-12,
+        )

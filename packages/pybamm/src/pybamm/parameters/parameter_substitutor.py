@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import inspect
 import numbers
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
 import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.util import _is_flux_boundary_condition
 
 if TYPE_CHECKING:
+    from pybamm.type_definitions import Numeric
+
     from .parameter_store import ParameterStore
 
 
@@ -84,7 +87,7 @@ class ParameterSubstitutor:
         >>> result = processed.evaluate()  # Returns evaluated value
         """
         if isinstance(symbol, numbers.Number):
-            return pybamm.Scalar(symbol)
+            return pybamm.Scalar(cast("Numeric", symbol))
         return pybamm.tree_map(
             self._substitute, symbol, cache=self._cache, is_leaf=self._is_leaf
         )
@@ -122,13 +125,13 @@ class ParameterSubstitutor:
                 return self._process_function_parameter(symbol)
             return self._process_callable_function_parameter(symbol, new_leaves)
 
-        if isinstance(symbol, pybamm.Variable):
+        if isinstance(symbol, pybamm.VariableBase):
             n_children = len(symbol.children)
             scale, reference, *bounds = new_leaves[n_children:]
             if isinstance(reference, pybamm.Vector):
                 # address numpy 1.25 deprecation warning: array should have ndim=0
                 # before conversion
-                reference = pybamm.Scalar((reference.evaluate()).item())
+                reference = pybamm.Scalar(reference.entries.item())
             return symbol.create_copy(
                 scale=scale, reference=reference, bounds=tuple(bounds)
             )
@@ -172,7 +175,7 @@ class ParameterSubstitutor:
             if np.isnan(value):
                 raise ValueError(f"Parameter '{symbol.name}' not found")
             # Scalar inherits name
-            return pybamm.Scalar(value, name=symbol.name)
+            return pybamm.Scalar(cast("Numeric", value), name=symbol.name)
         elif isinstance(value, pybamm.Symbol):
             return self.process_symbol(value).with_domains(symbol)
         else:
@@ -230,7 +233,7 @@ class ParameterSubstitutor:
                 )
             # If the "function" is provided is actually a scalar, return a Scalar
             # object instead of throwing an error.
-            function = pybamm.Scalar(function_name, name=symbol.name)
+            function = pybamm.Scalar(cast("Numeric", function_name), name=symbol.name)
         elif callable(function_name):
             # otherwise evaluate the function to create a new PyBaMM object
             self._check_electrode_conductivity_signature(symbol, function_name)
@@ -263,6 +266,9 @@ class ParameterSubstitutor:
             else:
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
             function_out = function.diff(new_diff_variable)
+            # A constant derivative keeps the function's shape, as above
+            if function_out.evaluates_to_number():
+                function_out = function_out * pybamm.ones_like(*new_children)
 
         # Process again just to be sure
         return self.process_symbol(function_out)
@@ -335,14 +341,12 @@ class ParameterSubstitutor:
         placeholders = {pybamm.Parameter(arg): child for arg, child in inputs.items()}
 
         # Rebuild the expression with the inputs' domains, leaves first, so the
-        # stored template is never modified.
+        # stored template is never modified. rebuild re-derives the other domains.
         def rebind_domains(node, new_leaves):
             new_node = pybamm.rebuild(node, new_leaves, simplify=False)
             if node in placeholders:
                 return new_node.with_domains(placeholders[node])
-            return new_node.with_domains(
-                new_node._combine_children_domains(new_node.children)
-            )
+            return new_node
 
         expression = pybamm.tree_map(rebind_domains, expression)
 
@@ -390,6 +394,9 @@ class ParameterSubstitutor:
             # return differentiated function
             new_diff_variable = self.process_symbol(symbol.diff_variable)
             function_out = function.diff(new_diff_variable)
+            # A constant derivative keeps the function's shape, as above
+            if function_out.evaluates_to_number():
+                function_out = function_out * pybamm.ones_like(*new_children)
 
         return function_out
 
@@ -575,6 +582,9 @@ class ParameterSubstitutor:
                 pybamm.logger.verbose(
                     f"Processing parameters for {variable!r} ({side} bc)"
                 )
+                if _is_flux_boundary_condition(typ):
+                    # Flux boundary conditions are specified as a tuple ("Flux", symbol)
+                    typ = (typ[0], self.process_symbol(typ[1]))
                 new_boundary_conditions[processed_variable][side] = (
                     self.process_symbol(bc),
                     typ,

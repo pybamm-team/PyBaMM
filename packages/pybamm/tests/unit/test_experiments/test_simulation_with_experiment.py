@@ -158,6 +158,28 @@ class TestSimulationExperiment:
             out[mode] = sol["Voltage [V]"](time)
         np.testing.assert_allclose(out["unified"], out["legacy"], rtol=1e-4, atol=1e-4)
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_drive_cycles_differing_in_the_middle(self, experiment_model_mode):
+        # numpy shortens the reprs of these drive cycles to the same text
+        time = np.linspace(0, 1000, 2001)
+        drive_cycle = np.column_stack([time, np.ones_like(time)])
+        changed = drive_cycle.copy()
+        changed[1000, 1] = 5
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(drive_cycle), pybamm.step.current(changed)]
+        )
+        assert len(experiment.unique_steps) == 2
+        np.testing.assert_array_equal(experiment.steps[1].input_value, changed)
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+        currents = [cycle["Current [A]"](cycle.t[0] + 500) for cycle in solution.cycles]
+        np.testing.assert_allclose(currents, [1, 5], rtol=1e-6)
+
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
             [
@@ -520,6 +542,9 @@ class TestSimulationExperiment:
 
             if experiment_model_mode == "legacy":
                 assert (model_0, model_1) in sim.model_state_mappers
+                # step() only uses the mapper function, not its jacobian
+                _, jacobian, _ = sim._compiled_model_state_mappers[(model_0, model_1)]
+                assert jacobian is None
             else:
                 assert len(sim.model_state_mappers.values()) == 0
 
@@ -1347,8 +1372,8 @@ class TestSimulationExperiment:
         full_solution, solution = solutions
 
         np.testing.assert_allclose(
-            solution.cycles[0].first_state.y,
-            full_solution.cycles[0].first_state.y,
+            solution.cycles[0].first_state.all_ys[0],
+            full_solution.cycles[0].first_state.all_ys[0],
             rtol=1e-6,
         )
         change = "Change in throughput capacity [A.h]"
@@ -1564,6 +1589,178 @@ class TestSimulationExperiment:
         sens = np.asarray(sensitivities[diffusivity_name])
         assert np.all(np.isfinite(sens))
         assert np.any(sens != 0)
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_resolve_with_changed_sensitivities(self, experiment_model_mode):
+        # The usual finite-difference check pattern: solve with, then without
+        name = "Negative particle diffusivity [m2.s-1]"
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]"})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute", "Rest for 1 minute"],
+                period="20 seconds",
+            ),
+            experiment_model_mode=experiment_model_mode,
+        )
+        inputs = {name: 3.3e-14}
+
+        first = sim.solve(inputs=inputs, calculate_sensitivities=True)
+        without = sim.solve(inputs=inputs, calculate_sensitivities=False)
+        again = sim.solve(inputs=inputs, calculate_sensitivities=[name])
+
+        # Error control differs with sensitivities, so only to the solver tolerance
+        t = first.t
+        np.testing.assert_allclose(
+            without["Voltage [V]"](t), first["Voltage [V]"](t), rtol=1e-4
+        )
+        assert not without.has_sensitivities()
+        np.testing.assert_allclose(
+            again["Voltage [V]"].sensitivities[name],
+            first["Voltage [V]"].sensitivities[name],
+            rtol=1e-8,
+        )
+
+    @pytest.mark.parametrize(
+        "starting_sensitivities, next_sensitivities",
+        [(["a", "b"], ["a"]), (["a"], False), (False, ["a"])],
+        ids=["fewer", "none", "more"],
+    )
+    def test_starting_solution_rejects_changed_sensitivities(
+        self, starting_sensitivities, next_sensitivities
+    ):
+        # The result joins the starting solution's sensitivities to the steps'
+        names = {
+            "a": "Negative particle diffusivity [m2.s-1]",
+            "b": "Positive particle diffusivity [m2.s-1]",
+        }
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]" for name in names.values()})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute"], period="20 seconds"
+            ),
+        )
+        inputs = {names["a"]: 3.3e-14, names["b"]: 4e-15}
+
+        def sensitivities(keys):
+            return keys and [names[key] for key in keys]
+
+        starting_solution = sim.solve(
+            inputs=inputs,
+            calculate_sensitivities=sensitivities(starting_sensitivities),
+        )
+        with pytest.raises(pybamm.SolverError, match=r"same 'calculate_sensitivities'"):
+            sim.solve(
+                inputs=inputs,
+                starting_solution=starting_solution,
+                calculate_sensitivities=sensitivities(next_sensitivities),
+            )
+
+        solution = sim.solve(
+            inputs=inputs,
+            starting_solution=starting_solution,
+            calculate_sensitivities=sensitivities(starting_sensitivities),
+        )
+        assert solution.t[-1] == pytest.approx(120)
+        if starting_sensitivities:
+            voltage = solution["Voltage [V]"]
+            assert voltage.sensitivities[names["a"]].shape == solution.t.shape
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_starting_solution_with_sensitivities_true(self, experiment_model_mode):
+        name = "Negative particle diffusivity [m2.s-1]"
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]"})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute"], period="20 seconds"
+            ),
+            experiment_model_mode=experiment_model_mode,
+        )
+        inputs = {name: 3.3e-14}
+        starting_solution = sim.solve(inputs=inputs, calculate_sensitivities=True)
+
+        solution = sim.solve(
+            inputs=inputs,
+            starting_solution=starting_solution,
+            calculate_sensitivities=True,
+        )
+        assert solution.t[-1] == pytest.approx(120)
+        assert solution.sensitivity_names == [name]
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_solve_with_sensitivities_true_skips_inputs_steps_lack(
+        self, caplog, experiment_model_mode
+    ):
+        # "unused" is in no model; "current" is only in the current step's legacy model
+        diffusivity_name = "Positive particle diffusivity [m2.s-1]"
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({diffusivity_name: "[input]"})
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.Current(pybamm.InputParameter("current"), duration=10),
+                pybamm.step.Rest(duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode=experiment_model_mode,
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            sol = sim.solve(
+                inputs={"current": 0.1, diffusivity_name: 1e-14, "unused": 1.0},
+                calculate_sensitivities=True,
+                calc_esoh=False,
+            )
+
+        skipped = (
+            ["unused"] if experiment_model_mode == "unified" else ["current", "unused"]
+        )
+        assert (
+            f"Inputs {skipped} are not input parameters of every experiment step "
+            "model, so no sensitivities are calculated for them."
+        ) in caplog.text
+        expected = {diffusivity_name} | (
+            {"current"} if experiment_model_mode == "unified" else set()
+        )
+        sensitivities = sol["Voltage [V]"].sensitivities
+        assert set(sensitivities) - {"all"} == expected
+        assert np.any(np.asarray(sensitivities[diffusivity_name]) != 0)
+
+    def test_solve_with_sensitivity_names_some_steps_lack_raises(self):
+        # In the legacy mode only the current step's model has "current"
+        diffusivity_name = "Positive particle diffusivity [m2.s-1]"
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({diffusivity_name: "[input]"})
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.Current(pybamm.InputParameter("current"), duration=10),
+                pybamm.step.Rest(duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode="legacy",
+        )
+        with pytest.raises(pybamm.SolverError, match=r"\['current'\] are not input"):
+            sim.solve(
+                inputs={"current": 0.1, diffusivity_name: 1e-14},
+                calculate_sensitivities=["current", diffusivity_name],
+                calc_esoh=False,
+            )
 
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
@@ -2068,8 +2265,8 @@ class TestSimulationExperiment:
                 experiment_model_mode=experiment_model_mode,
             )
             sim.solve(initial_soc=1)
-            previous_state = sim.solution.cycles[0].last_state.y
-            next_state = sim.solution.cycles[1].steps[-1].first_state.y
+            previous_state = sim.solution.cycles[0].last_state.all_ys[0]
+            next_state = sim.solution.cycles[1].steps[-1].first_state.all_ys[0]
 
             built_model = sim.steps_to_built_models[
                 sim.experiment.steps[0].basic_repr()
@@ -2261,7 +2458,7 @@ class TestSimulationExperiment:
                 self.t_event = None
                 self.y_event = None
                 self.t = source.t
-                self.y = source.y
+                self.all_ys = source.all_ys
                 self.all_inputs = source.all_inputs
 
             def __getitem__(self, key):
@@ -2677,3 +2874,95 @@ class TestSimulationExperiment:
 
         # Reusing the same Simulation must refresh experiment ICs when SOC changes.
         assert ic1 != ic2
+
+    @staticmethod
+    def _heated_body(control):
+        model = pybamm.BaseModel()
+        temperature = pybamm.Variable("Temperature [K]")
+        model.rhs = {temperature: control / 1000}
+        model.initial_conditions = {temperature: 300}
+        model.variables = {"Temperature [K]": temperature}
+        return model
+
+    def test_experiment_on_model_without_summary_variables(self):
+        current = pybamm.FunctionParameter(
+            "Current function [A]", {"Time [s]": pybamm.t}
+        )
+        model = self._heated_body(current)
+        experiment = pybamm.Experiment(
+            ["Rest for 10 seconds", "Discharge at 2 A for 10 seconds"]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Current function [A]": 1}),
+            experiment=experiment,
+        )
+        solution = sim.solve()
+
+        temperature = solution["Temperature [K]"]
+        np.testing.assert_allclose(temperature(10), 300, rtol=1e-6)
+        np.testing.assert_allclose(temperature(20), 300.02, rtol=1e-6)
+        assert solution.summary_variables.all_variables == []
+
+    def test_experiment_on_model_that_does_not_read_the_current(self):
+        model = self._heated_body(pybamm.Parameter("Heating power [W]"))
+        experiment = pybamm.Experiment(
+            ["Rest for 10 seconds", "Discharge at 1 A for 10 seconds"] * 2
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Heating power [W]": 100}),
+            experiment=experiment,
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"steps 'Rest for 10 seconds', 'Discharge at 1 A for 10 seconds' "
+            r"set 'Current function \[A\]', which the model 'Unnamed model' does not",
+        ):
+            sim.solve()
+
+    def test_experiment_on_model_that_reads_only_the_ambient_temperature(self):
+        model = pybamm.BaseModel()
+        temperature = pybamm.Variable("Temperature [K]")
+        ambient_temperature = pybamm.Parameter("Ambient temperature [K]")
+        model.rhs = {temperature: (ambient_temperature - temperature) / 10}
+        model.initial_conditions = {temperature: 300}
+        model.variables = {"Temperature [K]": temperature}
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Rest for 100 seconds", temperature="30 oC"),
+                pybamm.step.string("Rest for 100 seconds", temperature="40 oC"),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Ambient temperature [K]": 300}),
+            experiment=experiment,
+        )
+        solution = sim.solve()
+
+        temperature = solution["Temperature [K]"]
+        np.testing.assert_allclose(temperature(100), 303.15, rtol=1e-5)
+        np.testing.assert_allclose(temperature(200), 313.15, rtol=1e-5)
+
+    def test_experiment_temperature_step_on_model_that_reads_neither(self):
+        model = self._heated_body(pybamm.Parameter("Heating power [W]"))
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Rest for 10 seconds", temperature="30 oC"),
+                "Rest for 20 seconds",
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Heating power [W]": 100}),
+            experiment=experiment,
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"steps 'Rest for 10 seconds' set 'Current function \[A\]' and "
+            r"'Ambient temperature \[K\]', neither of which the model 'Unnamed "
+            r"model' reads, so they would have no effect on it\. The experiment "
+            r"steps 'Rest for 20 seconds' set 'Current function \[A\]', which",
+        ):
+            sim.solve()

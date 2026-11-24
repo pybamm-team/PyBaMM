@@ -28,6 +28,14 @@ from pybamm.models.full_battery_models.lithium_ion.basic_dfn import BasicDFN
 from pybamm.models.full_battery_models.lithium_ion.basic_spm import BasicSPM
 
 
+def _make_base_class_unimportable(data, name, mro=None):
+    """Set a serialised model's base class to the unimportable ``name``, ahead of
+    ``mro`` (default: the recorded MRO)."""
+    model = data["model"]
+    model["base_class"] = name
+    model["base_class_mro"] = [name, *(model["base_class_mro"] if mro is None else mro)]
+
+
 class TestSerialiseModels:
     def test_user_defined_model_recreaction(self):
         # Start with a base model
@@ -177,9 +185,8 @@ class TestSerialise:
 
         assert Serialise()._convert_options(options_dict) == options_result
 
-    def test_save_load_model(self, mocker, tmp_path, request):
-        os.chdir(tmp_path)
-        request.addfinalizer(lambda: os.chdir(os.getcwd()))
+    def test_save_load_model(self, mocker, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
 
         model = pybamm.lithium_ion.SPM(name="test_spm")
         geometry = model.default_geometry
@@ -764,6 +771,12 @@ class TestSerialise:
         assert "positive particle" in loaded.default_geometry
         assert "positive particle" in loaded.default_spatial_methods
 
+    def test_basic_dfn_half_cell_round_trip(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell()
+        payload = Serialise.serialise_custom_model(model)
+        loaded = Serialise.load_custom_model(payload)
+        assert loaded.options == model.options
+
     def test_serialise_records_base_class_mro(self, tmp_path):
         from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
             BaseModel as LiIonBaseModel,
@@ -804,11 +817,7 @@ class TestSerialise:
 
         with open(file_path) as f:
             data = json.load(f)
-        data["model"]["base_class"] = "user_private_pkg.MyLiIon"
-        data["model"]["base_class_mro"] = [
-            "user_private_pkg.MyLiIon",
-            *data["model"]["base_class_mro"],
-        ]
+        _make_base_class_unimportable(data, "user_private_pkg.MyLiIon")
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -836,11 +845,9 @@ class TestSerialise:
 
         with open(file_path) as f:
             data = json.load(f)
-        data["model"]["base_class"] = "nonexistent_module.A"
-        data["model"]["base_class_mro"] = [
-            "nonexistent_module.A",
-            "another_missing_module.B",
-        ]
+        _make_base_class_unimportable(
+            data, "nonexistent_module.A", mro=["another_missing_module.B"]
+        )
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -854,6 +861,60 @@ class TestSerialise:
             loaded = Serialise.load_custom_model(str(file_path))
 
         assert type(loaded) is pybamm.BaseModel
+
+    @pytest.mark.parametrize(
+        ("version", "loads"),
+        [
+            ("26.10.1.1", True),
+            ("24.5rc0", True),
+            (None, True),
+            ("26.11.0.0", False),
+            ("26.11rc0", False),
+        ],
+    )
+    def test_load_model_options_saved_before_per_electrode_checks(
+        self, tmp_path, version, loads
+    ):
+        model = pybamm.lithium_ion.SPM(
+            {"particle mechanics": ("swelling only", "none")}
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues("Ai2020")
+        )
+        sim.build()
+        sim.built_model.save_model(str(tmp_path / "model"))
+        data = json.loads((tmp_path / "model.json").read_text())
+        # 26.9 stored this default for one-electrode mechanics
+        data["options"]["stress-induced diffusion"] = "true"
+        del data["options_format"]
+        data["pybamm_version"] = version
+        if loads:
+            loaded = Serialise().load_model(data)
+            assert loaded.options.positive["stress-induced diffusion"] == "true"
+            assert loaded.options["particle mechanics"] == ("swelling only", "none")
+        else:
+            with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+                Serialise().load_model(data)
+
+    def test_save_model_keeps_legacy_options(self, tmp_path, monkeypatch):
+        options = {
+            "particle mechanics": ("swelling only", "none"),
+            "stress-induced diffusion": "true",
+        }
+        model = pybamm.lithium_ion.SPM(
+            pybamm.models.full_battery_models.battery_model_options.LegacyOptions(
+                options
+            )
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues("Ai2020")
+        )
+        sim.build()
+        monkeypatch.setattr(pybamm, "__version__", "26.11.0")
+        sim.built_model.save_model(str(tmp_path / "model"))
+        loaded = Serialise().load_model(str(tmp_path / "model.json"))
+        assert loaded.options.legacy
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
 
     def test_load_legacy_payload_without_base_class_mro(self, tmp_path):
         model = pybamm.BaseModel(name="DummyModel")
@@ -927,8 +988,7 @@ class TestSerialise:
             data = json.load(f)
         assert "discretisation" in data["model"]
         # ...and force the import-failed fallback to a bare pybamm.BaseModel.
-        data["model"]["base_class"] = "nonexistent_module.DiscModel"
-        data["model"]["base_class_mro"] = ["nonexistent_module.DiscModel"]
+        _make_base_class_unimportable(data, "nonexistent_module.DiscModel", mro=[])
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -950,6 +1010,37 @@ class TestSerialise:
             "positive particle",
             "current collector",
         }
+
+    def test_load_restores_overridden_defaults_on_ancestor_fallback(self):
+        class _HalfRadiusSPM(pybamm.lithium_ion.SPM):
+            @property
+            def default_geometry(self):
+                geometry = super().default_geometry
+                r_n = geometry["negative particle"]["r_n"]
+                r_n["max"] = r_n["max"] / 2
+                return geometry
+
+            @property
+            def default_var_pts(self):
+                return {**super().default_var_pts, "r_n": 7}
+
+        model = _HalfRadiusSPM()
+        data = Serialise.serialise_custom_model(model)
+        _make_base_class_unimportable(data, "user_private_pkg.HalfRadiusSPM")
+
+        with pytest.warns(UserWarning, match=r"Falling back to ancestor"):
+            loaded = Serialise.load_custom_model(data)
+
+        assert type(loaded) is pybamm.lithium_ion.SPM
+        assert loaded.default_var_pts["r_n"] == 7
+
+        # The restored geometry, not SPM's own, sets the mesh
+        sim = pybamm.Simulation(loaded)
+        sim.build()
+        R_n = loaded.default_parameter_values["Negative particle radius [m]"]
+        np.testing.assert_allclose(
+            sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
+        )
 
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no
@@ -1545,6 +1636,22 @@ class TestSerialise:
         sim.solve([0, 3600])
         sim.plot(show_plot=False)
 
+    def test_loaded_parameter_functions_keep_their_classes(self, tmp_path):
+        file_path = tmp_path / "params.json"
+        Serialise.save_parameters(pybamm.ParameterValues("Marquis2019"), file_path)
+
+        parameter_values = Serialise.load_parameters(file_path)
+        model = parameter_values.process_model(pybamm.lithium_ion.SPM(), inplace=False)
+
+        functions = [
+            node
+            for equation in model.rhs.values()
+            for node in equation.pre_order()
+            if isinstance(node, pybamm.Function)
+        ]
+        assert any(isinstance(node, pybamm.Exp) for node in functions)
+        assert not any(type(node) is pybamm.Function for node in functions)
+
 
 class TestConvertFunctionToSymbolicExpression:
     def test_partial_with_bound_kwargs(self):
@@ -1837,7 +1944,8 @@ class TestSpatialMethodsSerialization:
             "extrapolation": {
                 "order": {"gradient": "linear", "value": "quadratic"},
                 "use bcs": True,
-            }
+            },
+            "harmonic flux coefficients": True,
         }
         spatial_methods = {"macroscale": pybamm.FiniteVolume(options=custom_options)}
 

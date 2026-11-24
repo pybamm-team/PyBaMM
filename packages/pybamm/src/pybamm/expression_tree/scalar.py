@@ -8,7 +8,6 @@ from typing import Literal
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 
 import pybamm
 from pybamm.type_definitions import Numeric
@@ -106,12 +105,14 @@ class Scalar(pybamm.Symbol):
                 f"Cannot create a copy of a scalar with new children: {new_children}"
             )
 
-    def is_constant(self) -> Literal[True]:
+    def is_constant(self) -> bool:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -158,7 +159,7 @@ class Constant(Scalar):
     def __init__(self, value: Numeric, name: str):
         super().__init__(value, name)
 
-    def is_constant(self) -> Literal[True]:
+    def is_constant(self) -> Literal[False]:
         """
         The value is constant, but setting this to False makes sure we retain named constants
         in the expression tree. For example, `pybamm.constants.R + 2` should not be

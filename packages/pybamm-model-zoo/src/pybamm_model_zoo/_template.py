@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import datetime
 import re
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from string import Template
 
@@ -21,6 +20,7 @@ from pybamm_model_zoo._paths import TEMPLATE_ROOT, codeowners_folder
 from pybamm_model_zoo._registry import (
     NAME_PATTERN,
     SLUG_PATTERN,
+    extra_name,
     usable_identifier,
 )
 
@@ -40,26 +40,6 @@ def template_root() -> Path:
     return TEMPLATE_ROOT
 
 
-def default_pybamm_requires() -> str:
-    """A floor of the installed PyBaMM release — what the model was written for.
-
-    Reads the distribution metadata rather than importing PyBaMM, so scaffolding a
-    model does not pay for an import it has no other use for.
-    """
-    from packaging.version import Version
-
-    try:
-        installed = version("pybamm")
-    except PackageNotFoundError as error:
-        raise ZooError(
-            "pybamm is not installed, so the template cannot record the version "
-            "this model was written against. Install it, or pass "
-            "--pybamm-requires explicitly."
-        ) from error
-    parsed = Version(installed)
-    return f">={parsed.major}.{parsed.minor}"
-
-
 def citation_key_for(author: str, year: int) -> str:
     """A BibTeX key from an author's surname and a year, e.g. ``Author2026``."""
     words = author.split()
@@ -76,7 +56,6 @@ def tokens(
     tier: str = "community",
     year: int | None = None,
     added: str | None = None,
-    pybamm_requires: str | None = None,
 ) -> dict[str, str]:
     """Build the substitution map, validating the contributor's inputs."""
     if not usable_identifier(slug, SLUG_PATTERN):
@@ -98,10 +77,9 @@ def tokens(
         "github": github.lstrip("@"),
         "Year": str(year),
         "CitationKey": citation_key_for(author, year),
-        "extra": f"zoo-{slug.replace('_', '-')}",
+        "extra": extra_name(slug),
         "tier": tier,
         "added": added or today.isoformat(),
-        "pybamm_requires": pybamm_requires or default_pybamm_requires(),
     }
 
 

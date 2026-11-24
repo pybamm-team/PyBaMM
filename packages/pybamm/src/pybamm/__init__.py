@@ -82,10 +82,8 @@ from .models.event import EventType
 from .expression_tree.operations.diffsl import DiffSLExport
 
 # Battery models
-from .models.full_battery_models.base_battery_model import (
-    BaseBatteryModel,
-    BatteryModelOptions,
-)
+from .models.full_battery_models.battery_model_options import BatteryModelOptions
+from .models.full_battery_models.base_battery_model import BaseBatteryModel
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 from .models.full_battery_models import equivalent_circuit
@@ -248,6 +246,8 @@ from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
 from .plotting.plot_vtk import VTKQuickPlot
 from .plotting.nyquist_plot import nyquist_plot
+from .plotting.bode_plot import bode_plot
+from .plotting.eis_plot import eis_plot
 
 # Simulation
 from .simulation import BaseSimulation, Simulation, EISSimulation, load_sim, is_notebook

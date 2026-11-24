@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from pprint import pformat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 from warnings import warn
 
 import numpy as np
@@ -75,6 +75,8 @@ class ParameterValues:
         "Electron charge [C]": "pybamm.constants.q_e",
     }
 
+    _citation_default_reason: str | None = None
+
     def __init__(self, values: dict[str, Any] | str | ParameterValues) -> None:
         # Initialize the store
         self._store = ParameterStore({})
@@ -82,10 +84,14 @@ class ParameterValues:
         # Initialize the processor (uses this instance's store)
         self._processor = ParameterSubstitutor(self._store)
 
+        # Initial hysteresis states written by `set_initial_state` with a direction
+        self._hysteresis_states_from_direction = {}
+
         if isinstance(values, dict | ParameterValues):
             # Copy to avoid mutating input
             if isinstance(values, ParameterValues):
                 values_dict = dict(values._store._data)
+                self._citation_default_reason = values._citation_default_reason
             else:
                 values_dict = dict(values)
             # Remove the "chemistry" key if it exists
@@ -95,6 +101,7 @@ class ParameterValues:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets:
                 values_dict = dict(pybamm.parameter_sets[values])
+                self._citation_default_reason = f"{values} parameter set"
                 chemistry = values_dict.pop("chemistry", None)
                 self.update(values_dict)
             else:
@@ -109,10 +116,36 @@ class ParameterValues:
         else:
             self._set_initial_state = pybamm.lithium_ion.set_initial_state
 
-        # Save citations
         if "citations" in self._store:
-            for citation in self._store["citations"]:
-                pybamm.citations.register(citation)
+            self._register_citations(self._store["citations"])
+
+    def _register_citations(self, metadata: Any) -> None:
+        citations: list[str | list[str] | tuple[str, str]] = []
+        for citation in metadata:
+            if isinstance(citation, str):
+                citations.append(citation)
+            elif (
+                isinstance(citation, list | tuple)
+                and len(citation) == 2
+                and all(isinstance(member, str) for member in citation)
+            ):
+                citations.append(
+                    citation.copy() if isinstance(citation, list) else citation
+                )
+            else:
+                raise ValueError(
+                    f"Invalid citation {citation!r}: expected a key string or "
+                    "a (key, reason) pair of strings"
+                )
+
+        self._store["citations"] = citations
+        for citation in citations:
+            if isinstance(citation, str):
+                pybamm.citations.register(
+                    citation, reason=self._citation_default_reason
+                )
+            else:
+                pybamm.citations.register(citation[0], reason=citation[1])
 
     @property
     def store(self) -> ParameterStore:
@@ -122,7 +155,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx(
         cls, filename: str | Path, target_soc: float | None = None
-    ) -> ParameterValues:
+    ) -> Self:
         """
         Create ParameterValues from a BPX file.
 
@@ -168,7 +201,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx_obj(
         cls, bpx_obj: dict, target_soc: float | None = None
-    ) -> ParameterValues:
+    ) -> Self:
         """
         Create ParameterValues from a BPX dictionary object.
 
@@ -222,7 +255,7 @@ class ParameterValues:
         )
 
     @classmethod
-    def _create_from_bpx(cls, bpx, target_soc: float | None) -> ParameterValues:
+    def _create_from_bpx(cls, bpx, target_soc: float | None) -> Self:
         """Internal method to create ParameterValues from a parsed BPX object."""
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
@@ -583,8 +616,11 @@ class ParameterValues:
         >>> params_copy = params.copy()
         >>> params_copy["Current function [A]"] = 10.0  # Original unchanged
         """
-        new_copy = ParameterValues(dict(self._store._data))
+        new_copy = ParameterValues(self)
         new_copy._set_initial_state = self._set_initial_state
+        new_copy._hysteresis_states_from_direction = dict(
+            self._hysteresis_states_from_direction
+        )
         return new_copy
 
     def search(self, key: str, print_values: bool = True) -> None:
@@ -604,6 +640,7 @@ class ParameterValues:
         self,
         values: Mapping[str, Any],
         *,
+        strict: bool = False,
         check_conflict: bool = False,
         check_already_exists: bool = False,
         path: str = "",
@@ -615,6 +652,9 @@ class ParameterValues:
         ----------
         values : dict
             Dictionary of parameter values to update.
+        strict : bool, optional
+            If True, every key in ``values`` must already exist. Default is False,
+            which also adds new parameters.
         check_conflict : bool, optional
             Deprecated.
         check_already_exists : bool, optional
@@ -627,6 +667,13 @@ class ParameterValues:
         >>> params = pybamm.ParameterValues("Chen2020")
         >>> params.update({"Current function [A]": 2.0})  # Update existing
         >>> params.update({'a': 1.0})  # Create new
+        >>> params.update({"Current function [A]": 3.0}, strict=True)  # Existing only
+
+        Raises
+        ------
+        KeyError
+            If ``strict`` is True and a key does not exist. The message lists the
+            closest existing names, and nothing is updated.
 
         Notes
         -----
@@ -654,7 +701,33 @@ class ParameterValues:
             values = dict(values._store._data)
 
         # Check and transform parameter values
-        values = self.check_parameter_values(dict(values))
+        raw_values = dict(values)
+        values = self.check_parameter_values(dict(raw_values))
+
+        # Runs after list values are expanded into indexed keys, so a list
+        # parameter that already exists passes, and before any write
+        if strict:
+            unknown = [name for name in values if name not in self._store]
+            # An empty list expands to no keys, so check its own name
+            for name, value in raw_values.items():
+                if isinstance(value, list) and not value:
+                    base, units = ParameterNameParser.split(name)
+                    first = ParameterNameParser.combine(base, 0, units)
+                    if name not in self._store and first not in self._store:
+                        unknown.append(name)
+            if unknown:
+                hints = []
+                for name in unknown:
+                    matches = self._store._data.get_best_matches(name)
+                    hints.append(
+                        f"'{name}' (best matches: {matches})"
+                        if matches
+                        else f"'{name}'"
+                    )
+                raise KeyError(
+                    f"Unknown parameter(s) with strict=True, nothing was updated: "
+                    f"{'; '.join(hints)}. Use strict=False to add new parameters."
+                )
 
         for name, value in values.items():
             # Process value
@@ -762,6 +835,7 @@ class ParameterValues:
         inplace: bool = True,
         options=None,
         inputs=None,
+        differentiable: bool | list[str] = False,
     ):
         """
         Set the initial state of the battery.
@@ -782,6 +856,10 @@ class ParameterValues:
             Model options. Default is None.
         inputs : dict, optional
             Input parameters. Default is None.
+        differentiable : bool or list of str, optional
+            If True, or a list of input names, set the initial state as an expression
+            in the input parameters that carries its first derivative with respect to
+            them, see :func:`pybamm.lithium_ion.set_initial_state`. Default is False.
 
         Returns
         -------
@@ -795,6 +873,8 @@ class ParameterValues:
         >>> isinstance(result, pybamm.ParameterValues)
         True
         """
+        # Only chemistries that support it accept the keyword
+        kwargs = {"differentiable": differentiable} if differentiable else {}
         return self._set_initial_state(
             initial_value,
             self,
@@ -803,6 +883,7 @@ class ParameterValues:
             inplace=inplace,
             options=options,
             inputs=inputs,
+            **kwargs,
         )
 
     def set_initial_stoichiometry_half_cell(
@@ -1626,8 +1707,7 @@ def deserialize_parameter_value(value: Any) -> Any:
     """
     Reconstruct a single parameter value from its JSON representation.
 
-    Inverse of :func:`serialize_parameter_value`: dicts are decoded back to
-    :class:`pybamm.Symbol` objects, scalars pass through unchanged.
+    Decode dictionaries and list items; scalars pass through unchanged.
 
     Parameters
     ----------
@@ -1641,11 +1721,13 @@ def deserialize_parameter_value(value: Any) -> Any:
     """
     if isinstance(value, dict):
         return convert_symbol_from_json(value)
+    if isinstance(value, list):
+        return [deserialize_parameter_value(item) for item in value]
     return value
 
 
 def convert_parameter_values_to_json(
-    parameter_values: Mapping[str, Any], filename: str | None = None
+    parameter_values: ParameterValues | Mapping[str, Any], filename: str | None = None
 ) -> dict:
     """
     Convert a mapping of parameter values to a JSON-serializable dictionary.

@@ -8,9 +8,14 @@ from pybammsolvers import idaklu
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 from pybamm.solvers.base_solver import flatten_inputs
+from pybamm.solvers.idaklu_solver import (
+    _check_klu_pivot_tolerance,
+    casadi_to_idaklu_function,
+)
 
 _DEFAULT_OPTIONS = {
     "compile": False,
+    "klu_pivot_tolerance": 0.1,
 }
 
 
@@ -63,9 +68,13 @@ class NonlinearSolver(pybamm.BaseSolver):
     on_failure : str, optional
         Behaviour on convergence failure (default "error").
     options : dict, optional
-        Solver options. Currently supports ``compile`` (bool, default False)
-        for ahead-of-time compilation of CasADi residual/Jacobian.
+        Solver options. Supports ``compile`` (bool, default False) for
+        ahead-of-time compilation of CasADi residual/Jacobian, and
+        ``klu_pivot_tolerance`` (float in (0, 1], default 0.1), the KLU threshold
+        partial pivoting tolerance.
     """
+
+    uses_rhs_jacobian = False
 
     def __init__(
         self,
@@ -94,6 +103,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         self._options = self._overlay_options(
             _DEFAULT_OPTIONS, self._user_options, solver_name="Nonlinear"
         )
+        _check_klu_pivot_tolerance(self._options["klu_pivot_tolerance"])
 
     @staticmethod
     def _check_tolerance(value):
@@ -181,8 +191,8 @@ class NonlinearSolver(pybamm.BaseSolver):
 
     def _build_newton_solver(self, res_fn, jac_fn, len_alg):
         _setup = idaklu.StandaloneNewtonSolver(
-            residual=idaklu.generate_function(res_fn.serialize()),
-            jacobian=idaklu.generate_function(jac_fn.serialize()),
+            residual=casadi_to_idaklu_function(res_fn),
+            jacobian=casadi_to_idaklu_function(jac_fn),
             atol=np.full(len_alg, float(self.atol)).tolist(),
             rtol=float(self.rtol),
             step_tol=float(self.step_tol),
@@ -190,6 +200,7 @@ class NonlinearSolver(pybamm.BaseSolver):
             max_backtracks=int(self.max_backtracks),
             eps_newt=float(self.eps_newt),
             use_sparse=bool(self.use_sparse),
+            klu_pivot_tolerance=float(self._options["klu_pivot_tolerance"]),
         )
         return _NonlinearSolverSetup(_setup)
 
