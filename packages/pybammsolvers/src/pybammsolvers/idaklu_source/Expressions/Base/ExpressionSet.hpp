@@ -79,10 +79,14 @@ public:
 
   SetupOptions setup_opts;
 
-  // While set, a residual or sensitivity residual with a NaN or inf entry
-  // returns a recoverable failure
-  bool reject_nonfinite_residual = false;  // cppcheck-suppress unusedStructMember
+  // While set, a sensitivity residual with a NaN or inf entry returns a
+  // recoverable failure
   bool reject_nonfinite_sensitivities = false;  // cppcheck-suppress unusedStructMember
+
+  // Which events read yp, their fourth input; empty if none does
+  std::vector<bool> events_read_yp;
+  // The IDA memory, for its step count
+  void *ida_mem = nullptr;
 
   virtual sunrealtype *get_tmp_state_vector() = 0;
   virtual sunrealtype *get_tmp_sparse_jacobian_data() = 0;

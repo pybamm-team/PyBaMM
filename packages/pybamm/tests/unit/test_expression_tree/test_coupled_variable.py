@@ -72,6 +72,44 @@ class TestCoupledVariable:
         # Takes the base class's arguments, as tree rebuilds pass them
         assert a.create_copy(new_children=None, perform_simplifications=False) == a
 
+    def test_diff_time(self):
+        a = pybamm.CoupledVariable("a", domain="negative electrode")
+        a_dot = a.diff(pybamm.t)
+        assert isinstance(a_dot, pybamm.CoupledVariableDot)
+        assert a_dot.name == "a'"
+        assert a_dot.domain == ["negative electrode"]
+        assert a_dot.get_coupled_variable() == a
+        assert a_dot.create_copy() == a_dot
+        assert (2 * a).diff(pybamm.t) == 2 * a_dot
+        assert pybamm.exp(a).diff(pybamm.t) == pybamm.exp(a) * a_dot
+        assert a.diff(pybamm.Variable("b")) == pybamm.Scalar(0)
+        with pytest.raises(pybamm.ModelError, match=r"second time derivative"):
+            a_dot.diff(pybamm.t)
+
+    @pytest.mark.parametrize(
+        ("expression", "threshold"),
+        [
+            (lambda y: y, 0.25),
+            (lambda y: -y.diff(pybamm.t), 0.5),
+            (lambda y: -pybamm.log(y).diff(pybamm.t) * y, 0.5),
+        ],
+        ids=["value", "time_derivative", "function_time_derivative"],
+    )
+    def test_resolved_in_events(self, expression, threshold):
+        # y = -y' = exp(-t) reaches the threshold at t = -ln(threshold)
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -y}
+        model.initial_conditions = {y: pybamm.Scalar(1)}
+        model.variables = {"y": y}
+        coupled = expression(pybamm.CoupledVariable("y"))
+        model.events = [pybamm.Event("Threshold", coupled - threshold)]
+
+        solution = pybamm.Simulation(model).solve([0, 10])
+
+        assert solution.termination == "event: Threshold"
+        np.testing.assert_allclose(solution.t[-1], -np.log(threshold), rtol=1e-3)
+
     def test_setter(self):
         model = pybamm.BaseModel()
         a = pybamm.CoupledVariable("a")

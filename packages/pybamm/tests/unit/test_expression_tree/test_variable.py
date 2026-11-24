@@ -90,6 +90,11 @@ class TestVariableDot:
         assert a1 != a3
         assert a1 != a4
 
+    def test_get_variable(self):
+        # a time derivative identifies its variable, reference and bounds included
+        a = pybamm.Variable("a", domain="test", bounds=(0, 1), scale=2, reference=3)
+        assert a.diff(pybamm.t).get_variable() == a
+
     def test_variable_diff(self):
         a = pybamm.VariableDot("a")
         b = pybamm.Variable("b")
