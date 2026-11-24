@@ -201,7 +201,7 @@ jobs:
           persist-credentials: false
       - name: Install the MSRV toolchain
         run: rustup toolchain install 1.89 --profile minimal --no-self-update
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: packages/pybamm-rust
           key: msrv-1.89
@@ -224,7 +224,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: packages/pybamm-rust
           key: tests
@@ -257,7 +257,7 @@ jobs:
         run: |
           rustup toolchain install 1.100.0 --profile minimal --component clippy,rustfmt --no-self-update
           rustup default 1.100.0
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: packages/pybamm-rust
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -275,7 +275,7 @@ jobs:
         if: needs.changes.outputs.style_checked == 'true'
         run: uvx pre-commit run cargo-fmt --all-files
 
-      - uses: taiki-e/install-action@3a3daafd3b7f23b8f65d9f5ba2db203fb59b79e2 # v2.90.2
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-hack@0.6.46
       - name: Lint every feature combination
@@ -387,7 +387,7 @@ jobs:
         with:
           python-version: 3.13
 
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: packages/pybamm-rust
           save-if: ${{ github.ref == 'refs/heads/main' }}
