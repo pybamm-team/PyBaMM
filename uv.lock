@@ -3380,6 +3380,7 @@ vtk = [
 [package.dev-dependencies]
 bench = [
     { name = "hypothesis" },
+    { name = "memray", marker = "sys_platform != 'win32'" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-memray", marker = "sys_platform != 'win32'" },
@@ -3390,6 +3391,7 @@ dev = [
     { name = "hatchling" },
     { name = "hypothesis" },
     { name = "ipykernel" },
+    { name = "memray", marker = "sys_platform != 'win32'" },
     { name = "mypy" },
     { name = "nbmake" },
     { name = "nox" },
@@ -3466,6 +3468,7 @@ provides-extras = ["all", "bpx", "cite", "examples", "fem", "jax", "plot", "pydi
 [package.metadata.requires-dev]
 bench = [
     { name = "hypothesis" },
+    { name = "memray", marker = "sys_platform != 'win32'" },
     { name = "pytest", specifier = ">=9.0" },
     { name = "pytest-benchmark", specifier = ">=5.3.0" },
     { name = "pytest-memray", marker = "sys_platform != 'win32'", specifier = ">=1.7.0" },
@@ -3476,6 +3479,7 @@ dev = [
     { name = "hatchling", specifier = ">=1.32.0" },
     { name = "hypothesis" },
     { name = "ipykernel", specifier = ">=7.4.0" },
+    { name = "memray", marker = "sys_platform != 'win32'" },
     { name = "mypy", specifier = ">=1.14" },
     { name = "nbmake" },
     { name = "nox" },
