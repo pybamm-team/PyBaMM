@@ -8,7 +8,7 @@ use crate::observable::seed_param_tangent;
 use crate::params::ParamIdx;
 use crate::simplify::simplify_pipeline;
 use crate::tangent::tangent_wrt_params;
-use crate::tangent_batch::{LanePlan, unit_param_columns};
+use crate::tangent_batch::{LanePlan, Seeding, unit_param_columns};
 
 use super::{CompiledModel, FOREIGN_WORKSPACE, Workspace, check_len};
 
@@ -104,7 +104,7 @@ impl CompiledModel {
 
         let df_dp = simplify_pipeline(tangent_dag(rhs, tangent_wrt_params));
         let sens_expr = SplitCompiledExpr::compile(df_dp.as_ref());
-        self.sens_lanes = LanePlan::new(&sens_expr);
+        self.sens_lanes = LanePlan::new(&sens_expr, Seeding::Sparse);
         self.sens_expr = Some(sens_expr);
         self.sens_param_indices = sens_param_indices.to_vec();
         Ok(())

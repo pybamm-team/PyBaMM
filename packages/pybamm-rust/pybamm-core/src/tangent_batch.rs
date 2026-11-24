@@ -1,7 +1,9 @@
-//! Batched tangent sweeps: one walk of the tangent tape for `K` colour seeds.
+//! Batched tangent sweeps: one walk of the tangent tape for `K` seed directions.
 //!
 //! Primal slots are shared across lanes and tangent slots are lane-minor; each lane
 //! accumulates in the scalar sweep's order, so results are bitwise identical.
+
+use std::ops::Range;
 
 use crate::accumulate::dispatch;
 use crate::branch_regions::active_branch;
@@ -24,7 +26,23 @@ pub(crate) const MAX_LANES: usize = SUPPORTED_LANES[0];
 /// Scratch ceiling for one batched tangent region.
 const LANE_SCRATCH_BUDGET: usize = 32 << 20;
 
-/// How many lanes each walk of one tangent tape carries, chosen once from the tape's shape.
+/// What transposing one state of a dense direction into one lane costs, in [`walk_costs`]'
+/// units (fitted on Apple M4).
+const SEED_TRANSPOSE: usize = 3;
+
+/// How a caller seeds each walk of a tangent tape, which decides what batching costs it.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Seeding {
+    /// Seeds a scalar walk writes too, such as colour columns or unit parameters, so a
+    /// batched walk pays no more to seed.
+    Sparse,
+    /// Dense state directions, which a scalar walk reads in place but a batched one must
+    /// transpose into lanes: charged once per lane for each state the tape loads.
+    DenseStates,
+}
+
+/// How many lanes each walk of one tangent tape carries, chosen once from the tape's shape
+/// and how it is seeded.
 ///
 /// Per-lane arithmetic is width-independent, so a plan moves no bits, only time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,17 +57,29 @@ impl LanePlan {
         min_seeds: [None; 2],
     };
 
-    /// The cheapest plan for `expr` by [`walk_costs`]; scalar when it is not batchable.
-    pub(crate) fn new(expr: &SplitCompiledExpr) -> Self {
+    /// The cheapest plan for walking `expr` seeded by `seeding`, by [`walk_costs`] and
+    /// [`SEED_TRANSPOSE`]; scalar when `expr` is not batchable.
+    pub(crate) fn new(expr: &SplitCompiledExpr, seeding: Seeding) -> Self {
         if !expr.is_batchable() {
             return Self::SCALAR;
         }
+        // What seeding costs a batched walk per lane, beyond what a scalar walk pays
+        let per_lane = match seeding {
+            Seeding::Sparse => 0,
+            Seeding::DenseStates => {
+                let loaded: usize = state_seed_ranges(expr)
+                    .iter()
+                    .map(ExactSizeIterator::len)
+                    .sum();
+                SEED_TRANSPOSE * loaded
+            },
+        };
         let (scalar, batched) = walk_costs(expr);
         let fits =
             |lanes| tangent_scratch_len(expr, lanes) * size_of::<f64>() <= LANE_SCRATCH_BUDGET;
         let mut wide = [None; 2];
         for ((slot, cost), lanes) in wide.iter_mut().zip(batched).zip(SUPPORTED_LANES) {
-            *slot = fits(lanes).then_some(cost);
+            *slot = fits(lanes).then_some(cost + per_lane * lanes);
         }
         Self::from_costs(scalar, wide)
     }
@@ -94,6 +124,28 @@ impl LanePlan {
         }
         total
     }
+}
+
+/// The state ranges `expr`'s tangent section loads seeds from, ascending and merged.
+pub(crate) fn state_seed_ranges(expr: &SplitCompiledExpr) -> Vec<Range<usize>> {
+    let mut ranges: Vec<Range<usize>> = expr.ir().instructions()[expr.split_info().primal_end..]
+        .iter()
+        .filter_map(|instr| match *instr {
+            Instruction::LoadTangentState { start, width, .. } => {
+                Some(start.index()..start.index() + width.index())
+            },
+            _ => None,
+        })
+        .collect();
+    ranges.sort_unstable_by_key(|range| range.start);
+    let mut merged: Vec<Range<usize>> = Vec::with_capacity(ranges.len());
+    for range in ranges {
+        match merged.last_mut() {
+            Some(last) if range.start <= last.end => last.end = last.end.max(range.end),
+            _ => merged.push(range),
+        }
+    }
+    merged
 }
 
 /// Estimated cost of one walk of `expr`'s tangent section, scalar and at each
@@ -721,6 +773,56 @@ mod tests {
         let both = arena.alloc(Node::Add(by_states, by_params));
         let expr = SplitCompiledExpr::compile(DagRef::new(&arena, both));
         assert!(!expr.is_batchable());
+    }
+
+    /// `tangent_wrt_states` of `root`, compiled.
+    fn state_tangent(arena: &Arena, root: NodeId) -> SplitCompiledExpr {
+        let tangent = simplify_pipeline(tangent_dag(DagRef::new(arena, root), tangent_wrt_states));
+        SplitCompiledExpr::compile(tangent.as_ref())
+    }
+
+    #[test]
+    fn state_seed_ranges_merge_the_loads_of_a_tape() {
+        let mut arena = Arena::new();
+        let [low, middle, high] = [(2, 5), (4, 8), (10, 12)]
+            .map(|(start, end)| arena.alloc(Node::StateVector { start, end }));
+        let sine = arena.alloc(Node::Sin(low));
+        let square = arena.alloc(Node::Mul(middle, middle));
+        let cosine = arena.alloc(Node::Cos(high));
+        let root = arena.alloc(Node::Concat(vec![sine, square, cosine]));
+
+        let ranges = state_seed_ranges(&state_tangent(&arena, root));
+        assert_eq!(ranges, [2..8, 10..12]);
+    }
+
+    #[test]
+    fn a_batched_walk_pays_for_transposing_the_states_it_loads() {
+        let plans = |tape: &SplitCompiledExpr| {
+            (
+                LanePlan::new(tape, Seeding::Sparse),
+                LanePlan::new(tape, Seeding::DenseStates),
+            )
+        };
+        // A scaled field of 60 states, as an electrolyte concentration output reads them:
+        // the walk is cheap, so transposing 60 seeds per lane outweighs what batching saves
+        let n = 60;
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: n });
+        let scale = arena.alloc(Node::Scalar(1.5));
+        let field = arena.alloc(Node::Mul(scale, y));
+        let tape = state_tangent(&arena, field);
+        assert_eq!(state_seed_ranges(&tape), vec![0..n]);
+        let (sparse, dense) = plans(&tape);
+        assert!(sparse.widest() > 1, "the walk alone batches");
+        assert_eq!(dense, LanePlan::SCALAR);
+
+        // With many nonlinear terms per loaded state, batching still earns its seeds back
+        let root = parametric_rhs(&mut arena, 11);
+        let tape = state_tangent(&arena, root);
+        assert_eq!(state_seed_ranges(&tape), vec![0..2]);
+        let (sparse, dense) = plans(&tape);
+        assert!(sparse.widest() > 1, "the walk batches");
+        assert_eq!(dense, sparse, "two seeds per lane change nothing");
     }
 
     /// The lanes of each walk that `seeds` seeds take under `plan`.

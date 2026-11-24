@@ -1,5 +1,6 @@
 //! Observables (output variables and events): what a solve reports rather than integrates.
 
+use std::ops::Range;
 use std::sync::Arc;
 
 use crate::arena::{Arena, DagRef, NodeId, ReadExtents};
@@ -8,7 +9,7 @@ use crate::jacobian::tangent_dag;
 use crate::params::ParamIdx;
 use crate::simplify::{simplify_family, simplify_pipeline};
 use crate::tangent::{tangent_wrt_params, tangent_wrt_states};
-use crate::tangent_batch::{self, LanePlan, unit_param_columns};
+use crate::tangent_batch::{self, LanePlan, Seeding, unit_param_columns};
 
 /// Which family of observables a caller means.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +51,8 @@ struct ObservableTangents {
     sens_lanes: LanePlan,
     /// How sensitivity directions walk `jac`.
     jac_lanes: LanePlan,
+    /// The states `jac` loads, the only seeds a batched walk transposes.
+    jac_seeds: Box<[Range<usize>]>,
 }
 
 impl ObservableTangents {
@@ -60,8 +63,9 @@ impl ObservableTangents {
             compile_tangent(family, tangent_wrt_states),
         );
         Self {
-            sens_lanes: LanePlan::new(&sens),
-            jac_lanes: LanePlan::new(&jac),
+            sens_lanes: LanePlan::new(&sens, Seeding::Sparse),
+            jac_lanes: LanePlan::new(&jac, Seeding::DenseStates),
+            jac_seeds: tangent_batch::state_seed_ranges(&jac).into(),
             sens,
             jac,
         }
@@ -190,7 +194,8 @@ impl ObservableSet {
             tape: vec![0.0; tape_len],
             batch: Vec::new(),
             tangent_lanes: vec![0.0; tangent_lanes_len],
-            seed_lanes: Vec::new(),
+            param_seed_lanes: Vec::new(),
+            state_seed_lanes: Vec::new(),
         }
     }
 
@@ -341,11 +346,13 @@ impl ObservableSet {
             jac,
             sens_lanes,
             jac_lanes,
+            jac_seeds,
         } = self.tangents();
         let ObservableScratch {
             tape,
             tangent_lanes,
-            seed_lanes,
+            param_seed_lanes,
+            state_seed_lanes,
             ..
         } = scratch;
         let columns = &mut out[..n_sens * n_out];
@@ -357,7 +364,7 @@ impl ObservableSet {
             sens_params,
             dp,
             tangent_lanes,
-            seed_lanes,
+            param_seed_lanes,
             n_out,
             columns,
         );
@@ -376,17 +383,19 @@ impl ObservableSet {
                 k += 1;
                 continue;
             }
-            // Surplus lanes of a part-empty walk keep zero seeds, and nothing reads them.
+            // Only the states the tape loads are transposed, as the walk reads no other seed.
+            // A part-empty walk's surplus lanes get zero seeds, and their results go unread.
             let carried = lanes.min(n_sens - k);
-            seed_lanes.clear();
-            seed_lanes.resize(n_states * lanes, 0.0);
-            for lane in 0..carried {
-                let direction = &y_sens[(k + lane) * n_states..(k + lane + 1) * n_states];
-                for (state, &value) in direction.iter().enumerate() {
-                    seed_lanes[state * lanes + lane] = value;
+            state_seed_lanes.resize(n_states * lanes, 0.0);
+            for state in jac_seeds.iter().flat_map(Range::clone) {
+                let (seeds, surplus) =
+                    state_seed_lanes[state * lanes..(state + 1) * lanes].split_at_mut(carried);
+                for (lane, seed) in seeds.iter_mut().enumerate() {
+                    *seed = y_sens[(k + lane) * n_states + state];
                 }
+                surplus.fill(0.0);
             }
-            let result = primal.eval_tangent_batch(lanes, tangent_lanes, seed_lanes);
+            let result = primal.eval_tangent_batch(lanes, tangent_lanes, state_seed_lanes);
             for lane in 0..carried {
                 let column = &mut columns[(k + lane) * n_out..(k + lane + 1) * n_out];
                 add_lane(column, result, lanes, lane);
@@ -433,8 +442,11 @@ pub struct ObservableScratch {
     /// Lane-minor tangent region of the batched `dH/dp` and `dH/dy` walks; empty when neither
     /// batches.
     tangent_lanes: Vec<f64>,
-    /// Lane-minor `dH/dp` and `dH/dy` seeds, grown on demand.
-    seed_lanes: Vec<f64>,
+    /// Lane-minor unit seeds of the batched `dH/dp` walks, grown on demand.
+    param_seed_lanes: Vec<f64>,
+    /// Lane-minor direction seeds of the batched `dH/dy` walks, grown on demand; kept apart
+    /// so only the states a walk loads are ever rewritten.
+    state_seed_lanes: Vec<f64>,
 }
 
 #[cfg(test)]
@@ -444,7 +456,8 @@ impl ObservableScratch {
         self.tape.fill(value);
         self.tangent_lanes.fill(value);
         crate::jacobian::poison_grown(&mut self.batch, value);
-        crate::jacobian::poison_grown(&mut self.seed_lanes, value);
+        crate::jacobian::poison_grown(&mut self.param_seed_lanes, value);
+        crate::jacobian::poison_grown(&mut self.state_seed_lanes, value);
     }
 }
 
@@ -777,6 +790,8 @@ mod tests {
 
     /// The family's one tangent-tape pair reproduces per-item tapes bit for bit, its batched
     /// `dH/dy` walks included, on a scratch left dirty by earlier calls.
+    ///
+    /// `y` may be longer than the states the family reads; those seeds are never transposed.
     fn assert_family_matches_per_item_tapes(
         arena: &Arena,
         roots: &[NodeId],
@@ -785,13 +800,17 @@ mod tests {
     ) {
         let reference = PerItemTapes::compile(arena, roots);
         let set = ObservableSet::compile(arena, roots, true);
-        let first_walks = [1, 3, 6].map(|columns| set.tangents().jac_lanes.lanes(columns));
-        assert_eq!(first_walks, [1, 4, 8], "the family's dH/dy must batch");
+        assert!(
+            set.tangents().jac_lanes.widest() > 1,
+            "the family's dH/dy must batch"
+        );
         let n_out = set.total_len();
         let mut scratch = set.create_scratch();
         let dirty = |scratch: &mut ObservableScratch| {
             scratch.tape.fill(f64::NAN);
             scratch.tangent_lanes.fill(f64::NAN);
+            scratch.param_seed_lanes.fill(f64::NAN);
+            scratch.state_seed_lanes.fill(f64::NAN);
         };
         let bits = |values: &[f64]| -> Vec<u64> { values.iter().map(|v| v.to_bits()).collect() };
         let v: Vec<f64> = (0..y.len()).map(|i| 0.25 * i as f64 - 0.6).collect();
@@ -804,7 +823,7 @@ mod tests {
         set.sens_action(&mut scratch, 0.5, y, inputs, &dp, &mut out);
         assert_eq!(bits(&out), reference.action(false, y, inputs, &dp));
 
-        // One scalar sweep, then padded 4- and 8-lane walks, then an 8-lane walk and a scalar.
+        // Seed counts either side of each lane width, so walks run full, padded and scalar
         for n_sens in [1, 3, 6, 9] {
             let sens_params: Vec<ParamIdx> = (0..n_sens)
                 .map(|k| ParamIdx::new(u32::try_from(k % inputs.len()).expect("few inputs")))
@@ -879,8 +898,35 @@ mod tests {
         let hypot = arena.alloc(Node::Hypot(negated, p0));
         let roots = [total, scaled_middle, slice, product, zero, hypot];
 
-        let y_values: Vec<f64> = (0..n).map(|i| 0.3f64.mul_add(i as f64, -0.7)).collect();
-        assert_family_matches_per_item_tapes(&arena, &roots, &y_values, &[0.8, -1.3, 2.1]);
+        let set = ObservableSet::compile(&arena, &roots, true);
+        let first_walks = [1, 3, 6].map(|columns| set.tangents().jac_lanes.lanes(columns));
+        assert_eq!(
+            first_walks,
+            [1, 4, 8],
+            "a scalar walk, then padded 4 and 8 lanes"
+        );
+
+        // Also with three states past those the family reads, whose seeds go untransposed
+        for n_states in [n, n + 3] {
+            let y_values: Vec<f64> = (0..n_states)
+                .map(|i| 0.3f64.mul_add(i as f64, -0.7))
+                .collect();
+            assert_family_matches_per_item_tapes(&arena, &roots, &y_values, &[0.8, -1.3, 2.1]);
+        }
+    }
+
+    #[test]
+    fn a_cheap_output_projects_scalar_rather_than_transpose_its_directions() {
+        // A scaled 60-state field: its walk alone batches, but not once it pays for its seeds
+        let n = 60;
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: n });
+        let scale = arena.alloc(Node::Scalar(1.5));
+        let field = arena.alloc(Node::Mul(scale, y));
+        let set = ObservableSet::compile(&arena, &[field], true);
+        let tangents = set.tangents();
+        assert!(LanePlan::new(&tangents.jac, Seeding::Sparse).widest() > 1);
+        assert_eq!(tangents.jac_lanes, LanePlan::SCALAR);
     }
 
     /// Each real fixture's rhs `f` under four parameters, with outputs sharing its cone.
