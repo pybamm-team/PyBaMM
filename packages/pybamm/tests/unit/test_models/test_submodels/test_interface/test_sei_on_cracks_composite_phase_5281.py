@@ -42,12 +42,6 @@ class TestSEIOnCracksCompositePhase5281:
 
     def test_spme_composite_ec_reaction_limited_builds(self):
         """Exact reproducer from #5281 — SPMe with composite negative."""
-        # Before the fix this raised ``ModelError: Missing variable for
-        # submodel 'negative primary sei on cracks': 'Negative primary SEI
-        # on cracks thickness [m]'`` because ``SEIThickness`` (and the
-        # ``set_rhs`` branch of ``SEIGrowth`` in the ``"x-average"`` case)
-        # was looking up ``"Negative electrode roughness ratio"`` instead
-        # of ``"Negative primary electrode roughness ratio"``.
         model = pybamm.lithium_ion.SPMe(options=COMPOSITE_OPTS_5281)
         assert "Negative primary SEI on cracks thickness [m]" in model.variables
         assert "Negative secondary SEI on cracks thickness [m]" in model.variables
@@ -78,16 +72,10 @@ class TestSEIOnCracksCompositePhase5281:
         # consumes them. We verify the model exposes the registered keys.
         assert "Negative primary electrode roughness ratio" in model.variables
         assert "Negative secondary electrode roughness ratio" in model.variables
-        # The phase-stripped key historically existed only via the
-        # single-phase code path; for composite electrodes the SEI
-        # submodels must not depend on it.
         assert "Negative electrode roughness ratio" not in model.variables
 
     def test_single_phase_regression(self):
-        """Non-composite models that previously worked must keep working
-        after switching the lookups to use ``self.phase_name``. For a
-        single-phase electrode ``phase_name`` is empty, recovering the
-        original variable name verbatim."""
+        """Single-phase roughness keys remain unchanged."""
         opts = {
             "SEI": "solvent-diffusion limited",
             "particle mechanics": "swelling and cracking",
