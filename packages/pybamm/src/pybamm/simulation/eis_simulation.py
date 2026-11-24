@@ -144,7 +144,7 @@ class EISSimulation(BaseSimulation):
         for symbol in model.input_parameters:
             if symbol.name not in used_inputs:
                 inputs_dict.setdefault(symbol.name, np.nan)
-        inputs_dict = pybamm.BaseSolver._set_up_model_inputs(model, inputs_dict)
+        inputs_dict = pybamm.BaseSolver.set_up_model_inputs(model, inputs_dict)
 
         # Convert inputs to casadi format for Jacobian evaluation
         if model.convert_to_format == "casadi":

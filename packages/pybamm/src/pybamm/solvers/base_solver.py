@@ -1149,7 +1149,7 @@ class BaseSolver:
             inputs_list = inputs or [{}]
 
         model_inputs_list: list[dict] = [
-            self._set_up_model_inputs(model, inputs) for inputs in inputs_list
+            self.set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
         # Before the sensitivity setting below changes the model
@@ -1959,7 +1959,7 @@ class BaseSolver:
         timer = pybamm.Timer()
 
         # Set up inputs
-        model_inputs = self._set_up_model_inputs(model, inputs)
+        model_inputs = self.set_up_model_inputs(model, inputs)
 
         # Before the sensitivity setting below changes the model
         self._check_single_model(model)
@@ -2033,7 +2033,7 @@ class BaseSolver:
                 for name in sorted(ip.name for ip in previous_model.input_parameters):
                     if name not in mapper_p_inputs or mapper_p_inputs[name] is None:
                         mapper_p_inputs[name] = inputs.get(name, 0)
-                mapper_inputs = BaseSolver._set_up_model_inputs(
+                mapper_inputs = BaseSolver.set_up_model_inputs(
                     previous_model, mapper_p_inputs
                 )
                 p_casadi_stacked = casadi.vertcat(*[p for p in mapper_inputs.values()])
@@ -2303,8 +2303,30 @@ class BaseSolver:
         return "spawn"
 
     @staticmethod
-    def _set_up_model_inputs(model: pybamm.BaseModel, inputs: dict):
-        """Set up input parameters"""
+    def set_up_model_inputs(model: pybamm.BaseModel, inputs: dict) -> dict:
+        """Validate and order the input parameter values for a model.
+
+        Inputs the model does not use are dropped. Inputs the model uses only for
+        observing the solution get a placeholder value if missing, which disables
+        ``solution.observe``.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose input parameters are set up.
+        inputs : dict
+            Input parameter values, keyed by name.
+
+        Returns
+        -------
+        dict
+            Input parameter values for the model, sorted by name.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If a value is missing for an input the model requires to be solved.
+        """
         inputs = ParameterValues.check_parameter_values(inputs)
 
         # First, check all the strictly required input parameters that must be included
