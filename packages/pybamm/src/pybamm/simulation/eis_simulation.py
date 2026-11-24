@@ -4,6 +4,7 @@ import numpy as np
 from scipy.sparse import csc_matrix
 
 import pybamm
+from pybamm.solvers.base_solver import stack_inputs
 
 from .base_simulation import BaseSimulation
 
@@ -192,17 +193,12 @@ class EISSimulation(BaseSimulation):
             raise pybamm.SolverError(f"No value provided for input: [{missing_str}].")
         inputs_dict = {name: inputs[name] for name in self._input_names}
 
-        # Inputs in the format the compiled Jacobian expects for each backend
-        if model.convert_to_format == "casadi":
-            from casadi import vertcat
-
-            eval_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
-        elif model.convert_to_format == "rust":
-            from pybamm.solvers.base_solver import stack_inputs
-
-            eval_inputs = stack_inputs(inputs_dict, "rust")
-        else:
-            eval_inputs = inputs_dict
+        # Inputs in the format the compiled Jacobian expects
+        eval_inputs = (
+            stack_inputs(inputs_dict, model.convert_to_format)
+            if model.uses_stacked_inputs
+            else inputs_dict
+        )
 
         # Only compile Jacobian/model functions on first call; the compiled
         # functions persist on the model and work with any inputs/y0 values.
