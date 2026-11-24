@@ -219,13 +219,9 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
   auto* funcs = functions.get();
   bool has_alg_fns = (funcs->alg_res->nnz_out() > 0 && funcs->alg_jac->nnz_out() > 0);
 
-  // FULL mode drives IDA's linear solver outside IDA, which an iterative one
-  // cannot survive (its ATimes reads IDA's unset ycur); IDACalcIC is used instead
-  if (!has_alg_fns && setup_opts.using_iterative_solver) {
-    return;
-  }
-  // Without calc_ic, only the sub-block is needed, for the algebraic sensitivities
-  if (!has_alg_fns && !solver_opts.calc_ic) {
+  // FULL mode is not built for an iterative solver, whose ATimes reads IDA's unset
+  // ycur, nor without calc_ic, where IDACalcIC solves its sensitivities regardless
+  if (!has_alg_fns && (setup_opts.using_iterative_solver || !solver_opts.calc_ic)) {
     return;
   }
 
@@ -267,6 +263,10 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
 
     sb.res_nvec = N_VNew_Serial(len_alg_, sb.sunctx);
     sb.delta_nvec = N_VNew_Serial(len_alg_, sb.sunctx);
+    if (sensitivity) {
+      sb.sens_res = N_VCloneVectorArray(number_of_parameters, yy);
+      sb.number_of_sens_res = number_of_parameters;
+    }
 
     if (sb.use_sparse) {
       sb.J = SUNSparseMatrix(len_alg_, len_alg_, sb.nnz, CSC_MAT, sb.sunctx);
@@ -295,11 +295,6 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
 
     as.system = std::make_unique<FullSystem<ExprSet>>(
       funcs, yy_ptr, yyp_ptr, *this);
-  }
-
-  // Without calc_ic, the states at breakpoints are left to IDACalcIC, as before
-  if (!solver_opts.calc_ic) {
-    return;
   }
 
   // Build atol for the solve dimension

@@ -57,7 +57,6 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   if (sensitivity) {
     yyS = N_VCloneVectorArray(number_of_parameters, yy);
     yypS = N_VCloneVectorArray(number_of_parameters, yyp);
-    sens_res_ = N_VCloneVectorArray(number_of_parameters, yy);
   }
   // set initial values
   sunrealtype *atval = N_VGetArrayPointer(avtol);
@@ -339,7 +338,6 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
   if (sensitivity) {
     N_VDestroyVectorArray(yyS, number_of_parameters);
     N_VDestroyVectorArray(yypS, number_of_parameters);
-    N_VDestroyVectorArray(sens_res_, number_of_parameters);
   }
 
   IDAFree(&ida_mem);
@@ -705,15 +703,12 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   // Consistent initialization
   sunrealtype t0 = t_eval.front();
   sunrealtype t_eval_next = t_eval[1];
-  ReinitializeIntegrator(t0);
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
+  // Without calc_ic the states are kept as given, but dy0/dp fixes only the
+  // differential sensitivities
+  ConsistentInitialization(t0, t_eval_next, init_type, /*calc_states=*/solver_opts.calc_ic);
   if (solver_opts.calc_ic) {
-    ConsistentInitialization(t0, t_eval_next, init_type);
     log_.log_consistent_init(t0);
-  } else if (sensitivity) {
-    // The states are kept as given, but dy0/dp fixes only the differential
-    // sensitivities
-    ConsistentInitialization(t0, t_eval_next, init_type, /*calc_states=*/false);
   }
 
   // Set the initial stop time
@@ -918,7 +913,8 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   // Save stats before reinitializing (reinit resets IDA counters)
   SaveStats();
 
-  // The guess IDACalcIC starts from, unless hermite_sensitivities fetched it
+  // The ypS an ODE restarts from, and IDACalcIC's starting guess, unless
+  // hermite_sensitivities fetched it
   if (sensitivity && !save_hermite_sensitivities_) {
     CheckErrors(IDAGetSensDky(ida_mem, t_val, 1, yypS), "IDAGetSensDky");
   }
@@ -1143,7 +1139,7 @@ bool IDAKLUSolverOpenMP<ExprSet>::NonlinearSolverInitialConditions(
   // Keep the solved state if it is no worse than the guess: the Newton can
   // reduce the residual yet still fail the WRMS step-norm test at tiny atol.
   if (success || as.solver->final_res_norm() <= as.solver->initial_res_norm()) {
-    ConsistentInitializationODE(t_val);
+    RecoverYp(t_val);
   } else {
     std::memcpy(y_val, as.y_backup.data(), number_of_states * sizeof(sunrealtype));
     std::memcpy(yp_val, as.yp_backup.data(), number_of_states * sizeof(sunrealtype));
@@ -1216,32 +1212,28 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
   std::memset(y_cache_val, 0, number_of_states * sizeof(sunrealtype));
   // Overwrite yp
   residual_eval<ExprSet>(t_val, yy, y_cache, yyp, functions.get());
+}
 
-  // The algebraic rows hold the algebraic residual, not a derivative
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::RecoverYp(const sunrealtype& t_val) {
+  ConsistentInitializationODE(t_val);
   sunrealtype* yp_val = N_VGetArrayPointer(yyp);
-  const sunrealtype* id_val = N_VGetArrayPointer(id);
-  for (int i = 0; i < number_of_states; i++) {
-    if (is_algebraic(id_val[i])) {
-      yp_val[i] = SUN_RCONST(0.0);
-    }
-  }
+  for (int i : alg_state_->alg_idx) yp_val[i] = SUN_RCONST(0.0);
 }
 
 template <class ExprSet>
 bool IDAKLUSolverOpenMP<ExprSet>::SensitivityConsistentInitialization(
   const sunrealtype& t_val) {
   DEBUG("IDAKLUSolver::SensitivityConsistentInitialization");
-  if (!alg_state_ || !alg_state_->sub) {
-    return false;
-  }
+  N_Vector* sens_res = alg_state_->sub->sens_res;
 
   // F_y s + F_p at s' = 0, whose algebraic rows hold neither s'_diff nor M
-  auto residuals = [this, &t_val]() {
+  auto residuals = [this, &t_val, sens_res]() {
     for (int p = 0; p < number_of_parameters; p++) {
       N_VConst(SUN_RCONST(0.0), yypS[p]);
     }
     sensitivities_eval<ExprSet>(
-      number_of_parameters, t_val, yy, yyp, y_cache, yyS, yypS, sens_res_,
+      number_of_parameters, t_val, yy, yyp, y_cache, yyS, yypS, sens_res,
       functions.get(), y_cache, y_cache, y_cache);
   };
   residuals();
@@ -1251,7 +1243,7 @@ bool IDAKLUSolverOpenMP<ExprSet>::SensitivityConsistentInitialization(
     return false;
   }
   for (int p = 0; p < number_of_parameters; p++) {
-    sunrealtype* res_alg = N_VGetArrayPointer(sens_res_[p]) + len_rhs_;
+    sunrealtype* res_alg = N_VGetArrayPointer(sens_res[p]) + len_rhs_;
     if (SolveAlgebraicJacobian(res_alg, res_alg) != 0 ||
         !all_finite(len_alg_, res_alg)) {
       return false;
@@ -1266,7 +1258,7 @@ bool IDAKLUSolverOpenMP<ExprSet>::SensitivityConsistentInitialization(
   // The sub-block is built only for M = I, so s'_diff = f_y s + f_p
   for (int p = 0; p < number_of_parameters; p++) {
     sunrealtype* sp = N_VGetArrayPointer(yypS[p]);
-    N_VScale(SUN_RCONST(1.0), sens_res_[p], yypS[p]);
+    N_VScale(SUN_RCONST(1.0), sens_res[p], yypS[p]);
     std::fill(sp + len_rhs_, sp + number_of_states, SUN_RCONST(0.0));
     if (!all_finite(number_of_states, sp)) {
       return false;

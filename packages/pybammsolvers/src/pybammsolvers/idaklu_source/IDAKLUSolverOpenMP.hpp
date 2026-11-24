@@ -135,8 +135,12 @@ public:
     std::vector<int> data_indices;
     std::vector<sunrealtype> full_jac_buf;
     bool use_sparse = false;
+    // Sensitivity residuals F_y s + F_p - M s', one per parameter
+    N_Vector* sens_res = nullptr;
+    int number_of_sens_res = 0;
 
     ~SubBlockResources() {
+      if (sens_res) N_VDestroyVectorArray(sens_res, number_of_sens_res);
       if (res_nvec) N_VDestroy(res_nvec);
       if (delta_nvec) N_VDestroy(delta_nvec);
       if (LS) SUNLinSolFree(LS);
@@ -172,9 +176,6 @@ public:
     std::unique_ptr<FullSystemResources> full;
   };
   std::unique_ptr<AlgSolverState> alg_state_;
-
-  // Sensitivity residuals F_y s + F_p - M s', one vector per parameter
-  N_Vector *sens_res_ = nullptr;
 
   int len_rhs_;
   int len_alg_;
@@ -382,9 +383,15 @@ public:
   bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
 
   /**
-   * @brief Set yp = f(t, y), exact for M = I, and zero its algebraic components
+   * @brief Set a consistent initialization for ODEs
    */
   void ConsistentInitializationODE(const sunrealtype& t_val);
+
+  /**
+   * @brief Recover yp after a successful Newton IC solve.
+   * Calls ConsistentInitializationODE then zeros algebraic yp components.
+   */
+  void RecoverYp(const sunrealtype& t_val);
 
   /**
    * @brief Run IDACalcIC from the current yy/yyp and copy its result back,
@@ -402,8 +409,8 @@ public:
    *
    * Keeps the differential sensitivities, solves the algebraic rows for the
    * algebraic ones with the algebraic sub-block, and sets yypS = F_y s + F_p,
-   * exact as the sub-block is built only for M = I.
-   * @return False without the algebraic sub-block, or if its solve failed
+   * exact as the sub-block is built only for M = I. Requires the sub-block.
+   * @return False if its solve failed
    */
   bool SensitivityConsistentInitialization(const sunrealtype& t_val);
 
@@ -426,8 +433,8 @@ public:
    * @brief Build the algebraic Newton solver for consistent initial conditions.
    * Only built when mass matrix has zeros in algebraic rows (standard-form).
    * Not built for a full-system solve with an iterative linear solver, which
-   * leaves the initial conditions to IDACalcIC. Without calc_ic, only the
-   * sub-block is built, for the algebraic sensitivities.
+   * leaves the initial conditions to IDACalcIC. Without calc_ic, it is built
+   * only for a standard-form DAE's sensitivities.
    */
   void BuildAlgebraicSolver(const sunrealtype* id_val);
 
