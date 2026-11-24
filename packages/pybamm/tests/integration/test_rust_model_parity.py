@@ -1,5 +1,7 @@
 """CasADi parity of compiled expressions from full battery models."""
 
+import functools
+
 import casadi
 import numpy as np
 import pytest
@@ -90,16 +92,19 @@ def _casadi_functions(exprs, n, input_names):
     return functions
 
 
-def _assert_rows_close(actual, expected, terms, message):
-    """Assert each row agrees to 1e-9 of the larger of its value and its terms."""
-    tolerance = 1e-12 + 1e-9 * np.maximum(np.abs(expected), terms)
-    close = (np.abs(actual - expected) <= tolerance) | (
-        np.isnan(actual) & np.isnan(expected)
-    )
-    rows = np.flatnonzero(~close)
-    assert not rows.size, (
-        f"{message}: rows {rows[:5]} give {actual[rows[:5]]}, CasADi "
-        f"{expected[rows[:5]]}, within {tolerance[rows[:5]]}"
+def _assert_close(actual, expected, scale, message):
+    """Assert each entry agrees to 1e-9 of the larger of its value and ``scale``,
+    and each non-finite entry exactly."""
+    # An infinite derivative makes the scale non-finite, and bounds nothing
+    scale = np.where(np.isfinite(scale), scale, 0.0)
+    tolerance = 1e-12 + 1e-9 * np.maximum(np.abs(expected), scale)
+    with np.errstate(invalid="ignore"):
+        within = (np.abs(actual - expected) <= tolerance) & np.isfinite(expected)
+    close = within | (actual == expected) | (np.isnan(actual) & np.isnan(expected))
+    entries = np.argwhere(~close)[:5]
+    assert not entries.size, (
+        f"{message}: entries {entries.tolist()} give {actual[~close][:5]}, CasADi "
+        f"{expected[~close][:5]}, within {tolerance[~close][:5]}"
     )
 
 
@@ -156,19 +161,27 @@ class TestModelParity:
                 # A residual cancels terms far larger than itself; scale by those
                 terms = np.abs(expected["y"]) @ np.abs(y)
                 terms += np.abs(expected["p"]) @ np.abs(p_stacked)
-                _assert_rows_close(
+                _assert_close(
                     compiled(t, y, p),
                     np.asarray(reference["value"](t, y, p_stacked)).ravel(),
                     terms,
                     f"{name} value at t={t}",
                 )
                 for wrt, jacobian in jacobians.items():
-                    np.testing.assert_allclose(
+                    x = np.abs(y if wrt == "y" else p_stacked)
+                    # An entry's error times its variable gets the residual's
+                    # tolerance; a zero variable bounds nothing, so the flat one stays
+                    scale = np.divide(
+                        terms[:, None],
+                        x,
+                        out=np.zeros(expected[wrt].shape),
+                        where=x > 0,
+                    )
+                    _assert_close(
                         jacobian(t, y, p).toarray(),
                         expected[wrt],
-                        rtol=1e-9,
-                        atol=1e-12,
-                        err_msg=f"{name} d/d{wrt} at t={t}",
+                        scale,
+                        f"{name} d/d{wrt} at t={t}",
                     )
 
     def test_variables_and_events_match_casadi(self, case):
@@ -189,19 +202,32 @@ class TestModelParity:
         )["value"]
         p = {key: inputs[key] for key in names}
         p_stacked = [inputs[key] for key in names]
+
+        @functools.cache
+        def output_jacobians(name):
+            return _casadi_functions([outputs[name]], n, names)
+
         for t, y in points:
             values = compiled.split(compiled(t, y, p))
             expected = reference.call([t, y, p_stacked])
             for name, value, reference_value in zip(
                 compiled.output_names, values, expected, strict=True
             ):
-                np.testing.assert_allclose(
-                    np.ravel(value),
-                    np.asarray(reference_value).ravel(),
-                    rtol=1e-9,
-                    atol=1e-12,
-                    err_msg=f"{name} at t={t}",
-                )
+                actual = np.ravel(value)
+                desired = np.asarray(reference_value).ravel()
+                # A variable can cancel terms far larger than itself. They only widen the
+                # flat rule, and every output's jacobian is slow, so find them where it fails
+                terms = 0.0
+                if not np.allclose(
+                    actual, desired, rtol=1e-9, atol=1e-12, equal_nan=True
+                ):
+                    jacobians = output_jacobians(name)
+                    terms = sum(
+                        abs(jacobians[f"jac_{wrt}"](t, y, p_stacked).sparse())
+                        @ np.abs(x)
+                        for wrt, x in (("y", y), ("p", p_stacked))
+                    )
+                _assert_close(actual, desired, terms, f"{name} at t={t}")
 
 
 class TestSPMParity:
