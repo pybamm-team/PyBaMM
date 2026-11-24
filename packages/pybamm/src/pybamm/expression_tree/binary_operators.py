@@ -122,17 +122,15 @@ def _sparse_column_product_to_rust(
     """
     for column, other in ((product.left, product.right), (product.right, product.left)):
         entries = _sparse_column_entries(column)
-        if entries is None:
+        if entries is None or other.size not in (1, entries.shape[0]):
             continue
-        rows = entries.shape[0]
         if other.size == 1:
             matrix = column._to_rust_matmul_left(graph, rust_symbols)
-        elif other.size == rows:
+        else:
+            rows = entries.shape[0]
             stored = np.flatnonzero(np.diff(entries.indptr))
             diagonal = csr_matrix((entries.data, (stored, stored)), shape=(rows, rows))
             matrix = pybamm.Array._rust_sparse_matrix(graph, diagonal)
-        else:
-            continue
         return graph.matmul(matrix, other._to_rust_inner(graph, rust_symbols))
     return None
 

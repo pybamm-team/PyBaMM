@@ -694,6 +694,7 @@ def _parity_cases():
         ),
         "sparse_column_product": (sparse_column * right, poisoned),
         "sparse_column_product_on_the_right": (right * sparse_column, poisoned),
+        "sparse_column_inner_product": (pybamm.Inner(sparse_column, right), poisoned),
         "sparse_column_quotient": (sparse_column / right, poisoned),
         "sparse_column_times_input": (sparse_column * a, [{"inputs": {"a": 2.5}}]),
         "sparse_column_over_input": (sparse_column / a, [{"inputs": {"a": 2.5}}]),
