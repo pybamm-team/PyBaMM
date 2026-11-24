@@ -82,10 +82,8 @@ from .models.event import EventType
 from .expression_tree.operations.diffsl import DiffSLExport
 
 # Battery models
-from .models.full_battery_models.base_battery_model import (
-    BaseBatteryModel,
-    BatteryModelOptions,
-)
+from .models.full_battery_models.battery_model_options import BatteryModelOptions
+from .models.full_battery_models.base_battery_model import BaseBatteryModel
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 from .models.full_battery_models import equivalent_circuit
