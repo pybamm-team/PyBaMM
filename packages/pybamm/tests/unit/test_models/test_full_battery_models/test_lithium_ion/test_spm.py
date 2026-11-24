@@ -37,7 +37,10 @@ class TestSPM(BaseUnitTestLithiumIon):
 
         # Check model with distributed side reactions throws an error
         options["x-average side reactions"] = "false"
-        with pytest.raises(pybamm.OptionError, match=r"cannot be 'false' for SPM"):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"SPM requires 'x-average side reactions' to be 'true'",
+        ):
             pybamm.lithium_ion.SPM(options)
 
     @pytest.mark.parametrize(
@@ -52,6 +55,25 @@ class TestSPM(BaseUnitTestLithiumIon):
             "lithium plating porosity change": "true",
         }
         self.check_well_posedness(options)
+
+    def test_half_cell_porosity_change_ignores_unused_particle_size(self):
+        pybamm.lithium_ion.SPM(
+            {
+                "working electrode": "positive",
+                "particle size": ("distribution", "single"),
+                "SEI porosity change": "true",
+            }
+        )
+
+    def test_dependent_defaults_use_declared_options(self):
+        class MySPM(pybamm.lithium_ion.SPM):
+            default_options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+
+        assert MySPM(build=False).options["surface form"] == "algebraic"
+        model = MySPM({"surface form": "differential"}, build=False)
+        assert model.options["surface form"] == "differential"
+        model = pybamm.lithium_ion.MPM(build=False)
+        assert model.options["surface form"] == "algebraic"
 
     def test_distribution_options(self):
         options = {"particle size": "distribution"}

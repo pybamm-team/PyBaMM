@@ -8,3 +8,9 @@ class TestMSMR:
     def test_well_posed(self):
         model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
         model.check_well_posedness()
+
+    def test_build_false(self):
+        model = pybamm.lithium_ion.MSMR(
+            {"number of MSMR reactions": ("6", "4")}, build=False
+        )
+        assert not model._built
