@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.1",
+  "pybamm_version": "26.10.1.1",
+  "spatial_methods": {
+    "macroscale": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "negative particle": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "positive particle": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "negative primary particle": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "positive primary particle": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "negative secondary particle": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "positive secondary particle": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "negative particle size": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "positive particle size": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "negative primary particle size": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "positive primary particle size": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "negative secondary particle size": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "positive secondary particle size": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.finite_volume.FiniteVolume",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    },
+    "current collector": {
+      "$type": "type",
+      "class": "pybamm.spatial_methods.zero_dimensional_method.ZeroDimensionalSpatialMethod",
+      "options": {
+        "extrapolation": {
+          "order": {
+            "gradient": "quadratic",
+            "value": "linear"
+          },
+          "use bcs": false
+        }
+      }
+    }
+  }
+}

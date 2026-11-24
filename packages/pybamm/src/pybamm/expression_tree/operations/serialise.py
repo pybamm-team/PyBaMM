@@ -19,9 +19,13 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.tracing import tracing
 
-SUPPORTED_SCHEMA_VERSION = "2.0"
-# older versions that are still read; files are always written as the above
-LEGACY_SCHEMA_VERSIONS = ("1.1",)
+# geometry, spatial-method, var_pts and submesh-type files
+SUPPORTED_SCHEMA_VERSION = "1.1"
+# symbolic model files are versioned separately, so a change to their format
+# does not make older PyBaMM versions reject the other files
+MODEL_SCHEMA_VERSION = "2.0"
+# older model versions that are still read; models are always written as the above
+LEGACY_MODEL_SCHEMA_VERSIONS = ("1.1",)
 
 
 def _experiment_step_factories() -> dict:
@@ -571,7 +575,7 @@ class Serialise:
             model_content["options_format"] = saved_options_format(model.options)
 
         model_json = {
-            "schema_version": SUPPORTED_SCHEMA_VERSION,
+            "schema_version": MODEL_SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
             "model": model_content,
             # the tables that the model's {"$ref": index} entries point into
@@ -1427,11 +1431,25 @@ class Serialise:
                 raise ValueError(f"Failed to decompress model data: {e}") from e
 
         # Validate outer structure
-        schema_version = _check_schema_version(data)
+        schema_version = _check_schema_version(
+            data,
+            supported=(MODEL_SCHEMA_VERSION, *LEGACY_MODEL_SCHEMA_VERSIONS),
+            # files with no version are read by their layout, as before
+            default=MODEL_SCHEMA_VERSION
+            if "nodes" in data
+            else LEGACY_MODEL_SCHEMA_VERSIONS[-1],
+        )
         from pybamm.expression_tree.operations.serialise_flat import decode_nodes
 
+        # the version decides which format is parsed
+        is_flat = schema_version == MODEL_SCHEMA_VERSION
+        if is_flat != ("nodes" in data):
+            raise ValueError(
+                f"Schema version {schema_version} model "
+                + ("has no 'nodes' table" if is_flat else "has a 'nodes' table")
+            )
         # every {"$ref": index} below is nodes[index]; empty for nested files
-        nodes = decode_nodes(data)
+        nodes = decode_nodes(data) if is_flat else []
 
         model_data = data.get("model")
         if model_data is None:
@@ -2281,20 +2299,33 @@ def _relocate_legacy_model_tree(node):
     return out
 
 
-def _check_schema_version(data: dict) -> str:
+def _check_schema_version(
+    data: dict,
+    supported: tuple[str, ...] = (SUPPORTED_SCHEMA_VERSION,),
+    default: str | None = None,
+) -> str:
     """
     Return the schema version of a serialised document.
+
+    Parameters
+    ----------
+    data : dict
+        The document.
+    supported : tuple of str
+        The versions that can be read, current one first.
+    default : str, optional
+        The version of a document that does not state one. Defaults to the
+        current version.
 
     Raises
     ------
     ValueError
-        If the version is neither the current one nor a readable older one.
+        If the version is not one of ``supported``.
     """
-    schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-    if schema_version not in (SUPPORTED_SCHEMA_VERSION, *LEGACY_SCHEMA_VERSIONS):
+    schema_version = data.get("schema_version", default or supported[0])
+    if schema_version not in supported:
         raise ValueError(
-            f"Unsupported schema version: {schema_version}. "
-            f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+            f"Unsupported schema version: {schema_version}. Expected: {supported[0]}"
         )
     return schema_version
 
@@ -2311,19 +2342,17 @@ def convert_symbol_from_json(json_data, nodes=()):
     decoded leaf values (tuples, ndarrays) are returned as-is; use the kernel
     ``decode`` directly for generic, non-symbol JSON.
     """
-    from pybamm.expression_tree.operations.serialise_flat import _REF
+    from pybamm.expression_tree.operations.serialise_flat import (
+        _REF,
+        resolve_reference,
+    )
     from pybamm.expression_tree.operations.serialise_kernel import (
         SerialisationError,
         decode,
     )
 
     if isinstance(json_data, dict) and _REF in json_data:
-        try:
-            return nodes[json_data[_REF]]
-        except (IndexError, TypeError) as err:
-            raise SerialisationError(
-                f"Invalid node reference {json_data[_REF]!r}"
-            ) from err
+        return resolve_reference(json_data[_REF], nodes)
 
     decoded = decode(json_data)
     # decode returns a dict/list/str only when the input was one of those and

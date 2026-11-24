@@ -2289,7 +2289,10 @@ class BaseModel:
             raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
         try:
             with open(filename, "w") as f:
-                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+                # compact, like Serialise.save_custom_model
+                json.dump(
+                    data, f, separators=(",", ":"), default=Serialise._json_encoder
+                )
         except OSError as file_err:
             file_err.add_note(f"Failed to write {label} to file '{filename}'")
             raise

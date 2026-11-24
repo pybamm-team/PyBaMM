@@ -92,6 +92,9 @@ were shared when the model was saved are shared again.
 
 Model files written before schema version ``2.0`` nest every expression in
 place. They still load; saving the loaded model writes the current format.
+The version decides which form is read, so a file whose version does not match
+its layout is rejected. Geometry, spatial-method, ``var_pts`` and submesh-type
+files are versioned separately and remain at ``1.1``.
 
 Legacy formats (read-only)
 --------------------------

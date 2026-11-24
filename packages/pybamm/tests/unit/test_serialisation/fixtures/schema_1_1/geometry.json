@@ -1,0 +1,304 @@
+{
+  "schema_version": "1.1",
+  "pybamm_version": "26.10.1.1",
+  "geometry": {
+    "negative electrode": {
+      "x_n": {
+        "min": 0,
+        "max": {
+          "name": "Negative electrode thickness [m]",
+          "domains": {
+            "primary": [],
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": []
+          },
+          "$type": "pybamm.expression_tree.parameter.Parameter"
+        }
+      }
+    },
+    "separator": {
+      "x_s": {
+        "min": {
+          "name": "Negative electrode thickness [m]",
+          "domains": {
+            "primary": [],
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": []
+          },
+          "$type": "pybamm.expression_tree.parameter.Parameter"
+        },
+        "max": {
+          "name": "+",
+          "domains": {
+            "primary": [],
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": []
+          },
+          "children": [
+            {
+              "name": "Negative electrode thickness [m]",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "$type": "pybamm.expression_tree.parameter.Parameter"
+            },
+            {
+              "name": "Separator thickness [m]",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "$type": "pybamm.expression_tree.parameter.Parameter"
+            }
+          ],
+          "$type": "pybamm.expression_tree.binary_operators.Addition"
+        }
+      }
+    },
+    "positive electrode": {
+      "x_p": {
+        "min": {
+          "name": "+",
+          "domains": {
+            "primary": [],
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": []
+          },
+          "children": [
+            {
+              "name": "Negative electrode thickness [m]",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "$type": "pybamm.expression_tree.parameter.Parameter"
+            },
+            {
+              "name": "Separator thickness [m]",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "$type": "pybamm.expression_tree.parameter.Parameter"
+            }
+          ],
+          "$type": "pybamm.expression_tree.binary_operators.Addition"
+        },
+        "max": {
+          "name": "+",
+          "domains": {
+            "primary": [],
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": []
+          },
+          "children": [
+            {
+              "name": "+",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "children": [
+                {
+                  "name": "Negative electrode thickness [m]",
+                  "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": []
+                  },
+                  "$type": "pybamm.expression_tree.parameter.Parameter"
+                },
+                {
+                  "name": "Separator thickness [m]",
+                  "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": []
+                  },
+                  "$type": "pybamm.expression_tree.parameter.Parameter"
+                }
+              ],
+              "$type": "pybamm.expression_tree.binary_operators.Addition"
+            },
+            {
+              "name": "Positive electrode thickness [m]",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "$type": "pybamm.expression_tree.parameter.Parameter"
+            }
+          ],
+          "$type": "pybamm.expression_tree.binary_operators.Addition"
+        }
+      }
+    },
+    "negative particle": {
+      "r_n": {
+        "min": 0,
+        "max": {
+          "name": "Negative particle radius [m]",
+          "domains": {
+            "primary": [],
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": []
+          },
+          "input_names": [
+            "Through-cell distance (x) [m]"
+          ],
+          "print_name": "R_{\\mathrm{n}}^{\\mathrm{typ}}",
+          "has_diff_variable": false,
+          "children": [
+            {
+              "name": "*",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "children": [
+                {
+                  "name": "0.5",
+                  "value": 0.5,
+                  "$type": "pybamm.expression_tree.scalar.Scalar"
+                },
+                {
+                  "name": "Negative electrode thickness [m]",
+                  "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": []
+                  },
+                  "$type": "pybamm.expression_tree.parameter.Parameter"
+                }
+              ],
+              "$type": "pybamm.expression_tree.binary_operators.Multiplication"
+            }
+          ],
+          "$type": "pybamm.expression_tree.parameter.FunctionParameter"
+        }
+      }
+    },
+    "positive particle": {
+      "r_p": {
+        "min": 0,
+        "max": {
+          "name": "Positive particle radius [m]",
+          "domains": {
+            "primary": [],
+            "secondary": [],
+            "tertiary": [],
+            "quaternary": []
+          },
+          "input_names": [
+            "Through-cell distance (x) [m]"
+          ],
+          "print_name": "R_{\\mathrm{p}}^{\\mathrm{typ}}",
+          "has_diff_variable": false,
+          "children": [
+            {
+              "name": "+",
+              "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": []
+              },
+              "children": [
+                {
+                  "name": "+",
+                  "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": []
+                  },
+                  "children": [
+                    {
+                      "name": "Negative electrode thickness [m]",
+                      "domains": {
+                        "primary": [],
+                        "secondary": [],
+                        "tertiary": [],
+                        "quaternary": []
+                      },
+                      "$type": "pybamm.expression_tree.parameter.Parameter"
+                    },
+                    {
+                      "name": "Separator thickness [m]",
+                      "domains": {
+                        "primary": [],
+                        "secondary": [],
+                        "tertiary": [],
+                        "quaternary": []
+                      },
+                      "$type": "pybamm.expression_tree.parameter.Parameter"
+                    }
+                  ],
+                  "$type": "pybamm.expression_tree.binary_operators.Addition"
+                },
+                {
+                  "name": "*",
+                  "domains": {
+                    "primary": [],
+                    "secondary": [],
+                    "tertiary": [],
+                    "quaternary": []
+                  },
+                  "children": [
+                    {
+                      "name": "0.5",
+                      "value": 0.5,
+                      "$type": "pybamm.expression_tree.scalar.Scalar"
+                    },
+                    {
+                      "name": "Positive electrode thickness [m]",
+                      "domains": {
+                        "primary": [],
+                        "secondary": [],
+                        "tertiary": [],
+                        "quaternary": []
+                      },
+                      "$type": "pybamm.expression_tree.parameter.Parameter"
+                    }
+                  ],
+                  "$type": "pybamm.expression_tree.binary_operators.Multiplication"
+                }
+              ],
+              "$type": "pybamm.expression_tree.binary_operators.Addition"
+            }
+          ],
+          "$type": "pybamm.expression_tree.parameter.FunctionParameter"
+        }
+      }
+    },
+    "current collector": {
+      "z": {
+        "position": 1
+      }
+    }
+  }
+}

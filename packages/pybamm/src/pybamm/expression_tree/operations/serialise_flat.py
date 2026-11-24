@@ -3,8 +3,9 @@
 #
 from __future__ import annotations
 
+import hashlib
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import numpy as np
 
@@ -35,7 +36,7 @@ class FlatEncoder:
         self._domains: dict[str, int] = {}
         self._interned_domains: dict[int, int] = {}
         self._by_object: dict[int, dict] = {}
-        self._by_content: dict[str, int] = {}
+        self._by_content: dict[bytes, int] = {}
         # keeps memoised objects alive so their id() cannot be reused
         self._seen: list = []
 
@@ -56,7 +57,9 @@ class FlatEncoder:
             node[TAG] = self._types.setdefault(path, len(self._types))
             if "domains" in node:
                 node["domains"] = self._domains_index(obj, node["domains"])
-            key = json.dumps(node, sort_keys=True, default=self._default)
+            # a digest, so that nodes holding large arrays are not kept twice
+            content = json.dumps(node, sort_keys=True, default=self._default)
+            key = hashlib.blake2b(content.encode(), digest_size=16).digest()
             position = self._by_content.get(key)
             if position is None:
                 position = self._by_content[key] = len(self.nodes)
@@ -95,6 +98,24 @@ class FlatEncoder:
         }
 
 
+def resolve_reference(reference, nodes: Sequence):
+    """
+    The entry of ``nodes`` that ``{"$ref": reference}`` points to.
+
+    Raises
+    ------
+    SerialisationError
+        If ``reference`` is not the index of an entry of ``nodes``. Negative
+        indices and booleans are rejected rather than read as Python indices.
+    """
+    if type(reference) is not int or not 0 <= reference < len(nodes):
+        raise serialise_kernel.SerialisationError(
+            f"Invalid node reference {reference!r}: expected an index below "
+            f"{len(nodes)}"
+        )
+    return nodes[reference]
+
+
 def decode_nodes(document: dict) -> list:
     """
     Build every node of a flat document, each exactly once.
@@ -128,7 +149,7 @@ def decode_nodes(document: dict) -> list:
         if not isinstance(raw, dict):
             return raw
         if _REF in raw:
-            return objects[raw[_REF]]
+            return resolve_reference(raw[_REF], objects)
         tag = raw.get(TAG)
         if tag == "builtins.tuple":
             return tuple(decode(item) for item in raw["items"])
@@ -175,7 +196,7 @@ def to_nested(document: dict):
         if not isinstance(value, dict):
             return value
         if _REF in value:
-            return expanded[value[_REF]]
+            return resolve_reference(value[_REF], expanded)
         return {key: resolve(item) for key, item in value.items()}
 
     for node in document["nodes"]:

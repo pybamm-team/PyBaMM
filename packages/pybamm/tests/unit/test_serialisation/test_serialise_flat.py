@@ -2,6 +2,8 @@
 # Tests for the flat node-table serialisation
 #
 import json
+import lzma
+import pathlib
 
 import numpy as np
 import pytest
@@ -131,9 +133,24 @@ class TestDecodeNodes:
         with pytest.raises(SerialisationError, match="No codec to decode"):
             decode_nodes(document)
 
-    def test_invalid_reference_raises(self):
+    # -1 and True are valid Python indices, so they must not reach the table
+    @pytest.mark.parametrize("reference", [3, -1, True, 1.0, "0", None])
+    def test_invalid_reference_raises(self, reference):
+        nodes = [pybamm.Scalar(1), pybamm.Scalar(2)]
         with pytest.raises(SerialisationError, match="Invalid node reference"):
-            convert_symbol_from_json({"$ref": 3}, [])
+            convert_symbol_from_json({"$ref": reference}, nodes)
+
+    @pytest.mark.parametrize("reference", [0, 1, -1, True])
+    def test_node_cannot_reference_itself_or_later_nodes(self, reference):
+        encoder = FlatEncoder()
+        encoder.encode(-pybamm.Parameter("a"))
+        document = as_json(encoder.tables())
+        # the first node has nothing before it to refer to
+        document["nodes"][0]["children"] = [{"$ref": reference}]
+        with pytest.raises(SerialisationError, match="Invalid node reference"):
+            decode_nodes(document)
+        with pytest.raises(SerialisationError, match="Invalid node reference"):
+            to_nested(document)
 
 
 DEGRADATION_OPTIONS = {
@@ -185,6 +202,48 @@ class TestFlatModel:
         assert document["schema_version"] == "2.0"
         assert {"types", "domains", "nodes", "model"} <= document.keys()
 
+    def test_version_decides_the_format_parsed(self):
+        flat = Serialise.serialise_custom_model(pybamm.lithium_ion.BasicSPM())
+        with pytest.raises(ValueError, match=r"1\.1 model has a 'nodes' table"):
+            Serialise.load_custom_model({**flat, "schema_version": "1.1"})
+        nested = {**as_legacy(as_bytes(flat)), "schema_version": "2.0"}
+        with pytest.raises(ValueError, match=r"2\.0 model has no 'nodes' table"):
+            Serialise.load_custom_model(nested)
+
+    def test_document_without_version_is_read_by_its_layout(self):
+        flat = as_bytes(Serialise.serialise_custom_model(pybamm.lithium_ion.BasicSPM()))
+        for document in (json.loads(flat), as_legacy(flat)):
+            del document["schema_version"]
+            loaded = Serialise.load_custom_model(document)
+            assert as_bytes(Serialise.serialise_custom_model(loaded)) == flat
+
+    @pytest.mark.parametrize("save", ["to_json", "save_custom_model"])
+    def test_model_files_are_compact(self, tmp_path, save):
+        model = pybamm.lithium_ion.BasicSPM()
+        file = tmp_path / "model.json"
+        if save == "to_json":
+            model.to_json(str(file))
+        else:
+            Serialise.save_custom_model(model, file)
+        document = json.loads(file.read_text())
+        compact = json.dumps(
+            document, separators=(",", ":"), default=Serialise._json_encoder
+        )
+        assert file.read_text() == compact
+
+    def test_only_model_files_carry_the_model_version(self):
+        model = pybamm.lithium_ion.SPM()
+        others = [
+            Serialise.serialise_custom_geometry(model.default_geometry),
+            Serialise.serialise_spatial_methods(model.default_spatial_methods),
+            Serialise.serialise_var_pts(model.default_var_pts),
+            Serialise.serialise_submesh_types(model.default_submesh_types),
+        ]
+        # their format did not change, so older PyBaMM versions still read them
+        assert [document["schema_version"] for document in others] == ["1.1"] * 4
+        with pytest.raises(ValueError, match=r"Unsupported schema version: 2\.0"):
+            Serialise.load_custom_geometry({**others[0], "schema_version": "2.0"})
+
     @pytest.mark.parametrize("build", MODELS.values(), ids=MODELS.keys())
     def test_loads_byte_identical(self, build):
         flat = as_bytes(Serialise.serialise_custom_model(build()))
@@ -234,6 +293,74 @@ class TestFlatModel:
             pybamm.Simulation(m).solve([0, 3600])["Voltage [V]"](t_eval) for m in loaded
         ]
         np.testing.assert_array_equal(voltages[1], voltages[0])
+
+
+RELEASE_FILES = pathlib.Path(__file__).parent / "fixtures" / "schema_1_1"
+
+
+def release_model(name):
+    return json.loads(lzma.decompress((RELEASE_FILES / f"{name}.json.xz").read_bytes()))
+
+
+class TestReleaseFiles:
+    """
+    Files written by PyBaMM 26.10.1.1, the last release before schema 2.0 (see
+    fixtures/schema_1_1/generate.py), rather than by this checkout.
+    """
+
+    @pytest.mark.parametrize(
+        "name, model_class",
+        [("spm", pybamm.lithium_ion.SPM), ("dfn", pybamm.lithium_ion.DFN)],
+    )
+    def test_model_loads_and_upgrades(self, name, model_class):
+        document = release_model(name)
+        assert document["schema_version"] == "1.1"
+        assert "nodes" not in document
+
+        model = Serialise.load_custom_model(document)
+        assert type(model) is model_class
+        assert model.schema_version == "1.1"
+        saved = document["model"]
+        for section in ("rhs", "algebraic", "initial_conditions", "events"):
+            assert len(getattr(model, section)) == len(saved[section])
+        assert len(model.boundary_conditions) == len(saved["boundary_conditions"])
+        assert list(model.variables) == list(saved["variables"])
+
+        # saving it writes the flat format, which then round-trips exactly
+        flat = as_bytes(Serialise.serialise_custom_model(model))
+        assert json.loads(flat)["schema_version"] == "2.0"
+        reloaded = Serialise.load_custom_model(json.loads(flat))
+        assert as_bytes(Serialise.serialise_custom_model(reloaded)) == flat
+
+    def test_model_solves_like_its_upgrade(self):
+        model = Serialise.load_custom_model(release_model("spm"))
+        upgraded = Serialise.load_custom_model(model.to_json())
+        t_eval = np.linspace(0, 3600, 20)
+        voltages = [
+            pybamm.Simulation(m).solve([0, 3600])["Voltage [V]"](t_eval)
+            for m in (model, upgraded)
+        ]
+        assert 3 < voltages[0].min() < voltages[0].max() < 4
+        np.testing.assert_array_equal(voltages[1], voltages[0])
+
+    @pytest.mark.parametrize(
+        "name, load, expected",
+        [
+            ("geometry", Serialise.load_custom_geometry, "default_geometry"),
+            (
+                "spatial_methods",
+                Serialise.load_spatial_methods,
+                "default_spatial_methods",
+            ),
+            ("var_pts", Serialise.load_var_pts, "default_var_pts"),
+            ("submesh_types", Serialise.load_submesh_types, "default_submesh_types"),
+        ],
+    )
+    def test_other_files_load(self, name, load, expected):
+        document = json.loads((RELEASE_FILES / f"{name}.json").read_text())
+        assert document["schema_version"] == "1.1"
+        loaded = load(document)
+        assert loaded.keys() == getattr(pybamm.lithium_ion.SPM(), expected).keys()
 
 
 class TestFlatProperties:
