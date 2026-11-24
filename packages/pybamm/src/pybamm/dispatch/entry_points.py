@@ -1,8 +1,41 @@
 import importlib.metadata
 import textwrap
 from collections.abc import Callable, Mapping
+from importlib.util import find_spec
+
+from packaging.requirements import Requirement
+from packaging.version import Version
 
 import pybamm
+
+
+def _entry_point_is_available(entry_point: importlib.metadata.EntryPoint) -> bool:
+    if (
+        entry_point.group != "pybamm_parameter_sets"
+        or entry_point.value
+        != "pybamm.input.parameters.lithium_ion."
+        "MolicelP45B_AboutEnergy2026:get_parameter_values"
+    ):
+        return True
+
+    try:
+        if find_spec("bpx") is None:
+            return False
+        bpx_version = Version(importlib.metadata.version("bpx"))
+    except (importlib.metadata.PackageNotFoundError, ValueError):
+        return False
+
+    distribution = entry_point.dist
+    if distribution is None:
+        return False
+    return any(
+        bpx_version in requirement.specifier
+        for requirement in map(Requirement, distribution.requires or ())
+        if requirement.name == "bpx"
+        and (
+            requirement.marker is None or requirement.marker.evaluate({"extra": "bpx"})
+        )
+    )
 
 
 class EntryPoint(Mapping):
@@ -10,8 +43,8 @@ class EntryPoint(Mapping):
     A mapping interface for accessing PyBaMM models and parameter sets through entry points.
 
     Access via :py:data:`pybamm.parameter_sets` for parameter sets - provides access
-    to all registered battery parameter sets (e.g., 'Chen2020', 'Ai2020') that can
-    be used to parameterise battery models.
+    to installed battery parameter sets (e.g., 'Chen2020', 'Ai2020'). Sets needing
+    an extra are listed by ``get_entries("pybamm_parameter_sets")``.
 
     Access via :py:data:`pybamm.Model` for models - provides access to all registered
     battery models (e.g., 'SPM', 'DFN').
@@ -56,7 +89,8 @@ class EntryPoint(Mapping):
             self._all_entries = {}
             self.group = group
             for entry_point in self.get_entries(self.group):
-                self._all_entries[entry_point.name] = entry_point
+                if _entry_point_is_available(entry_point):
+                    self._all_entries[entry_point.name] = entry_point
 
     @staticmethod
     def get_entries(group_name):
