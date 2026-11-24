@@ -34,6 +34,16 @@ def decode_root(document, root):
     return convert_symbol_from_json(root, decode_nodes(document))
 
 
+class _Fields(pybamm.Symbol):
+    """A symbol whose fields hold a tuple, a dict and an array."""
+
+    def __init__(self, child, pair, mapping, weights):
+        super().__init__("fields", children=[child])
+        self.pair = pair
+        self.mapping = mapping
+        self.weights = weights
+
+
 class TestFlatEncoder:
     def test_shared_term_stored_once(self):
         a = pybamm.Parameter("a")
@@ -77,6 +87,21 @@ class TestFlatEncoder:
         with pytest.raises(SerialisationError, match="no codec registered"):
             FlatEncoder().encode(object())
 
+    def test_container_and_leaf_fields_round_trip(self):
+        a = pybamm.Parameter("a")
+        symbol = _Fields(a, (a, 1), {"key": a}, np.array([1.0, 2.0]))
+        encoder = FlatEncoder(default=Serialise._json_encoder)
+        document = as_json({"root": encoder.encode(symbol), **encoder.tables()})
+        # symbols inside the tuple and dict fields are references, not copies
+        assert len(document["nodes"]) == 2
+        assert to_nested(document) == {"root": as_json(encode(symbol))}
+
+        restored = decode_root(document, document["root"])
+        assert restored.pair == (a, 1)
+        assert restored.pair[0] is restored.children[0]
+        assert restored.mapping["key"] is restored.children[0]
+        np.testing.assert_array_equal(restored.weights, symbol.weights)
+
 
 class TestDecodeNodes:
     def test_shared_term_decoded_once(self):
@@ -100,6 +125,11 @@ class TestDecodeNodes:
     def test_missing_table_raises(self):
         with pytest.raises(SerialisationError, match="missing the 'types' table"):
             decode_nodes({"nodes": [], "domains": []})
+
+    def test_type_without_codec_raises(self):
+        document = {"types": ["builtins.dict"], "domains": [], "nodes": [{"$type": 0}]}
+        with pytest.raises(SerialisationError, match="No codec to decode"):
+            decode_nodes(document)
 
     def test_invalid_reference_raises(self):
         with pytest.raises(SerialisationError, match="Invalid node reference"):
