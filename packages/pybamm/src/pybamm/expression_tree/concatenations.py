@@ -543,6 +543,8 @@ class FluxConcatenation(DomainConcatenation):
         in each domain.
     """
 
+    __slots__ = ()
+
     def __init__(self, children: Sequence[pybamm.Symbol], full_mesh: pybamm.Mesh):
         # Check if we are concatenating fluxes
         unpacker = pybamm.SymbolUnpacker(pybamm.Gradient)

@@ -18,6 +18,7 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.tracing import tracing
+from pybamm.util import _is_flux_boundary_condition
 
 SUPPORTED_SCHEMA_VERSION = "1.1"
 
@@ -516,7 +517,9 @@ class Serialise:
                     {
                         side: [
                             convert_symbol_to_json(expression),
-                            boundary_type,
+                            ["Flux", convert_symbol_to_json(boundary_type[1])]
+                            if _is_flux_boundary_condition(boundary_type)
+                            else boundary_type,
                         ]
                         for side, (expression, boundary_type) in conditions.items()
                     },
@@ -1526,6 +1529,11 @@ class Serialise:
                 for side, (expression_json, boundary_type) in condition_dict.items():
                     try:
                         expr = _require_symbol(expression_json)
+                        if (
+                            isinstance(boundary_type, list)
+                            and boundary_type[0] == "Flux"
+                        ):
+                            boundary_type = ("Flux", _require_symbol(boundary_type[1]))
                         sides[side] = (expr, boundary_type)
                     except Exception as e:
                         raise ValueError(
