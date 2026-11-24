@@ -294,3 +294,49 @@ class TestDFNWithSizeDistribution:
             model, parameter_values=parameter_values, var_pts=self.var_pts
         )
         modeltest.test_all(skip_output_tests=True)
+
+    @pytest.mark.parametrize(
+        ("particle_size", "porosity_options"),
+        [
+            (("single", "distribution"), {"SEI porosity change": "true"}),
+            (("single", "distribution"), {"lithium plating porosity change": "true"}),
+            (
+                ("distribution", "single"),
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+            (
+                "distribution",
+                {
+                    "SEI porosity change": "true",
+                    "lithium plating porosity change": "true",
+                },
+            ),
+        ],
+    )
+    def test_reaction_driven_porosity(self, particle_size, porosity_options):
+        options = {
+            "particle size": particle_size,
+            "SEI": "solvent-diffusion limited",
+            "lithium plating": "irreversible",
+            **porosity_options,
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        parameter_values = pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("OKane2022")
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, var_pts=self.var_pts
+        )
+        solution = sim.solve([0, 3600])
+
+        t = solution.t
+        eps_n = solution["X-averaged negative electrode porosity"](t)
+        assert np.all(eps_n[1:] < parameter_values["Negative electrode porosity"])
+        np.testing.assert_allclose(
+            solution["X-averaged positive electrode porosity"](t),
+            parameter_values["Positive electrode porosity"],
+            rtol=1e-12,
+        )
