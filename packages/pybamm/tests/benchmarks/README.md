@@ -95,13 +95,11 @@ used up, both CI's pushes and the runner's pulls fail with a 429. To fit it:
 
 - The image installs only pybamm's runtime dependencies and the `bench` group, with
   zstd-compressed layers (about 200 MiB).
-- pybamm's source is the last layer. CI builds with `SOURCE_DATE_EPOCH` and
-  `rewrite-timestamp=true`, and the `apt` step deletes its logs, so a layer rebuilt
-  from the same inputs is byte-identical to the one in the registry even after the
-  Actions cache has evicted it. A commit that leaves `uv.lock` and the solver alone
-  uploads about 3 MiB.
-- Only PRs into `main` run on Bencher. A stacked PR runs on its first push after it is
-  retargeted to `main`.
+- PyBaMM's source and wheel are in the final layers. CI normalizes file times with
+  `SOURCE_DATE_EPOCH` and `rewrite-timestamp=true`. The Dockerfile also removes apt
+  logs and skips timestamped metadata when installing local wheels. These steps help
+  cold builds reuse layers already in the registry.
+- Only PRs into `main` run on Bencher. Retargeting a PR to `main` triggers benchmarks.
 - A tracking run skips a commit that a newer push, or closing the PR, has superseded.
 
 Add new benchmark-only dependencies to the `bench` group, not `dev`, or the image can't

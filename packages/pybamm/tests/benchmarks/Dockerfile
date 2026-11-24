@@ -64,11 +64,11 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     uv venv "$VIRTUAL_ENV" \
     && uv pip install --no-deps --requirement /tmp/requirements.txt
 
-# Install the in-repo solver wheel staged by the inputs stage, if CI built one
+# Local wheel installer metadata embeds timestamps that change layer digests.
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     --mount=type=bind,from=inputs,source=/inputs/wheel,target=/tmp/wheel \
     for wheel in /tmp/wheel/*.whl; do \
-      if [ -e "$wheel" ]; then uv pip install --no-deps "$wheel"; fi; \
+      if [ -e "$wheel" ]; then uv pip install --no-installer-metadata --no-deps "$wheel"; fi; \
     done
 
 COPY packages/pybamm /pybamm/packages/pybamm
@@ -78,9 +78,9 @@ WORKDIR /pybamm/packages/pybamm
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     --mount=type=bind,from=inputs,source=/inputs/pybamm,target=/tmp/pybamm \
     if python -c "import importlib.metadata as m; m.version('pybammsolvers')" 2>/dev/null; then \
-      uv pip install --no-deps /tmp/pybamm/*.whl && uv pip check; \
+      uv pip install --no-installer-metadata --no-deps /tmp/pybamm/*.whl && uv pip check; \
     else \
-      uv pip install /tmp/pybamm/*.whl; \
+      uv pip install --no-installer-metadata /tmp/pybamm/*.whl; \
     fi
 
 WORKDIR /pybamm/packages/pybamm/tests/benchmarks
