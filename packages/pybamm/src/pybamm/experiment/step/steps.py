@@ -502,25 +502,28 @@ class CustomStepImplicit(BaseStepImplicit):
 class ControlStep(BaseStep):
     """
     Step that sets model parameters (its controls) to values (explicit), or adjusts
-    them so that residuals are zero (implicit). Other controls keep their parameter
-    values, but on battery models an undriven current is zero.
-    ``"Ambient temperature [K]"`` cannot be a control; use ``temperature``.
+    them so that residuals are zero (implicit). Controls that the step does not
+    drive keep their parameter values, except that on battery models the current is
+    zero (the step rests) unless the step drives ``"Current function [A]"``.
 
-    Values and targets can be a number, a 2-column array of times and values, or a
-    function of the time since the start of the step. Steps that differ only in
-    numeric values and targets share one branch of the unified experiment model.
-    Residual functions are compared by identity, so reuse one function across steps.
-
-    Subclasses can override :meth:`control_residuals` to define their own control laws.
+    Steps that differ only in numeric values and targets share one branch of the
+    unified experiment model. Subclasses can override :meth:`control_residuals` to
+    define their own control laws.
 
     Parameters
     ----------
     explicit : dict, optional
-        Maps the name of each control that the step sets to its value.
+        Maps the name of each control that the step sets to its value: a number, a
+        2-column array of times and values (as a drive cycle), or a function of the
+        time since the start of the step. ``"Ambient temperature [K]"`` cannot be a
+        control; set it with ``temperature`` instead.
     implicit : dict, optional
         Maps the name of each control that the step adjusts to its residual: either a
         function of the model variables, or a tuple ``(function, target)`` in which
-        ``function`` takes the variables and the target.
+        ``function`` takes the variables and the target, which can be any value that
+        ``explicit`` takes. Residual functions are compared by identity, so for steps
+        to share a branch, define each function once and reuse it rather than
+        creating a new ``lambda`` for every step.
     **kwargs
         Any other keyword arguments are passed to :class:`pybamm.step.BaseStep`.
 
