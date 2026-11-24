@@ -2274,7 +2274,7 @@ class BaseModel:
         >>> isinstance(param_dict, dict)
         True
         >>> model.to_json("model.json")  # Save and return dict
-        {'schema_version': '1.1', ...}
+        {'schema_version': '2.0', ...}
         """
         model_json = Serialise.serialise_custom_model(self, compress=compress)
         if filename is not None:

@@ -62,6 +62,37 @@ A few non-class values the kernel encodes itself use reserved ``"$type"`` tags:
    * - a class itself (not an instance)
      - ``{"$type": "type", "class": "module.ClassName"}``
 
+Symbolic model files
+--------------------
+
+A symbolic model (``BaseModel.to_json``, ``BaseModel.to_config``,
+``Serialise.save_custom_model``) shares most of its expressions between
+equations and variables, so each unique expression is written once. The model
+document carries three extra top-level tables, and every expression in the
+model is a reference into them:
+
+.. code-block:: json
+
+    {
+      "schema_version": "2.0",
+      "model": {
+        "rhs": [[{"$ref": 4}, {"$ref": 8}]],
+        "variables": {"Current [A]": {"$ref": 7}}
+      },
+      "types": ["pybamm.expression_tree.scalar.Scalar"],
+      "domains": [{"primary": [], "secondary": [], "tertiary": [], "quaternary": []}],
+      "nodes": [{"name": "1.0", "value": 1.0, "$type": 0}]
+    }
+
+``{"$ref": i}`` is entry ``i`` of ``nodes``. A node has the same fields as the
+nested form above, except that its ``children`` are references to earlier
+entries, and its ``"$type"`` and ``"domains"`` are indices into the ``types``
+and ``domains`` tables. On load each node is built once, so expressions that
+were shared when the model was saved are shared again.
+
+Model files written before schema version ``2.0`` nest every expression in
+place. They still load; saving the loaded model writes the current format.
+
 Legacy formats (read-only)
 --------------------------
 
