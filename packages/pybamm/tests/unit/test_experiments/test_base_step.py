@@ -171,6 +171,7 @@ def test_parse_termination_requires_operator_for_input_parameter():
         (pybamm.step.power(1), "Voltage [V]"),
         (pybamm.step.resistance(1), "Voltage [V]"),
         (pybamm.step.voltage(4.1), "Current [A]"),
+        (pybamm.step.control({"Heating power [W]": 1}, duration=1), None),
     ],
 )
 def test_upsampling_variable(step, variable):

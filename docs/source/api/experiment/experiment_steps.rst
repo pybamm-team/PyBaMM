@@ -30,6 +30,18 @@ Custom steps can be defined using either explicit or implicit control:
 .. autoclass:: pybamm.step.CustomStepImplicit
     :members:
 
+Control steps
+-------------
+
+Battery steps drive the current, through ``"Current function [A]"``. Control steps can
+drive any of a model's parameters so that experiments can run on models that are not
+battery models:
+
+.. autofunction:: pybamm.step.control
+
+.. autoclass:: pybamm.step.ControlStep
+    :members:
+
 Step terminations
 -----------------
 
