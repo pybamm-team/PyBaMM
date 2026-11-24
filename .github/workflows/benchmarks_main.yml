@@ -83,7 +83,7 @@ jobs:
       - name: Build and push benchmark image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         env:
-          SOURCE_DATE_EPOCH: "315532800" # 1980-01-01, the earliest time a zip can hold
+          SOURCE_DATE_EPOCH: "315532800" # 1980-01-01; sets image and file times, not RUN's env
         with:
           context: .
           file: packages/pybamm/tests/benchmarks/Dockerfile

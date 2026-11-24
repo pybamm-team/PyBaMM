@@ -64,7 +64,8 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     uv venv "$VIRTUAL_ENV" \
     && uv pip install --no-deps --requirement /tmp/requirements.txt
 
-# Local wheel installer metadata embeds timestamps that change layer digests.
+# Install the in-repo solver wheel staged by the inputs stage, if CI built one; skip
+# uv's installer metadata, whose timestamp for a local wheel changes the layer
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     --mount=type=bind,from=inputs,source=/inputs/wheel,target=/tmp/wheel \
     for wheel in /tmp/wheel/*.whl; do \

@@ -70,8 +70,8 @@ jobs:
             core.exportVariable("PR_BASE_SHA", event.pull_request.base.sha);
             core.exportVariable("PR_NUMBER", String(event.number));
 
-      # A newer push or a closed PR supersedes this commit, so skip it rather
-      # than spend Bencher's daily registry quota on it
+      # Skip a commit that a newer push, retarget, draft or close has superseded, to save
+      # Bencher's registry quota; the run's own head_sha vets the fork-written PR number
       - name: Check the pull request is still at this commit
         id: current
         if: steps.artifact.outputs.found == 'true'
@@ -82,9 +82,16 @@ jobs:
               owner: context.repo.owner, repo: context.repo.repo,
               pull_number: Number(process.env.PR_NUMBER),
             });
-            const current = pull.state === "open" && pull.head.sha === process.env.PR_HEAD_SHA;
+            const built = context.payload.workflow_run.head_sha;
+            const current = pull.state === "open" && !pull.draft
+              && pull.base.ref === process.env.PR_BASE
+              && pull.head.sha === built && process.env.PR_HEAD_SHA === built;
             if (!current) {
-              core.notice(`Skipped: #${pull.number} is ${pull.state} at ${pull.head.sha}`);
+              const state = pull.draft ? "draft" : pull.state;
+              core.notice(
+                `Skipped ${built} into ${process.env.PR_BASE}: #${pull.number} is ${state} ` +
+                `at ${pull.head.sha} into ${pull.base.ref}`,
+              );
             }
             core.setOutput("current", current);
 
