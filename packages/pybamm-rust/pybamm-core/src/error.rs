@@ -51,7 +51,7 @@ pub enum CoreError {
 
     /// A model expression other than an event read `y_dot`, which only events are given.
     #[error(
-        "the expression reads y_dot (a StateVectorDot), which a compiled model gives only its events"
+        "the expression reads y_dot (a StateVectorDot), which a compiled model gives only to its events"
     )]
     StateDotRead,
 
