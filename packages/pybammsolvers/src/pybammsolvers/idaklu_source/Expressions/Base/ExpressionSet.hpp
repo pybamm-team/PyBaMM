@@ -11,10 +11,9 @@ class ExpressionSet
 {
 public:
 
-  // Compile-time markers, overridden by RustFunctions.
-  static constexpr bool kNativeOutputSensitivities = false;
-  static constexpr bool kNativeBatchedOutputs = false;
-  static constexpr bool kNativeBatchedJacActions = false;
+  // Set by an ExprSet with jac_action_sensitivities, eval_outputs_batch and
+  // project_output_sensitivities, which the solver then calls in place of the Expressions
+  static constexpr bool kNativeKernels = false;
 
   /**
    * @brief Constructor

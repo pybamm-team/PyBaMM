@@ -369,7 +369,7 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
 
   const int ns = p_python_functions->number_of_states;
   bool finite = true;
-  if constexpr (T::kNativeBatchedJacActions) {
+  if constexpr (T::kNativeKernels) {
     // Every (∂F/∂y)s i (t) at once, sharing one primal pass; bitwise the per-i products.
     const sunrealtype *jac_yS =
       p_python_functions->jac_action_sensitivities(t, NV_DATA(yy), yS);
@@ -381,7 +381,7 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
   for (int i = 0; i < np; i++)
   {
     sunrealtype *tmp = p_python_functions->get_tmp_state_vector();
-    if constexpr (!T::kNativeBatchedJacActions) {
+    if constexpr (!T::kNativeKernels) {
       // put (∂F/∂y)s i (t) in tmp
       p_python_functions->jac_action->m_arg[0] = &t;
       p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);

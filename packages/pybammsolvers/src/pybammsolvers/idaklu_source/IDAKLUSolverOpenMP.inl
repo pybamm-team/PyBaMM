@@ -1387,7 +1387,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
   DEBUG("IDAKLUSolver::SetStepOutput");
   // FLAT STORAGE: Write output variables to y[i_save_ * stride + j]
 
-  if constexpr (ExprSet::kNativeBatchedOutputs) {
+  if constexpr (ExprSet::kNativeKernels) {
     // Outputs read only y, so they are staged even when the sensitivities below run per point.
     if (stage_out_t_.empty()) {
       stage_out_first_ = i_save_;
@@ -1411,7 +1411,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
   }
 
   if (sensitivity) {
-    if constexpr (ExprSet::kNativeOutputSensitivities) {
+    if constexpr (ExprSet::kNativeKernels) {
       NativeSetStepOutputSensitivities(tval);
     } else {
       SetStepOutputSensitivities(tval);
@@ -1421,7 +1421,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::FlushOutputBatch() {
-  if constexpr (ExprSet::kNativeBatchedOutputs) {
+  if constexpr (ExprSet::kNativeKernels) {
     const size_t k = stage_out_t_.size();
     if (k == 0) {
       return;

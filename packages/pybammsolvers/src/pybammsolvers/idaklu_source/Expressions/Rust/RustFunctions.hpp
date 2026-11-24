@@ -510,9 +510,7 @@ public:
         return tmp_sparse_jacobian_data.data();
     }
 
-    static constexpr bool kNativeOutputSensitivities = true;
-    static constexpr bool kNativeBatchedOutputs = true;
-    static constexpr bool kNativeBatchedJacActions = true;
+    static constexpr bool kNativeKernels = true;
 
     // J·yS_i for every sensitivity parameter in one call, which shares a single primal pass.
     const sunrealtype* jac_action_sensitivities(
