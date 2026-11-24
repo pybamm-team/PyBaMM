@@ -37,13 +37,24 @@ def _casadi_functions(expr, n_states, input_sizes):
     return functions
 
 
+def jacobian_entries(indptr, indices):
+    """The ``(row, column)`` entries of a CSC pattern."""
+    return {
+        (int(row), column)
+        for column in range(len(indptr) - 1)
+        for row in indices[indptr[column] : indptr[column + 1]]
+    }
+
+
 @pytest.fixture
 def dual_backend_compare():
     """Return a callable asserting the Rust backend matches ``evaluate()`` and CasADi.
 
     The value is checked against both. Unless ``expr`` reads ``y_dot``, the
     jacobian with respect to ``y`` and a jvp are checked against CasADi, and so is
-    the jacobian with respect to the inputs when every input is scalar. Pass
+    the jacobian with respect to the inputs when every input is scalar. The
+    pattern of the jacobian with respect to ``y`` must hold no entry CasADi's
+    lacks. Pass
     ``check_evaluate=False`` where ``evaluate()`` follows a different convention
     from the compiled backends.
     """
@@ -112,8 +123,14 @@ def dual_backend_compare():
 
         if "jac_y" in casadi_fns:
             if n_states:
+                jacobian = compiled.jacobian("y")
+                pattern = casadi_fns["jac_y"].sparsity_out(0)
+                extra = jacobian_entries(*jacobian.sparsity()) - jacobian_entries(
+                    pattern.colind(), pattern.row()
+                )
+                assert not extra, f"df/dy entries CasADi's pattern lacks: {extra}"
                 np.testing.assert_allclose(
-                    compiled.jacobian("y")(t, y, p).toarray(),
+                    jacobian(t, y, p).toarray(),
                     np.asarray(casadi_fns["jac_y"](t, y, p_stacked)),
                     rtol=rtol,
                     atol=atol,
