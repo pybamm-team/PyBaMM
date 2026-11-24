@@ -391,6 +391,12 @@ class Simulation(BaseSimulation):
                     f"Step '{step_name}' does not drive '{control}', which has no "
                     "value in the parameter values."
                 )
+            if default(control).size_for_testing != 1:
+                raise pybamm.ModelError(
+                    f"Step '{step_name}' does not drive '{control}', whose parameter "
+                    "value is not a scalar, so the unified experiment model cannot "
+                    "hold it. Drive it in every step, or use the legacy mode."
+                )
             return default(control)
 
         def hold_residual(control, step_name):
