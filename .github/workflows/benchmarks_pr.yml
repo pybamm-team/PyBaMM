@@ -29,12 +29,15 @@ jobs:
     permissions:
       pull-requests: read
       contents: read
+    env:
+      STYLE_PREFLIGHT: ${{ github.base_ref != github.event.repository.default_branch }}
     outputs:
       benchmark: ${{ steps.filter.outputs.benchmark }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: ${{ env.STYLE_PREFLIGHT == 'true' && 2 || 1 }}
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -53,6 +56,13 @@ jobs:
               - '.dockerignore'
               - '.github/workflows/benchmarks_pr.yml'
               - '.github/workflows/benchmarks_track.yml'
+
+      # Run the shared check here to keep the benchmark artifact handoff independent.
+      - name: Check style before starting benchmarks
+        if: env.STYLE_PREFLIGHT == 'true' && steps.filter.outputs.benchmark == 'true'
+        uses: $/.github/actions/check-style
+        with:
+          preflight: "true"
 
   build_solver:
     needs: changes

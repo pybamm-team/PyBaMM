@@ -492,7 +492,9 @@ uv.lock
 
 Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub Actions](https://github.com/features/actions).
 
-Tests are run for different operating systems, and for all Python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
+Pull requests are tested on Linux: the unit tests run on the oldest and newest Python versions supported by PyBaMM, and the other test sessions on Python 3.13. A pull request that changes platform-sensitive code is also tested on Windows, macOS and Linux ARM; these runs are advisory and do not block a merge. Unless a pull request changes the example notebooks or `noxfile.py`, only a few getting-started notebooks are run. On a draft pull request, or one that targets a branch other than `main`, the style checks run first and the tests start only if they pass. A scheduled workflow tests every supported operating system and Python version each night.
+
+If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 
 Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmark results are compared to the results available for the latest commit on the `main` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
 
