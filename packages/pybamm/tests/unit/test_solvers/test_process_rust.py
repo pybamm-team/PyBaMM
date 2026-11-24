@@ -407,7 +407,7 @@ class TestProcessRustParity:
 
         _model, vars_, _ = pair[fmt]
         expression = pybamm.StateVector(slice(0, 1)).diff(pybamm.t) + 1
-        with pytest.raises(ValueError, match=r"Must provide a 'y_dot'"):
+        with pytest.raises(pybamm.ModelError, match=r"Must provide a 'y_dot'"):
             process(expression, "event_0", vars_, use_jacobian=False)
 
     def test_rectangular_group_jacobian_matches_casadi(self, pair):

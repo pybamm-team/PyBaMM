@@ -20,11 +20,11 @@ def reject_y_dot(function: CompiledFunction) -> None:
 
     Raises
     ------
-    ValueError
+    :class:`pybamm.ModelError`
         If ``function`` reads ``y_dot``, as the CasADi conversion does without it.
     """
     if function.uses_y_dot:
-        raise ValueError(
+        raise pybamm.ModelError(
             "Must provide a 'y_dot' for converting state vectors differentiated "
             "in time, e.g. by `symbol.diff(pybamm.t)`"
         )
