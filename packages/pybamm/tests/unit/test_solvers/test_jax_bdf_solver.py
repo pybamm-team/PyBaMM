@@ -147,6 +147,36 @@ class TestJaxBDFSolver:
 
         assert grad_bdf == pytest.approx(grad_num, abs=0.001)
 
+    def test_solver_does_not_read_uninitialised_memory(self, monkeypatch):
+        # from JAX 0.11 jnp.empty is uninitialised on GPU and TPU, but zeroed on CPU
+        def nan_filled(shape, dtype=None, **kwargs):
+            return jax.numpy.full(shape, np.nan, dtype=dtype)
+
+        def nan_filled_like(a, dtype=None, **kwargs):
+            return jax.numpy.full_like(a, np.nan, dtype=dtype)
+
+        monkeypatch.setattr(jax.numpy, "empty", nan_filled)
+        monkeypatch.setattr(jax.numpy, "empty_like", nan_filled_like)
+
+        def fun(y, t):
+            return jax.numpy.stack([0.1 * y[0], y[1] - 2.0 * y[0]])
+
+        mass = jax.numpy.array([[2.0, 0.0], [0.0, 0.0]])
+        y0 = jax.numpy.array([1.0, 1.5])
+        t_eval = np.linspace(0.0, 1.0, 10)
+
+        # a solve that reads the NaN may never return, so check the initial state first
+        bdf = pybamm.solvers.jax_bdf_solver
+        state = bdf._bdf_init(fun, jax.jacfwd(fun), mass, 0.0, y0, 0.1, 1e-8, 1e-8)
+        assert np.isfinite(state.D).all()
+        assert np.isfinite(state.U).all()
+
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, mass=mass, rtol=1e-8, atol=1e-8)
+
+        soln = np.exp(0.05 * t_eval)
+        np.testing.assert_allclose(y[:, 0], soln, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(y[:, 1], 2.0 * soln, rtol=1e-6, atol=1e-6)
+
     def test_solver_with_inputs(self):
         # Create model
         model = pybamm.BaseModel()

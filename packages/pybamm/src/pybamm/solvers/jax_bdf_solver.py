@@ -217,7 +217,7 @@ if pybamm.has_jax():
         h = _select_initial_step(atol, rtol, fun, t0, y0, f0, h0)
 
         # Initialise the difference matrix, D
-        D = jnp.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
+        D = jnp.zeros((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
         D = D.at[jnp.index_exp[0, :]].set(y0)
         D = D.at[jnp.index_exp[1, :]].set(f0 * h)
 
@@ -280,7 +280,7 @@ if pybamm.has_jax():
         """
         I = jnp.arange(1, MAX_ORDER + 1).reshape(-1, 1)
         J = jnp.arange(1, MAX_ORDER + 1)
-        M = jnp.empty((MAX_ORDER + 1, MAX_ORDER + 1))
+        M = jnp.zeros((MAX_ORDER + 1, MAX_ORDER + 1))
         M = M.at[jnp.index_exp[1:, 1:]].set((I - 1 - factor * J) / I)
         M = M.at[jnp.index_exp[0]].set(1)
         R = jnp.cumprod(M, axis=0)
