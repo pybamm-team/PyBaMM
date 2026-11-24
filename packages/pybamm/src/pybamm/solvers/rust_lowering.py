@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING
 import pybamm
 
 if TYPE_CHECKING:
-    from pybamm.rust import CompiledFunction
+    from collections.abc import Iterable
+
+    from pybamm.rust import CompiledFunction, ExprGraph
 
 
 def rust_input_parameter_widths(model: pybamm.BaseModel) -> dict[str, int]:
@@ -30,10 +32,24 @@ def reject_y_dot(function: CompiledFunction) -> None:
         )
 
 
-def rust_graph_with_inputs(model: pybamm.BaseModel, input_names):
+def rust_graph_with_inputs(
+    model: pybamm.BaseModel, input_names: Iterable[str]
+) -> ExprGraph:
     """Build an ``ExprGraph`` with ``input_names`` registered in stacking order.
 
     Registration precedes any lowering so graph input indices match that order.
+
+    Parameters
+    ----------
+    model : :class:`pybamm.BaseModel`
+        The discretised model whose input parameter widths are registered.
+    input_names : iterable of str
+        Input parameter names, in the order the inputs are stacked.
+
+    Returns
+    -------
+    :class:`pybamm.rust.ExprGraph`
+        A graph with each input registered at its packed width.
     """
     from pybamm.rust import ExprGraph
 
