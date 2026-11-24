@@ -203,8 +203,12 @@ class Serialise:
             "_solution_observable": model._solution_observable.name,
         }
 
-        if getattr(model.options, "legacy", False):
-            model_json["legacy_options"] = True
+        if isinstance(model, pybamm.BaseBatteryModel):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                saved_options_format,
+            )
+
+            model_json["options_format"] = saved_options_format(model.options)
         if mesh:
             model_json["mesh"] = encode(mesh)
 
@@ -310,7 +314,7 @@ class Serialise:
         recon_model_dict = {
             "name": model_data["name"],
             "pybamm_version": model_data.get("pybamm_version"),
-            "legacy_options": model_data.get("legacy_options", False),
+            "options_format": model_data.get("options_format"),
             "options": self._convert_options(model_data["options"]),
             "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
             "concatenated_rhs": self._decode_model_node(model_data["concatenated_rhs"]),
@@ -551,8 +555,12 @@ class Serialise:
         discretisation = Serialise._serialise_discretisation(model)
         if discretisation:
             model_content["discretisation"] = discretisation
-        if getattr(model_content["options"], "legacy", False):
-            model_content["legacy_options"] = True
+        if isinstance(model, pybamm.BaseBatteryModel):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                saved_options_format,
+            )
+
+            model_content["options_format"] = saved_options_format(model.options)
 
         SCHEMA_VERSION = "1.1"
         model_json = {
@@ -1480,7 +1488,7 @@ class Serialise:
                 opts = restore_saved_options(
                     opts,
                     data.get("pybamm_version"),
-                    model_data.get("legacy_options", False),
+                    model_data.get("options_format"),
                 )
             model.options = opts
 

@@ -627,8 +627,25 @@ UNVERSIONED_CONFIG_OPTIONS = frozenset(
 )
 
 
+def saved_options_format(options: Mapping) -> str:
+    """Return the ``"options_format"`` marker to save alongside a model's options.
+
+    Parameters
+    ----------
+    options : dict
+        The model's options.
+
+    Returns
+    -------
+    str
+        ``"legacy"`` for :class:`LegacyOptions`-derived options, otherwise
+        ``"per-electrode"``.
+    """
+    return "legacy" if getattr(options, "legacy", False) else "per-electrode"
+
+
 def restore_saved_options(
-    options: dict, version: str | None, legacy: bool = False
+    options: dict, version: str | None, options_format: str | None = None
 ) -> dict:
     """Mark options loaded from a file with the rules they were saved under.
 
@@ -638,20 +655,23 @@ def restore_saved_options(
         The saved options.
     version : str or None
         The PyBaMM version that saved them, or None if it was not recorded.
-    legacy : bool, optional
-        Whether the options were saved as legacy options. Default is False.
+    options_format : str, optional
+        The saved ``"options_format"`` marker, ``"legacy"`` or ``"per-electrode"``,
+        or None for files saved without one.
 
     Returns
     -------
     dict
-        ``options`` as a :class:`LegacyOptions` if ``legacy`` is True or
-        ``version`` is unknown or predates per-electrode option checks,
-        otherwise ``options`` unchanged.
+        ``options`` as a :class:`LegacyOptions` if they were saved as legacy
+        options, or have no marker and ``version`` is unknown or predates
+        per-electrode option checks; otherwise ``options`` unchanged.
     """
+    if options_format == "per-electrode":
+        return options
     # the leading YY.MM, so pre-releases such as "26.11rc0" count as their release
     match = re.match(r"(\d+)\.(\d+)", str(version))
     release = (int(match[1]), int(match[2])) if match else ()
-    if legacy or release < _PER_ELECTRODE_OPTIONS_RELEASE:
+    if options_format == "legacy" or release < _PER_ELECTRODE_OPTIONS_RELEASE:
         return LegacyOptions(options)
     return options
 

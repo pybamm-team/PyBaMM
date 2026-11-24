@@ -563,6 +563,7 @@ class TestSavedOptionsVersion:
     def test_from_json_loads_legacy_options(self, version):
         data = pybamm.lithium_ion.SPM(self.OPTIONS, build=False).to_json()
         data["model"]["options"] = self._as_saved(data["model"]["options"])
+        del data["model"]["options_format"]
         data["pybamm_version"] = version
         loaded = pybamm.BaseModel.from_json(data)
         assert loaded.options.positive["stress-induced diffusion"] == "true"
@@ -571,6 +572,7 @@ class TestSavedOptionsVersion:
     def test_from_json_checks_options_saved_with_per_electrode_checks(self):
         data = pybamm.lithium_ion.SPM(self.OPTIONS, build=False).to_json()
         data["model"]["options"] = self._as_saved(data["model"]["options"])
+        del data["model"]["options_format"]
         data["pybamm_version"] = "26.11.0.0"
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_json(data)
@@ -578,12 +580,13 @@ class TestSavedOptionsVersion:
     def test_legacy_options_survive_resave(self, monkeypatch, tmp_path):
         config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
         config["options"] = self._as_saved(config["options"])
+        del config["options_format"]
         config["pybamm_version"] = "26.10"
         monkeypatch.setattr(pybamm, "__version__", "26.11.0")
         model = pybamm.BaseModel.from_config(config)
 
         resaved = json.loads(json.dumps(model.to_config()))
-        assert resaved["legacy_options"] is True
+        assert resaved["options_format"] == "legacy"
         loaded = pybamm.BaseModel.from_config(resaved)
         assert loaded.options.positive["stress-induced diffusion"] == "true"
 
@@ -591,10 +594,28 @@ class TestSavedOptionsVersion:
         loaded = pybamm.BaseModel.from_json(tmp_path / "model.json")
         assert loaded.options.positive["stress-induced diffusion"] == "true"
 
-    def test_current_options_not_marked_legacy(self):
+    def test_current_options_marked_per_electrode(self):
         model = pybamm.lithium_ion.SPM(self.OPTIONS)
-        assert "legacy_options" not in model.to_config()
-        assert "legacy_options" not in model.to_json()["model"]
+        assert model.to_config()["options_format"] == "per-electrode"
+        assert model.to_json()["model"]["options_format"] == "per-electrode"
+
+    def test_marker_overrides_dev_version(self, monkeypatch):
+        # dev builds report the previous release until the next one is tagged
+        monkeypatch.setattr(pybamm, "__version__", "26.10.1.1.dev159")
+        model = pybamm.lithium_ion.DFN(
+            {
+                "particle phases": ("2", "1"),
+                "particle mechanics": (("swelling only", "none"), "none"),
+            },
+        )
+        expected = (("true", "false"), "false")
+        assert model.options["stress-induced diffusion"] == expected
+        for loaded in [
+            pybamm.BaseModel.from_json(model.to_json()),
+            pybamm.BaseModel.from_config(model.to_config()),
+        ]:
+            assert not loaded.options.legacy
+            assert loaded.options["stress-induced diffusion"] == expected
 
     def test_to_config_records_version(self):
         config = pybamm.lithium_ion.SPM().to_config()
@@ -604,6 +625,7 @@ class TestSavedOptionsVersion:
     def test_from_config_loads_legacy_options(self, version):
         config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
         config["options"] = self._as_saved(config["options"])
+        del config["options_format"]
         if version is None:
             del config["pybamm_version"]
         else:
@@ -614,6 +636,7 @@ class TestSavedOptionsVersion:
     def test_from_config_checks_options_saved_with_per_electrode_checks(self):
         config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
         config["options"] = self._as_saved(config["options"])
+        del config["options_format"]
         config["pybamm_version"] = "26.11.0.0"
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_config(config)
@@ -624,7 +647,7 @@ class TestSavedOptionsVersion:
         )
 
         config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
-        del config["pybamm_version"]
+        del config["pybamm_version"], config["options_format"]
         config["options"] = {
             key: value
             for key, value in self._as_saved(config["options"]).items()
