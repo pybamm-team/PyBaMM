@@ -21,6 +21,8 @@ class CoupledVariable(pybamm.Symbol):
 
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         name: str,
@@ -33,8 +35,43 @@ class CoupledVariable(pybamm.Symbol):
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return pybamm.evaluate_for_shape_using_domain(self.domains)
+        return pybamm.evaluate_for_shape_using_domain(self._domains)
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """Creates a new copy of the coupled variable."""
-        return CoupledVariable(self.name, self.domain)
+        return type(self)(self.name, self._domains["primary"])
+
+    def _diff(self, variable):
+        # Only reached for time: resolved, like this variable, from model.variables
+        return CoupledVariableDot(self.name + "'", self._domains["primary"])
+
+
+class CoupledVariableDot(CoupledVariable):
+    """
+    A node in the expression tree representing the time derivative of a
+    :class:`CoupledVariable`, resolved as the time derivative of the variable it
+    couples to.
+
+    Parameters
+    ----------
+    name : str
+        Name of the coupled variable, followed by a prime (``'``).
+    domain : iterable of str, optional
+        List of domains that this coupled variable is valid over.
+
+    """
+
+    __slots__ = ()
+
+    def get_coupled_variable(self) -> CoupledVariable:
+        """Returns the :class:`CoupledVariable` this is the time derivative of."""
+        return CoupledVariable(self.name[:-1], self._domains["primary"])
+
+    def _diff(self, variable):
+        raise pybamm.ModelError(
+            "cannot take second time derivative of a CoupledVariable"
+        )

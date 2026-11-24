@@ -205,6 +205,8 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
   }
   else if (p_python_functions->setup_opts.using_sparse_matrix)
   {
+    // Re-copied every call: the KLU linear solver resets the matrix index
+    // arrays during setup, so a one-time copy in Initialize does not survive
     if (SUNSparseMatrix_SparseType(JJ) == CSC_MAT)
     {
       sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
@@ -214,8 +216,7 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
       auto p_jac_times_cjmass_rowvals =
           p_python_functions->jac_times_cjmass_rowvals.data();
 
-      // just copy across row vals (do I need to do this every time?)
-      // (or just in the setup?)
+      // just copy across row vals
       for (int i = 0; i < n_row_vals; i++)
       {
         jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
@@ -225,7 +226,7 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
       auto p_jac_times_cjmass_colptrs =
           p_python_functions->jac_times_cjmass_colptrs.data();
 
-      // just copy across col ptrs (do I need to do this every time?)
+      // just copy across col ptrs
       for (int i = 0; i < n_col_ptrs; i++)
       {
         jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
@@ -264,13 +265,40 @@ int events_eval(sunrealtype t, N_Vector yy, N_Vector yp, sunrealtype *events_ptr
   DEBUG("events_eval");
   auto *p_python_functions = static_cast<T*>(user_data);
 
-  // args are t, y, put result in events_ptr
+  // args are t, y, inputs and, if read, yp (CasADi takes a null input as zero),
+  // put result in events_ptr
   p_python_functions->events->m_arg[0] = &t;
   p_python_functions->events->m_arg[1] = NV_DATA(yy);
   p_python_functions->events->m_arg[2] = p_python_functions->inputs.data();
+  if (!p_python_functions->events_read_yp.empty()) {
+    p_python_functions->events->m_arg[3] = NV_DATA(yp);
+  }
   p_python_functions->events->m_res[0] = events_ptr;
   (*p_python_functions->events)();
 
+  return (0);
+}
+
+template<class T>
+int events_with_derivatives_eval(sunrealtype t, N_Vector yy, N_Vector yp,
+                                   sunrealtype *events_ptr, void *user_data)
+{
+  DEBUG("events_with_derivatives_eval");
+  auto *p_python_functions = static_cast<T*>(user_data);
+  events_eval<T>(t, yy, yp, events_ptr, user_data);
+
+  // IDA checks events at a (re)initialization with yp from before its first
+  // step, unset for algebraic states: zeros make IDA skip those reading it
+  long int number_of_steps = 0;
+  IDAGetNumSteps(p_python_functions->ida_mem, &number_of_steps);
+  if (number_of_steps == 0) {
+    const auto &reads_yp = p_python_functions->events_read_yp;
+    for (size_t i = 0; i < reads_yp.size(); i++) {
+      if (reads_yp[i]) {
+        events_ptr[i] = 0.0;
+      }
+    }
+  }
   return (0);
 }
 
@@ -318,6 +346,8 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
   // resvalsS now has (∂F/∂p i )
   (*p_python_functions->sens)();
 
+  const int ns = p_python_functions->number_of_states;
+  bool finite = true;
   for (int i = 0; i < np; i++)
   {
     // put (∂F/∂y)s i (t) in tmp
@@ -329,7 +359,6 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
     p_python_functions->jac_action->m_res[0] = tmp;
     (*p_python_functions->jac_action)();
 
-    const int ns = p_python_functions->number_of_states;
     axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
 
     // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
@@ -340,7 +369,12 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
     // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i )
     // AXPY: y <- a*x + y
     axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
+
+    if (p_python_functions->reject_nonfinite_sensitivities) {
+      finite &= all_finite(ns, NV_DATA(resvalS[i]));
+    }
   }
 
-  return 0;
+  // Recoverable, as in residual_eval: IDAS cuts the step
+  return finite ? 0 : 1;
 }

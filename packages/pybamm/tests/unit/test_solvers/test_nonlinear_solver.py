@@ -1,5 +1,6 @@
 """Tests for pybamm.NonlinearSolver (C++ Newton algebraic solver wrapper)."""
 
+import logging
 import pickle
 
 import numpy as np
@@ -31,6 +32,16 @@ class TestNonlinearSolver:
         solver.step_tol = 1e-6
         assert solver.step_tol == 1e-6
 
+    def test_an_unknown_option_is_rejected(self):
+        with pytest.raises(
+            pybamm.SolverError, match=r"Unknown Nonlinear solver option\(s\): compiel"
+        ):
+            pybamm.NonlinearSolver(options={"compiel": True})
+        assert pybamm.NonlinearSolver(options={"compile": True})._options == {
+            "compile": True,
+            "klu_pivot_tolerance": 0.1,
+        }
+
     def test_simple_root_find(self):
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
@@ -42,7 +53,7 @@ class TestNonlinearSolver:
 
         solver = pybamm.NonlinearSolver()
         solution = solver.solve(model, np.linspace(0, 1, 10))
-        np.testing.assert_array_almost_equal(solution.y, -2, decimal=8)
+        np.testing.assert_array_almost_equal(solution.all_ys[0], -2, decimal=8)
 
     def test_solve_with_input(self):
         var = pybamm.Variable("var")
@@ -59,7 +70,7 @@ class TestNonlinearSolver:
             np.linspace(0, 1, 10),
             inputs={"param": 7},
         )
-        np.testing.assert_array_almost_equal(solution.y, -7, decimal=8)
+        np.testing.assert_array_almost_equal(solution.all_ys[0], -7, decimal=8)
 
     def test_model_solver_with_time(self):
         model = pybamm.BaseModel()
@@ -77,7 +88,7 @@ class TestNonlinearSolver:
         solution = solver.solve(model, t_eval)
 
         sol = np.vstack((3 * t_eval, 6 * t_eval))
-        np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0], sol, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(
             solution["var1"].data.flatten(),
             sol[0, :],
@@ -107,7 +118,7 @@ class TestNonlinearSolver:
         solution = solver.solve(model, t_eval)
 
         sol = np.vstack((3 + 0 * t_eval, 6 + 0 * t_eval))
-        np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0], sol, rtol=1e-7, atol=1e-6)
 
     def test_solver_caching(self):
         var = pybamm.Variable("var")
@@ -137,7 +148,7 @@ class TestNonlinearSolver:
 
         solver = pybamm.NonlinearSolver()
         sol_pre = solver.solve(model, [0])
-        np.testing.assert_array_almost_equal(sol_pre.y, -3, decimal=8)
+        np.testing.assert_array_almost_equal(sol_pre.all_ys[0], -3, decimal=8)
         # Sanity: live C++ solver was built and attached to the model.
         assert model.algebraic_root_solver
 
@@ -150,7 +161,7 @@ class TestNonlinearSolver:
         assert not restored_model.algebraic_root_solver
 
         sol_post = restored_solver.solve(restored_model, [0])
-        np.testing.assert_array_almost_equal(sol_post.y, -3, decimal=8)
+        np.testing.assert_array_almost_equal(sol_post.all_ys[0], -3, decimal=8)
         assert restored_model.algebraic_root_solver
 
     def test_sparse_and_dense_modes(self):
@@ -170,7 +181,29 @@ class TestNonlinearSolver:
         sol_s = pybamm.NonlinearSolver(use_sparse=True).solve(model_sparse, t_eval)
         sol_d = pybamm.NonlinearSolver(use_sparse=False).solve(model_dense, t_eval)
 
-        np.testing.assert_allclose(sol_s.y, sol_d.y, atol=1e-10)
+        np.testing.assert_allclose(sol_s.all_ys[0], sol_d.all_ys[0], atol=1e-10)
+
+    def test_klu_pivot_tolerance(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var**3 - 8}
+        model.initial_conditions = {var: 1}
+        pybamm.Discretisation().process_model(model)
+
+        t_eval = np.linspace(0, 1, 5)
+        solutions = [
+            pybamm.NonlinearSolver(options={"klu_pivot_tolerance": value}).solve(
+                model, t_eval
+            )
+            for value in [0.001, 1.0]
+        ]
+        np.testing.assert_allclose(solutions[0].all_ys[0], 2, rtol=1e-6)
+        np.testing.assert_allclose(
+            solutions[1].all_ys[0], solutions[0].all_ys[0], rtol=1e-10
+        )
+
+        with pytest.raises(pybamm.SolverError, match="klu_pivot_tolerance"):
+            pybamm.NonlinearSolver(options={"klu_pivot_tolerance": 2.0})
 
     def test_matches_casadi_algebraic_solver(self):
         from pybamm.models.full_battery_models.lithium_ion.electrode_soh import (
@@ -202,7 +235,9 @@ class TestNonlinearSolver:
             inputs=inputs,
         )
 
-        np.testing.assert_allclose(sol_newton.y, sol_casadi.y, rtol=1e-3, atol=1e-5)
+        np.testing.assert_allclose(
+            sol_newton.all_ys[0], sol_casadi.all_ys[0], rtol=1e-3, atol=1e-5
+        )
 
     def test_used_in_composite_solver(self):
         model = pybamm.BaseModel()
@@ -221,7 +256,7 @@ class TestNonlinearSolver:
             ]
         )
         solution = composite.solve(model)
-        np.testing.assert_allclose(solution.y, 7, rtol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0], 7, rtol=1e-6)
 
     def test_convergence_failure_raises(self):
         var = pybamm.Variable("var")
@@ -235,3 +270,21 @@ class TestNonlinearSolver:
         solver = pybamm.NonlinearSolver(max_iter=50)
         with pytest.raises(pybamm.SolverError, match="Could not find acceptable"):
             solver.solve(model, [0])
+
+    def test_debug_log_reports_newton_iterations(self, caplog):
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var**3 - 2}
+        model.initial_conditions = {var: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.NonlinearSolver()
+        with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+            solver.solve(model, [0])
+
+        messages = [m.strip() for m in caplog.messages]
+        assert any(m.startswith("Newton solve at t =") for m in messages)
+        assert any(m.startswith("Newton iter") for m in messages)
+        assert any(m.startswith("Newton converged") for m in messages)

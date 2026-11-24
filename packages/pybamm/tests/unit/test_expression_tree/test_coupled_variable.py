@@ -53,8 +53,7 @@ class TestCoupledVariable:
 
         model = combine_models([model_1, model_2])
 
-        # CoupledVariables in rhs require resolve_coupled_variables=True
-        disc = pybamm.Discretisation(resolve_coupled_variables=True)
+        disc = pybamm.Discretisation()
         disc.process_model(model)
 
         solver = pybamm.IDAKLUSolver()
@@ -70,6 +69,46 @@ class TestCoupledVariable:
         a = pybamm.CoupledVariable("a")
         b = a.create_copy()
         assert a == b
+        # Takes the base class's arguments, as tree rebuilds pass them
+        assert a.create_copy(new_children=None, perform_simplifications=False) == a
+
+    def test_diff_time(self):
+        a = pybamm.CoupledVariable("a", domain="negative electrode")
+        a_dot = a.diff(pybamm.t)
+        assert isinstance(a_dot, pybamm.CoupledVariableDot)
+        assert a_dot.name == "a'"
+        assert a_dot.domain == ["negative electrode"]
+        assert a_dot.get_coupled_variable() == a
+        assert a_dot.create_copy() == a_dot
+        assert (2 * a).diff(pybamm.t) == 2 * a_dot
+        assert pybamm.exp(a).diff(pybamm.t) == pybamm.exp(a) * a_dot
+        assert a.diff(pybamm.Variable("b")) == pybamm.Scalar(0)
+        with pytest.raises(pybamm.ModelError, match=r"second time derivative"):
+            a_dot.diff(pybamm.t)
+
+    @pytest.mark.parametrize(
+        ("expression", "threshold"),
+        [
+            (lambda y: y, 0.25),
+            (lambda y: -y.diff(pybamm.t), 0.5),
+            (lambda y: -pybamm.log(y).diff(pybamm.t) * y, 0.5),
+        ],
+        ids=["value", "time_derivative", "function_time_derivative"],
+    )
+    def test_resolved_in_events(self, expression, threshold):
+        # y = -y' = exp(-t) reaches the threshold at t = -ln(threshold)
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -y}
+        model.initial_conditions = {y: pybamm.Scalar(1)}
+        model.variables = {"y": y}
+        coupled = expression(pybamm.CoupledVariable("y"))
+        model.events = [pybamm.Event("Threshold", coupled - threshold)]
+
+        solution = pybamm.Simulation(model).solve([0, 10])
+
+        assert solution.termination == "event: Threshold"
+        np.testing.assert_allclose(solution.t[-1], -np.log(threshold), rtol=1e-3)
 
     def test_setter(self):
         model = pybamm.BaseModel()
@@ -107,18 +146,24 @@ class TestCoupledVariable:
 
     def test_unresolved_coupled_variable_in_rhs_raises_error(self):
         """Test that a CoupledVariable in rhs raises error during discretisation."""
-        model = pybamm.BaseModel()
-        a = pybamm.Variable("a")
-        unresolved = pybamm.CoupledVariable("missing_variable")
 
-        model.rhs = {a: unresolved}  # CoupledVariable in rhs
-        model.initial_conditions = {a: pybamm.Scalar(1)}
-        model.variables = {"a": a}  # "missing_variable" NOT in variables
+        def make_model():
+            model = pybamm.BaseModel()
+            a = pybamm.Variable("a")
+            model.rhs = {a: pybamm.CoupledVariable("missing_variable")}
+            model.initial_conditions = {a: pybamm.Scalar(1)}
+            model.variables = {"a": a}  # "missing_variable" NOT in variables
+            return model
 
-        sim = pybamm.Simulation(model)
+        with pytest.raises(
+            ValueError, match="CoupledVariable 'missing_variable' not found"
+        ):
+            pybamm.Simulation(make_model()).solve([0, 1])
 
-        # Without resolve_coupled_variables=True, CoupledVariable is not resolved
-        # and hits the discretisation error
+        # Without resolving, the CoupledVariable hits the discretisation error
+        sim = pybamm.Simulation(
+            make_model(), discretisation_kwargs={"resolve_coupled_variables": False}
+        )
         with pytest.raises(
             pybamm.DiscretisationError,
             match="CoupledVariable 'missing_variable' was not resolved",
@@ -141,3 +186,97 @@ class TestCoupledVariable:
 
         # Double voltage should be exactly 2x the voltage
         np.testing.assert_allclose(double_voltage, 2 * voltage, rtol=1e-10)
+
+    def test_coupled_variable_in_boundary_condition(self):
+        mesh = pybamm.Mesh(
+            pybamm.Geometry(
+                {
+                    "negative electrode": {
+                        "x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+                    }
+                }
+            ),
+            {"negative electrode": pybamm.Uniform1DSubMesh},
+            {"x_n": 10},
+        )
+        spatial_methods = {"negative electrode": pybamm.FiniteVolume()}
+
+        def make_model(flux):
+            model = pybamm.BaseModel()
+            c = pybamm.Variable("c", domain="negative electrode")
+            model.rhs = {c: pybamm.div(pybamm.grad(c))}
+            model.boundary_conditions = {
+                c: {"left": (pybamm.Scalar(0), "Neumann"), "right": (flux, "Neumann")}
+            }
+            model.initial_conditions = {c: pybamm.Scalar(1)}
+            model.variables = {"Flux": pybamm.Scalar(2), "c": c}
+            return model
+
+        solutions = []
+        for flux in [pybamm.Scalar(2), pybamm.CoupledVariable("Flux")]:
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            model = disc.process_model(make_model(flux), inplace=False)
+            solutions.append(pybamm.IDAKLUSolver().solve(model, [0, 1]))
+
+        np.testing.assert_allclose(
+            solutions[1]["c"](1.0), solutions[0]["c"](1.0), rtol=1e-10
+        )
+
+    def test_resolve_does_not_modify_model_when_not_inplace(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        rhs_a = -pybamm.CoupledVariable("b")
+        model.rhs = {a: rhs_a, b: pybamm.Scalar(1)}
+        model.initial_conditions = {a: pybamm.Scalar(1), b: pybamm.Scalar(0)}
+        model.variables = {"a": a, "b": b}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model, inplace=False)
+
+        assert model.rhs[a] is rhs_a
+        assert not model.is_discretised
+
+    def test_resolve_shares_cache_across_equations(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        model.rhs = {
+            a: pybamm.CoupledVariable("Source"),
+            b: pybamm.CoupledVariable("Source"),
+            c: pybamm.Scalar(1),
+        }
+        model.initial_conditions = {
+            a: pybamm.Scalar(0),
+            b: pybamm.Scalar(0),
+            c: pybamm.Scalar(0),
+        }
+        model.variables = {
+            "Source": pybamm.CoupledVariable("c") + 1,
+            "a": a,
+            "b": b,
+            "c": c,
+        }
+
+        disc = pybamm.Discretisation()
+        resolved = disc._resolve_coupled_variables_in_model(model, inplace=True)
+
+        assert resolved is model
+        assert model.rhs[a] == c + 1
+        # the "Source" target is resolved once and shared between equations
+        assert model.rhs[a] is model.rhs[b]
+
+    def test_resolve_without_coupled_variables_keeps_model(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        rhs_a = -a
+        model.rhs = {a: rhs_a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        disc = pybamm.Discretisation()
+        resolved = disc._resolve_coupled_variables_in_model(model, inplace=False)
+
+        assert resolved is model
+        assert model.rhs[a] is rhs_a

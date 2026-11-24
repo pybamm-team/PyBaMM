@@ -318,10 +318,13 @@ class BasicDFNComposite(BaseModel):
         ######################
         # Electrolyte concentration
         ######################
-        N_e = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
-        self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) + (1 - self.param.t_plus(c_e, T)) * a_j / self.param.F
+        # The migration term t_plus * i_e / F is kept inside the flux so that the
+        # balance is conservative when t_plus depends on c_e (see #5745)
+        N_e = (
+            -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
+            + self.param.t_plus(c_e, T) * i_e / self.param.F
         )
+        self.rhs[c_e] = (1 / eps) * (-pybamm.div(N_e) + a_j / self.param.F)
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),

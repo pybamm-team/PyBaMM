@@ -8,7 +8,6 @@ from typing import Literal
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 
 import pybamm
 from pybamm.type_definitions import Numeric
@@ -28,13 +27,19 @@ class Scalar(pybamm.Symbol):
 
     """
 
+    __slots__ = ("_value",)
+    # scalars with equal values are the same symbol whatever they are called
+    _id_excluded_fields = ("_name",)
+
     def __init__(
         self,
         value: Numeric,
         name: str | None = None,
     ) -> None:
         # set default name if not provided
-        self.value = value
+        self._value = np.float64(
+            value.item() if isinstance(value, np.ndarray) else value
+        )
         if name is None:
             name = str(self.value)
 
@@ -56,17 +61,18 @@ class Scalar(pybamm.Symbol):
     # address numpy 1.25 deprecation warning: array should have ndim=0 before conversion
     @value.setter
     def value(self, value):
-        self._value = (
-            np.float64(value.item())
-            if isinstance(value, np.ndarray)
-            else np.float64(value)
+        pybamm.expression_tree.symbol._warn_mutation(
+            "value", "Construct a new Scalar(value)."
         )
-
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
-        # We must include the value in the hash, since different scalars can be
-        # indistinguishable by class and name alone
-        self._id = hash((self.__class__, str(self.value)))
+        object.__setattr__(
+            self,
+            "_value",
+            (
+                np.float64(value.item())
+                if isinstance(value, np.ndarray)
+                else np.float64(value)
+            ),
+        )
 
     def _base_evaluate(
         self,
@@ -81,6 +87,11 @@ class Scalar(pybamm.Symbol):
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        return graph.scalar(float(self.value))
 
     def _jac(self, variable: pybamm.Variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
@@ -99,12 +110,14 @@ class Scalar(pybamm.Symbol):
                 f"Cannot create a copy of a scalar with new children: {new_children}"
             )
 
-    def is_constant(self) -> Literal[True]:
+    def is_constant(self) -> bool:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -146,10 +159,12 @@ class Constant(Scalar):
         the name of the node
     """
 
+    __slots__ = ()
+
     def __init__(self, value: Numeric, name: str):
         super().__init__(value, name)
 
-    def is_constant(self) -> Literal[True]:
+    def is_constant(self) -> Literal[False]:
         """
         The value is constant, but setting this to False makes sure we retain named constants
         in the expression tree. For example, `pybamm.constants.R + 2` should not be

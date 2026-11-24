@@ -9,6 +9,8 @@ import pybamm
 class DummySolver(pybamm.BaseSolver):
     """Dummy solver class for empty models."""
 
+    uses_rhs_jacobian = False
+
     def __init__(self):
         super().__init__()
         self.name = "Dummy solver"

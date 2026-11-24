@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import hashlib
 import numbers
+import os
+import sys
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
+from warnings import catch_warnings, filterwarnings, warn
 
 import numpy as np
 
 import pybamm
 
+from .controls import CURRENT_CONTROL, upsampling_variable_name
 from .step_termination import _read_termination
 
 
-class ControlKind(str, Enum):
+class ControlKind(StrEnum):
     """The control-law shape of a step (the quantity its residual fixes)."""
 
     CURRENT = "current"
@@ -101,34 +106,13 @@ class BaseStep:
         self.is_drive_cycle = isinstance(value, np.ndarray)
         self.is_python_function = callable(value)
         if self.is_drive_cycle:
-            if value.ndim != 2 or value.shape[1] != 2:
-                raise ValueError(
-                    "Drive cycle must be a 2-column array with time in the first column"
-                    " and current/C-rate/power/voltage/resistance in the second"
-                )
-            # Check that drive cycle starts at t=0
-            t = value[:, 0]
-            if t[0] != 0:
-                raise ValueError("Drive cycle must start at t=0")
+            _check_drive_cycle(value)
         elif self.is_python_function:
-            t0 = 0
-            # Check if the function is only a function of t
-            try:
-                value_t0 = value(t0)
-            except TypeError:
-                raise TypeError(
-                    "Input function must have only 1 positional argument for time"
-                ) from None
-
-            # Check if the value at t0 is feasible
-            if not (np.isfinite(value_t0) and np.isscalar(value_t0)):
-                raise ValueError(
-                    f"Input function must return a real number output at t = {t0}"
-                )
+            _check_function_of_time(value)
 
         # Record whether the step uses the default duration
         # This will be used by the experiment to check whether the step is feasible
-        self.uses_default_duration = duration is None and not self.is_drive_cycle
+        self.uses_default_duration = duration is None and not self._has_drive_cycle()
 
         # Set duration
         if duration is None:
@@ -138,31 +122,9 @@ class BaseStep:
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
         if self.is_drive_cycle:
-            t_max = self.duration
-            if t_max > value[-1, 0]:
-                # duration longer than drive cycle values so loop
-                nloop = np.ceil(t_max / value[-1, 0]).astype(int)
-                tstep = np.diff(value[:, 0])[0]
-                t = []
-                y = []
-                for i in range(nloop):
-                    t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
-                    y.append(value[:, 1])
-                t = np.asarray(t).flatten()
-                y = np.asarray(y).flatten()
-            else:
-                t, y = value[:, 0], value[:, 1]
-
-            self.value = pybamm.Interpolant(
-                t,
-                y,
-                pybamm.t - pybamm.InputParameter("start time"),
-                name="Drive Cycle",
-            )
-
+            self.value = _drive_cycle_interpolant(value, self.duration)
         elif self.is_python_function:
-            t = pybamm.t - pybamm.InputParameter("start time")
-            self.value = value(t)
+            self.value = value(_step_time())
         else:
             self.value = value
         self.period = _convert_time_to_seconds(period)
@@ -202,6 +164,24 @@ class BaseStep:
             direction = self.value_based_charge_or_discharge()
         self.direction = direction
 
+        # A voltage termination without an operator takes its sign from the step
+        # direction, so without a charge or discharge direction it is ignored
+        for term in self.termination:
+            if (
+                isinstance(term, pybamm.step.VoltageTermination)
+                and term.operator is None
+                and self.direction not in ["charge", "discharge"]
+            ):
+                warn(
+                    f"The voltage termination at {term.value} V is ignored because "
+                    "this step is neither a charge nor a discharge, so it is not "
+                    "known whether the voltage should rise or fall to it. Add an "
+                    f"operator, e.g. 'until > {term.value} V' or "
+                    f"'until < {term.value} V'.",
+                    UserWarning,
+                    stacklevel=_user_stacklevel(),
+                )
+
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
         if tags is None:
@@ -221,6 +201,10 @@ class BaseStep:
     def is_implicit() -> bool:
         return False
 
+    def _has_drive_cycle(self):
+        """Whether the step follows a time series, which sets its default duration."""
+        return self.is_drive_cycle
+
     def copy(self):
         """
         Return a copy of the step.
@@ -230,18 +214,21 @@ class BaseStep:
         :class:`pybamm.Step`
             A copy of the step.
         """
-        return self.__class__(
-            self.input_value,
-            duration=self.input_duration,
-            termination=self.termination,
-            period=self.period,
-            temperature=self.temperature,
-            tags=self.tags,
-            start_time=self.start_time,
-            description=self.description,
-            direction=self.direction,
-            skip_ok=self.skip_ok,
-        )
+        # The original step already warned about an ignored voltage termination
+        with catch_warnings():
+            filterwarnings("ignore", "The voltage termination at", UserWarning)
+            return self.__class__(
+                self.input_value,
+                duration=self.input_duration,
+                termination=self.termination,
+                period=self.period,
+                temperature=self.temperature,
+                tags=self.tags,
+                start_time=self.start_time,
+                description=self.description,
+                direction=self.direction,
+                skip_ok=self.skip_ok,
+            )
 
     def __str__(self):
         if self.description is not None:
@@ -295,6 +282,28 @@ class BaseStep:
     #: Control-law shape (a :class:`ControlKind`); steps sharing it and differing only in
     #: their target value collapse to one unified-mode branch.
     control_kind = None
+
+    #: Names of the model parameters that the step drives (its controls).
+    controls = (CURRENT_CONTROL,)
+
+    def get_control_residuals(self, variables, targets=None):
+        """
+        Residual of each control, keyed by control name. ``targets`` maps control
+        names to per-step inputs that override the step's own targets.
+        """
+        target = None if targets is None else targets.get(CURRENT_CONTROL)
+        return {CURRENT_CONTROL: self.get_control_residual(variables, target)}
+
+    def control_target_values(self, parameter_values):
+        """
+        Target of each control as a number, or ``None`` if it is not a constant,
+        keyed by control name.
+        """
+        return {CURRENT_CONTROL: self.control_target_value(parameter_values)}
+
+    #: Variable that ``upsampling_tolerance`` resolves; the model's own
+    #: ``upsampling_variable`` is used if the model lacks it.
+    upsampling_variable = "Voltage [V]"
 
     def get_control_residual(self, variables, target=None):
         """Control residual. ``target`` is the per-step input that collapsible steps
@@ -457,11 +466,17 @@ class BaseStep:
             new_parameter_values["Ambient temperature [K]"] = self.temperature
 
         # Parameterise the model
-        return new_parameter_values.process_model(
+        processed_model = new_parameter_values.process_model(
             new_model,
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
         )
+        upsampling_variable = upsampling_variable_name(
+            self, model, processed_model.variables
+        )
+        if upsampling_variable is not None:
+            processed_model.upsampling_variable = upsampling_variable
+        return processed_model
 
     def get_termination_events(self, variables):
         events = []
@@ -544,7 +559,7 @@ class BaseStep:
     ):
         """Record all the args for repr and hash"""
         repr_args = f"{value}, duration={duration}"
-        hash_args = f"{value}"
+        hash_args = _value_identity(value)
         if termination:
             repr_args += f", termination={termination}"
             hash_args += f", termination={termination}"
@@ -583,9 +598,7 @@ class BaseStepExplicit(BaseStep):
         return variables["Current [A]"] - target
 
     def set_up(self, new_model, new_parameter_values):
-        new_parameter_values["Current function [A]"] = self.current_value(
-            new_model.variables
-        )
+        new_parameter_values[CURRENT_CONTROL] = self.current_value(new_model.variables)
         return new_model, new_parameter_values
 
 
@@ -618,9 +631,7 @@ class BaseStepImplicit(BaseStep):
         new_model.initial_conditions.update(submodel.initial_conditions)
 
         if new_parameter_values is not None:
-            new_parameter_values["Current function [A]"] = submodel.variables[
-                "Current [A]"
-            ]
+            new_parameter_values[CURRENT_CONTROL] = submodel.variables["Current [A]"]
 
         return new_model, variables
 
@@ -645,6 +656,18 @@ _type_to_units = {
 }
 
 
+def _user_stacklevel():
+    """Stack level of the first frame outside PyBaMM, so that a warning raised while
+    building a step points at the user's code whichever subclass built it."""
+    pybamm_dir = os.path.dirname(pybamm.__file__)
+    level = 1
+    frame = sys._getframe(1)
+    while frame is not None and frame.f_code.co_filename.startswith(pybamm_dir):
+        frame = frame.f_back
+        level += 1
+    return level
+
+
 def _constant_value(parameter_values, target):
     """Numeric value of ``target`` if it is a state/time-independent constant (after
     parameter substitution), else ``None``. ``target`` may be ``None`` (custom steps),
@@ -653,6 +676,65 @@ def _constant_value(parameter_values, target):
         return None
     processed = parameter_values.process_symbol(pybamm.convert_to_symbol(target))
     return float(processed.evaluate()) if processed.is_constant() else None
+
+
+def _step_time():
+    """Time since the start of the step."""
+    return pybamm.t - pybamm.InputParameter("start time")
+
+
+def _check_drive_cycle(value):
+    if value.ndim != 2 or value.shape[1] != 2:
+        raise ValueError(
+            "Drive cycle must be a 2-column array with time in the first column"
+            " and current/C-rate/power/voltage/resistance in the second"
+        )
+    # Check that drive cycle starts at t=0
+    if value[0, 0] != 0:
+        raise ValueError("Drive cycle must start at t=0")
+
+
+def _check_function_of_time(value):
+    t0 = 0
+    # Check if the function is only a function of t
+    try:
+        value_t0 = value(t0)
+    except TypeError:
+        raise TypeError(
+            "Input function must have only 1 positional argument for time"
+        ) from None
+
+    # Check if the value at t0 is feasible
+    if not (np.isfinite(value_t0) and np.isscalar(value_t0)):
+        raise ValueError(f"Input function must return a real number output at t = {t0}")
+
+
+def _drive_cycle_interpolant(value, t_max):
+    """Interpolant of a drive cycle, repeated until ``t_max`` if it is shorter."""
+    if t_max > value[-1, 0]:
+        # duration longer than drive cycle values so loop
+        nloop = np.ceil(t_max / value[-1, 0]).astype(int)
+        tstep = np.diff(value[:, 0])[0]
+        t = []
+        y = []
+        for i in range(nloop):
+            t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
+            y.append(value[:, 1])
+        t = np.asarray(t).flatten()
+        y = np.asarray(y).flatten()
+    else:
+        t, y = value[:, 0], value[:, 1]
+
+    return pybamm.Interpolant(t, y, _step_time(), name="Drive Cycle")
+
+
+def _value_identity(value) -> str:
+    """Text that identifies a step value, with arrays identified by their contents."""
+    # numpy shortens the repr of large arrays, which would merge different drive cycles
+    if isinstance(value, np.ndarray):
+        digest = hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
+        return f"array(shape={value.shape}, dtype={value.dtype}, sha256={digest})"
+    return f"{value}"
 
 
 def get_unit_from(a_string: str) -> str:
@@ -684,13 +766,19 @@ def _convert_time_to_seconds(time_and_units):
             "time units must be 'seconds', 'minutes' or 'hours'. "
             f"For example: {_examples}"
         )
+    # Strings like "-5 minutes" must fail like the number -300 does
+    if time_in_seconds <= 0:
+        raise ValueError("time must be positive")
     return time_in_seconds
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
     """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
     # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, int | float) or temperature_and_units is None:
+    if (
+        isinstance(temperature_and_units, numbers.Number)
+        or temperature_and_units is None
+    ):
         return temperature_and_units
 
     # Split number and units

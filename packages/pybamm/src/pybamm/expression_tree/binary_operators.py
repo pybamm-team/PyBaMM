@@ -5,13 +5,12 @@ from __future__ import annotations
 
 import functools
 import numbers
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import cast
 
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
@@ -28,6 +27,13 @@ from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
 def _preprocess_binary(
     left: ChildSymbol, right: ChildSymbol
 ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
+    # fast exit: two symbols on the same (interned) domains need no broadcasting
+    if (
+        isinstance(left, pybamm.Symbol)
+        and isinstance(right, pybamm.Symbol)
+        and left._domains is right._domains
+    ):
+        return left, right
     if isinstance(left, float | int | np.number):
         left = pybamm.Scalar(left)
     elif isinstance(left, np.ndarray):
@@ -48,13 +54,127 @@ def _preprocess_binary(
         )
 
     # Do some broadcasting in special cases, to avoid having to do this manually
-    if left.domain != [] and right.domain != [] and left.domain != right.domain:
-        if left.domain == right.secondary_domain:
-            left = pybamm.PrimaryBroadcast(left, right.domain)
-        elif right.domain == left.secondary_domain:
-            right = pybamm.PrimaryBroadcast(right, left.domain)
+    if (
+        left._domains["primary"]
+        and right._domains["primary"]
+        and left._domains["primary"] != right._domains["primary"]
+    ):
+        if left._domains["primary"] == right._domains["secondary"]:
+            left = pybamm.PrimaryBroadcast(left, right._domains["primary"])
+        elif right._domains["primary"] == left._domains["secondary"]:
+            right = pybamm.PrimaryBroadcast(right, left._domains["primary"])
 
     return left, right
+
+
+def _sparse_column_entries(symbol: pybamm.Symbol) -> csr_matrix | None:
+    """
+    The entries of ``symbol`` if it is a sparse constant column with both stored
+    and unstored rows, else ``None``.
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The operand to inspect.
+
+    Returns
+    -------
+    :class:`scipy.sparse.csr_matrix` or None
+        The column, with duplicate entries summed.
+    """
+    if not (
+        isinstance(symbol, pybamm.Array)
+        and issparse(symbol.entries)
+        and symbol.entries.shape[1:] == (1,)
+    ):
+        return None
+    entries = csr_matrix(symbol.entries, copy=True)
+    entries.sum_duplicates()
+    # Dense costs less with no row to skip, and the core folds an all-zero operand
+    if not 0 < entries.nnz < entries.shape[0]:
+        return None
+    return entries
+
+
+def _sparse_column_product_to_rust(
+    product: BinaryOperator, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+) -> pybamm.rust.Expr | None:
+    """
+    Lower an element-wise product with a sparse constant column as a sparse matrix
+    product, or return ``None`` when neither operand is one.
+
+    Against a vector the column becomes a diagonal matrix, and against a scalar it
+    stays a column, so its unstored rows are never computed.
+
+    Parameters
+    ----------
+    product : :class:`pybamm.BinaryOperator`
+        The element-wise product to lower.
+    graph : :class:`pybamm.rust.ExprGraph`
+        The graph to allocate the nodes in.
+    rust_symbols : dict
+        The lowered symbols, by id.
+
+    Returns
+    -------
+    :class:`pybamm.rust.Expr` or None
+        The product's node.
+    """
+    for column, other in ((product.left, product.right), (product.right, product.left)):
+        entries = _sparse_column_entries(column)
+        if entries is None or other.size not in (1, entries.shape[0]):
+            continue
+        if other.size == 1:
+            matrix = column._to_rust_matmul_left(graph, rust_symbols)
+        else:
+            rows = entries.shape[0]
+            stored = np.flatnonzero(np.diff(entries.indptr))
+            diagonal = csr_matrix((entries.data, (stored, stored)), shape=(rows, rows))
+            matrix = pybamm.Array._rust_sparse_matrix(graph, diagonal)
+        return graph.matmul(matrix, other._to_rust_inner(graph, rust_symbols))
+    return None
+
+
+def _sparse_column_numerator_to_rust(
+    operator: BinaryOperator, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+) -> pybamm.rust.Expr | None:
+    """
+    Lower an operator that is zero wherever its left operand is, such as a quotient,
+    on the stored rows of a sparse constant column only, or return ``None`` when the
+    left operand is not one.
+
+    Parameters
+    ----------
+    operator : :class:`pybamm.BinaryOperator`
+        The operator to lower.
+    graph : :class:`pybamm.rust.ExprGraph`
+        The graph to allocate the nodes in.
+    rust_symbols : dict
+        The lowered symbols, by id.
+
+    Returns
+    -------
+    :class:`pybamm.rust.Expr` or None
+        The operator's node.
+    """
+    entries = _sparse_column_entries(operator.left)
+    if entries is None or operator.right.size not in (1, entries.shape[0]):
+        return None
+    # An unstored zero never meets the right operand, and the scatter leaves its
+    # row exactly zero
+    rows = entries.shape[0]
+    stored = np.flatnonzero(np.diff(entries.indptr))
+    ones, positions = np.ones(stored.size), np.arange(stored.size)
+    right = operator.right._to_rust_inner(graph, rust_symbols)
+    if operator.right.size > 1:
+        gather = csr_matrix((ones, (positions, stored)), shape=(stored.size, rows))
+        right = graph.matmul(pybamm.Array._rust_sparse_matrix(graph, gather), right)
+    left = graph.array(entries.data.astype(float))
+    scatter = csr_matrix((ones, (stored, positions)), shape=(rows, stored.size))
+    return graph.matmul(
+        pybamm.Array._rust_sparse_matrix(graph, scatter),
+        operator._rust_node(graph, left, right),
+    )
 
 
 class BinaryOperator(pybamm.Symbol):
@@ -74,30 +194,58 @@ class BinaryOperator(pybamm.Symbol):
         rhs child node (converted to :class:`Scalar` if Number)
     """
 
+    __slots__ = ()
+
     def __init__(
         self, name: str, left_child: ChildSymbol, right_child: ChildSymbol
     ) -> None:
         left, right = _preprocess_binary(left_child, right_child)
 
-        domains = self.get_children_domains([left, right])
+        domains = self._combine_children_domains([left, right])
         super().__init__(name, children=[left, right], domains=domains)
-        self.left = self.children[0]
-        self.right = self.children[1]
+
+    @property
+    def left(self) -> pybamm.Symbol:
+        return self._children[0]
+
+    @left.setter
+    def left(self, value: ChildSymbol) -> None:
+        pybamm.expression_tree.symbol._warn_mutation(
+            "left", "Use symbol.create_copy(new_children=...) to replace children."
+        )
+        children = list(self._children)
+        children[0] = pybamm.convert_to_symbol(value)
+        object.__setattr__(
+            self, "_children", pybamm.expression_tree.symbol.SymbolChildren(children)
+        )
+
+    @property
+    def right(self) -> pybamm.Symbol:
+        return self._children[1]
+
+    @right.setter
+    def right(self, value: ChildSymbol) -> None:
+        pybamm.expression_tree.symbol._warn_mutation(
+            "right", "Use symbol.create_copy(new_children=...) to replace children."
+        )
+        children = list(self._children)
+        children[1] = pybamm.convert_to_symbol(value)
+        object.__setattr__(
+            self, "_children", pybamm.expression_tree.symbol.SymbolChildren(children)
+        )
 
     @classmethod
     def _from_json(cls, snippet: dict):
         """Use to instantiate when deserialising; discretisation has
-        already occured so pre-processing of binaries is not necessary."""
+        already occurred so pre-processing of binaries is not necessary."""
 
+        name, domains = snippet["name"], snippet["domains"]
         instance = cls.__new__(cls)
-
         super(BinaryOperator, instance).__init__(
-            snippet["name"],
+            name,
             children=[snippet["children"][0], snippet["children"][1]],
-            domains=snippet["domains"],
+            domains=domains,
         )
-        instance.left = instance.children[0]
-        instance.right = instance.children[1]
 
         return instance
 
@@ -135,17 +283,18 @@ class BinaryOperator(pybamm.Symbol):
         children = self._children_for_copying(new_children)
 
         if not perform_simplifications:
+            # Concrete subclasses take (left, right), not the base's (name, left, right)
+            # pyrefly: ignore[missing-argument, bad-argument-type]
             out = self.__class__(children[0], children[1])
         else:
             # creates a new instance using the overloaded binary operator to perform
             # additional simplifications, rather than just calling the constructor
             out = self._binary_new_copy(children[0], children[1])
 
-        out.copy_domains(self)
+        # new children determine the domains; a plain copy keeps this node's
+        return out if new_children else out.with_domains(self)
 
-        return out
-
-    def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
+    def _binary_new_copy(self, left: pybamm.Symbol, right: pybamm.Symbol):
         """
         Performs the overloaded binary operation on the two symbols `left` and `right`,
         to create a binary class instance after performing appropriate simplifying
@@ -171,8 +320,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape()`."""
-        left = self.children[0].evaluate_for_shape()
-        right = self.children[1].evaluate_for_shape()
+        left = self._children[0].evaluate_for_shape()
+        right = self._children[1].evaluate_for_shape()
         return self._binary_evaluate(left, right)
 
     def _binary_jac(self, left_jac, right_jac):
@@ -197,7 +346,25 @@ class BinaryOperator(pybamm.Symbol):
         )
         return self._casadi_evaluate(converted_left, converted_right)
 
-    def _evaluates_on_edges(self, dimension: str) -> bool:
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        left, right = self._children_to_rust(graph, rust_symbols)
+        return self._rust_node(graph, left, right)
+
+    def _rust_node(
+        self,
+        graph: pybamm.rust.ExprGraph,
+        left: pybamm.rust.Expr,
+        right: pybamm.rust.Expr,
+    ) -> pybamm.rust.Expr:
+        """Allocate this operator's node in ``graph`` over its converted operands."""
+        raise NotImplementedError(
+            f"Cannot convert binary operator of type '{type(self).__name__}' "
+            f"to the Rust backend. {self._RUST_FALLBACK_HINT}"
+        )
+
+    def _evaluates_on_edges(self, dimension: str) -> bool | str:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
             dimension
@@ -205,7 +372,11 @@ class BinaryOperator(pybamm.Symbol):
 
     def is_constant(self):
         """See :meth:`pybamm.Symbol.is_constant()`."""
-        return self.left.is_constant() and self.right.is_constant()
+        # memoised: simplification asks this of every subtree as it is built
+        if self._cached_is_constant is None:
+            left, right = self._children
+            self._cached_is_constant = left.is_constant() and right.is_constant()
+        return self._cached_is_constant
 
     def _sympy_operator(self, left, right):
         """Apply appropriate SymPy operators."""
@@ -213,10 +384,12 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
-            child1, child2 = self.children
+            child1, child2 = self._children
             eq1 = child1.to_equation()
             eq2 = child2.to_equation()
             return self._sympy_operator(eq1, eq2)
@@ -230,7 +403,7 @@ class BinaryOperator(pybamm.Symbol):
 
         return json_dict
 
-    def _t_discon(self, expr, y0, inputs, num_events):
+    def _t_discon(self, expr, y0, inputs, t_eval):
         """Returns the discontinuity time-points for a function."""
         raise NotImplementedError(f"`_t_discon` not implemented for {self.name}")
 
@@ -239,6 +412,8 @@ class Power(BinaryOperator):
     """
     A node in the expression tree representing a `**` power operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -287,11 +462,17 @@ class Power(BinaryOperator):
         with np.errstate(invalid="ignore"):
             return left**right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.pow(left, right)
+
 
 class Addition(BinaryOperator):
     """
     A node in the expression tree representing an addition operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -313,11 +494,17 @@ class Addition(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left + right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.add(left, right)
+
 
 class Subtraction(BinaryOperator):
     """
     A node in the expression tree representing a subtraction operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -340,6 +527,10 @@ class Subtraction(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left - right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.sub(left, right)
+
 
 class Multiplication(BinaryOperator):
     """
@@ -347,6 +538,8 @@ class Multiplication(BinaryOperator):
     (Hadamard product). Overloads cases where the "*" operator would usually return a
     matrix multiplication (e.g. scipy.sparse.coo.coo_matrix)
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -383,11 +576,26 @@ class Multiplication(BinaryOperator):
         else:
             return left * right
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        product = _sparse_column_product_to_rust(self, graph, rust_symbols)
+        if product is None:
+            return super()._to_rust(graph, rust_symbols)
+        return product
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.mul(left, right)
+
 
 class KroneckerProduct(BinaryOperator):
     """
     A node in the expression tree representing a matrix multiplication operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -445,6 +653,10 @@ class TensorProduct(BinaryOperator):
     The result rank is capped at 2.
     """
 
+    __slots__ = ("_result_rank",)
+    # derived from the children's ranks
+    _id_excluded_fields = ("_result_rank",)
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -486,8 +698,8 @@ class TensorProduct(BinaryOperator):
 
     def _binary_new_copy(
         self,
-        left: ChildSymbol,
-        right: ChildSymbol,
+        left: pybamm.Symbol,
+        right: pybamm.Symbol,
     ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return tensor_product(left, right)
@@ -497,6 +709,8 @@ class MatrixMultiplication(BinaryOperator):
     """
     A node in the expression tree representing a matrix multiplication operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -535,13 +749,23 @@ class MatrixMultiplication(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left @ right
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        left = self.left._to_rust_matmul_left(graph, rust_symbols)
+        right = self.right._to_rust_inner(graph, rust_symbols)
+        return graph.matmul(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
-        result = try_repeated_row_matmul(self.children[0], right)
+        result = try_repeated_row_matmul(self._children[0], right)
         return result if result is not None else self._binary_evaluate(left, right)
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -551,6 +775,8 @@ class Division(BinaryOperator):
     """
     A node in the expression tree representing a division operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -585,6 +811,19 @@ class Division(BinaryOperator):
         else:
             return left / right
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        quotient = _sparse_column_numerator_to_rust(self, graph, rust_symbols)
+        if quotient is None:
+            return super()._to_rust(graph, rust_symbols)
+        return quotient
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.div(left, right)
+
 
 class Inner(BinaryOperator):
     """
@@ -601,6 +840,8 @@ class Inner(BinaryOperator):
     the inner product of the vector onto the scalar part of the grid if required
     by a particular discretisation.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -637,6 +878,19 @@ class Inner(BinaryOperator):
             return right.multiply(left)
         else:
             return left * right
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        product = _sparse_column_product_to_rust(self, graph, rust_symbols)
+        if product is None:
+            return super()._to_rust(graph, rust_symbols)
+        return product
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.mul(left, right)
 
     def _binary_new_copy(
         self,
@@ -679,6 +933,8 @@ class Equality(BinaryOperator):
     nodes. Returns 1 if the two nodes evaluate to the same thing and 0 otherwise.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -706,6 +962,10 @@ class Equality(BinaryOperator):
             return int(left == right.item())
         else:
             return int(left == right)
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.equality(left, right)
 
     def _binary_new_copy(
         self,
@@ -736,6 +996,8 @@ class _Heaviside(BinaryOperator):
     DISCONTINUITY event will automatically be added by the solver.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         name: str,
@@ -762,13 +1024,13 @@ class _Heaviside(BinaryOperator):
         Returns an array of NaNs of the correct shape.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`.
         """
-        left = self.children[0].evaluate_for_shape()
-        right = self.children[1].evaluate_for_shape()
+        left = self._children[0].evaluate_for_shape()
+        right = self._children[1].evaluate_for_shape()
         # _binary_evaluate will return an array of bools, so we multiply by NaN to get
         # an array of NaNs
         return self._binary_evaluate(left, right) * np.nan
 
-    def _t_discon(self, expr, y0, inputs, num_events):
+    def _t_discon(self, expr, y0, inputs, t_eval):
         """Returns the discontinuity time-points for the heaviside function."""
         value = expr.evaluate(0, y0, inputs=inputs)
         t_discon = [value]
@@ -783,6 +1045,8 @@ class _Heaviside(BinaryOperator):
 
 class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -802,6 +1066,10 @@ class EqualHeaviside(_Heaviside):
         with np.errstate(invalid="ignore"):
             return left <= right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.equal_heaviside(left, right)
+
     def _t_discon_next(self, value: float):
         if self.left == pybamm.t:
             # t <= x
@@ -815,6 +1083,8 @@ class EqualHeaviside(_Heaviside):
 
 class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -833,6 +1103,10 @@ class NotEqualHeaviside(_Heaviside):
         with np.errstate(invalid="ignore"):
             return left < right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.not_equal_heaviside(left, right)
+
     def _t_discon_next(self, value: float):
         if self.left == pybamm.t:
             # t < x
@@ -846,6 +1120,8 @@ class NotEqualHeaviside(_Heaviside):
 
 class Modulo(BinaryOperator):
     """Calculates the remainder of an integer division."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -885,24 +1161,97 @@ class Modulo(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left % right
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        remainder = _sparse_column_numerator_to_rust(self, graph, rust_symbols)
+        if remainder is None:
+            return super()._to_rust(graph, rust_symbols)
+        return remainder
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.modulo(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmod(left, right)
 
-    def _t_discon(self, expr, y0, inputs, num_events):
-        value = expr.evaluate(0, y0, inputs=inputs)
-        t_discon = []
+    def _t_discon(self, expr, y0, inputs, t_eval):
+        """Returns the discontinuity time-points of ``t mod expr`` over ``t_eval``."""
+        period = float(np.ravel(expr.evaluate(0, y0, inputs=inputs))[0])
+        return np.concatenate(self._t_stops_restarts(period, t_eval))
 
-        for i in np.arange(num_events):
-            t = value * (i + 1)
-            # Stop right before t and at t
-            t_discon.append(np.nextafter(t, -np.inf))
-            t_discon.append(t)
-        return t_discon
+    @staticmethod
+    def _t_stops_restarts(
+        period: float, t_eval: Sequence[float] | npt.NDArray[np.float64]
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Times either side of each reset of ``t mod period`` over ``t_eval``.
+
+        Parameters
+        ----------
+        period : float
+            The positive period of the modulo.
+        t_eval : array-like
+            The times of the integration window.
+
+        Returns
+        -------
+        stops, restarts : :class:`numpy.ndarray`
+            The last float before and the first float after each reset in
+            :meth:`Modulo._t_resets`, at which ``t mod period`` takes its old and its
+            new value.
+        """
+        t_resets = Modulo._t_resets(period, t_eval)
+        # CasADi's fmod takes the new value at a reset for t > 0 but the old one
+        # for t < 0, and is continuous at t = 0
+        positive = t_resets[t_resets > 0]
+        negative = t_resets[t_resets < 0]
+        stops = np.concatenate([np.nextafter(positive, -np.inf), negative])
+        restarts = np.concatenate([positive, np.nextafter(negative, np.inf)])
+        return stops, restarts
+
+    @staticmethod
+    def _t_resets(
+        period: float, t_eval: Sequence[float] | npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
+        """Times at which ``t mod period`` resets over the range of ``t_eval``.
+
+        Parameters
+        ----------
+        period : float
+            The positive period of the modulo.
+        t_eval : array-like
+            The times of the integration window.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The multiples of ``period`` in the range of ``t_eval``, and the nearest
+            multiple beyond each end, so that none inside is lost to rounding. Each is
+            rounded away from zero, to the float at which ``fmod`` has reset for
+            ``t > 0`` and has not yet for ``t < 0``. Empty if ``period`` is infinite.
+        """
+        if not np.isfinite(period):
+            # t mod inf is t, which never resets
+            return np.array([])
+        first = np.floor(t_eval[0] / period)
+        last = np.ceil(t_eval[-1] / period)
+        t_resets = period * np.arange(first, last + 1)
+        # k * period can round to the float short of the multiple, where the exact
+        # fmod has not reset, so move those one float on
+        short = np.abs(np.fmod(t_resets, period)) > period / 2
+        t_resets[short] = np.nextafter(
+            t_resets[short], np.copysign(np.inf, t_resets[short])
+        )
+        return t_resets
 
 
 class Minimum(BinaryOperator):
     """Returns the smaller of two objects."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -932,6 +1281,10 @@ class Minimum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.minimum(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmin(left, right)
@@ -946,11 +1299,15 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Min(left, right)
 
 
 class Maximum(BinaryOperator):
     """Returns the greater of two objects."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -980,6 +1337,10 @@ class Maximum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.maximum(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmax(left, right)
@@ -994,11 +1355,15 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Max(left, right)
 
 
 class Hypot(BinaryOperator):
     """Returns the hypotenuse: sqrt(left**2 + right**2)."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -1027,6 +1392,10 @@ class Hypot(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return np.hypot(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.hypot(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.hypot(left, right)
@@ -1041,6 +1410,8 @@ class Hypot(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.sqrt(left**2 + right**2)
 
 
@@ -1062,21 +1433,20 @@ def _simplify_elementwise_binary_broadcasts(
 
     def unpack_broadcast_recursive(symbol: pybamm.Symbol) -> pybamm.Symbol:
         if isinstance(symbol, pybamm.Broadcast):
-            if symbol.child.domain == []:
+            if symbol.child._domains["primary"] == []:
                 return symbol.orphans[0]
             elif (
                 isinstance(symbol.child, pybamm.Broadcast)
                 and symbol.child.broadcasts_to_nodes
             ):
                 out = unpack_broadcast_recursive(symbol.orphans[0])
-                if out.domain == []:
+                if out._domains["primary"] == []:
                     return out
         return symbol
 
-    # No need to broadcast if the other symbol already has the shape that is being
-    # broadcasted to
-    # Do this recursively
-    if left.domains == right.domains:
+    # a broadcast to the other side's shape is redundant; interned domains are equal
+    # only if identical
+    if left._domains is right._domains:
         if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
             left = unpack_broadcast_recursive(left)
         elif isinstance(right, pybamm.Broadcast) and right.broadcasts_to_nodes:
@@ -1095,9 +1465,9 @@ def _simplified_binary_broadcast_concatenation(
     with
     """
     # Broadcast commutes with elementwise operators
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+    if isinstance(left, pybamm.Broadcast) and right._domains["primary"] == []:
         return left.create_copy([operator(left.orphans[0], right)])
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+    elif isinstance(right, pybamm.Broadcast) and left._domains["primary"] == []:
         return right.create_copy([operator(left, right.orphans[0])])
 
     # Concatenation commutes with elementwise operators
@@ -1218,7 +1588,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains
+            for dim in left._domains
         ):
             return right
 
@@ -1239,7 +1609,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         new_left = l_left + r_left
         if new_left.is_constant():
             new_sum = new_left @ l_right
-            new_sum.copy_domains(Addition(left, right))
+            new_sum = new_sum.with_domains(Addition(left, right))
             return new_sum
 
     # Turn a + (-b) into a - b
@@ -1311,7 +1681,7 @@ def subtract(
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains
+            for dim in left._domains
         ):
             return -right
 
@@ -1398,9 +1768,13 @@ def multiply(
     # dimensions
     # (and possibly more generally, but not implemented here)
     try:
-        if left.shape_for_testing == right.shape_for_testing and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains
+        if (
+            left.is_constant()  # only a constant can be a matrix of ones
+            and left.shape_for_testing == right.shape_for_testing
+            and all(
+                left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+                for dim in left._domains
+            )
         ):
             if pybamm.is_matrix_one(left):
                 return right
@@ -1421,10 +1795,10 @@ def multiply(
             r_left, r_right = right.orphans
             new_left = left * r_left
             # be careful about domains to avoid weird errors
-            new_left.clear_domains()
+            new_left = new_left.without_domains()
             new_mul = new_left @ r_right
             # Keep the domain of the old right
-            new_mul.copy_domains(right)
+            new_mul = new_mul.with_domains(right)
             return new_mul
 
         elif not is_tracing():
@@ -1458,8 +1832,12 @@ def multiply(
                     )
                 ):
                     r_left, r_right = right.orphans
-                    if (r_left.domain == right.domain or r_left.domain == []) and (
-                        r_right.domain == right.domain or r_right.domain == []
+                    if (
+                        r_left._domains["primary"] == right._domains["primary"]
+                        or r_left._domains["primary"] == []
+                    ) and (
+                        r_right._domains["primary"] == right._domains["primary"]
+                        or r_right._domains["primary"] == []
                     ):
                         if isinstance(right, Addition):
                             return (left * r_left) + (left * r_right)
@@ -1590,39 +1968,37 @@ def matmul(
         r_left, r_right = right.orphans
         new_left = left @ r_left
         # be careful about domains to avoid weird errors
-        new_left.clear_domains()
+        new_left = new_left.without_domains()
         new_mul = new_left @ r_right
         # Keep the domain of the old right
-        new_mul.copy_domains(right)
+        new_mul = new_mul.with_domains(right)
         return new_mul
 
-    elif left.is_constant() and isinstance(right, Addition | Subtraction):
-        # Simplify A @ (b +- c) to (A @ b) +- (A @ c) if (A @ b) or (A @ c) is constant
-        # This is a common construction that appears from discretisation of spatial
-        # operators
-        # Or simplify A @ (B @ b +- C @ c) to (A @ B @ b) +- (A @ C @ c) if (A @ B)
-        # and (A @ C) are constant
-        # Don't do this if either b or c is a number as this will lead to matmul errors
-        if (
-            (right.left.is_constant() or right.right.is_constant())
-            # these lines should work but don't, possibly because of poorly
-            # conditioned model?
+    # Simplify A @ (b +- c) to (A @ b) +- (A @ c), or A @ (B @ b +- C @ c) to
+    # (A @ B @ b) +- (A @ C @ c), when the distributed products are constant
+    if (
+        left.is_constant()
+        and isinstance(right, Addition | Subtraction)
+        and (
+            right.left.is_constant()
+            or right.right.is_constant()
             or (
                 isinstance(right.left, MatrixMultiplication)
                 and right.left.left.is_constant()
                 and isinstance(right.right, MatrixMultiplication)
                 and right.right.left.is_constant()
             )
-        ) and not (
-            right.left.size_for_testing == 1 or right.right.size_for_testing == 1
-        ):
-            r_left, r_right = right.orphans
-            r_left.domains = right.domains
-            r_right.domains = right.domains
-            if isinstance(right, Addition):
-                return (left @ r_left) + (left @ r_right)
-            elif isinstance(right, Subtraction):
-                return (left @ r_left) - (left @ r_right)
+        )
+        # A scalar b or c would lead to matmul shape errors
+        and not (right.left.size_for_testing == 1 or right.right.size_for_testing == 1)
+    ):
+        r_left, r_right = right.orphans
+        r_left = r_left.with_domains(right)
+        r_right = r_right.with_domains(right)
+        if isinstance(right, Addition):
+            return (left @ r_left) + (left @ r_right)
+        elif isinstance(right, Subtraction):
+            return (left @ r_left) - (left @ r_right)
 
     return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
 
@@ -1766,8 +2142,8 @@ def smooth_max(left, right, k):
 
 
 def sigmoid(
-    left: pybamm.Symbol,
-    right: pybamm.Symbol,
+    left: Numeric | pybamm.Symbol,
+    right: Numeric | pybamm.Symbol,
     k: float,
 ):
     """
@@ -1776,7 +2152,9 @@ def sigmoid(
     Note that the concept of deciding which side to pick when left=right does not apply
     for this smooth approximation. When left=right, the value is (left+right)/2.
     """
-    return (1 + pybamm.tanh(k * (right - left))) / 2
+    # Callers pass a symbol on at least one side, so the difference is a symbol
+    difference = cast("pybamm.Symbol", right - left)
+    return (1 + pybamm.tanh(k * difference)) / 2
 
 
 def source(
@@ -1811,7 +2189,7 @@ def source(
         corresponding to a source term in the bulk.
     """
     # Broadcast if left is number
-    right_domain = right.domain
+    right_domain = right._domains["primary"]
     if isinstance(left, numbers.Number):
         left = pybamm.PrimaryBroadcast(left, right_domain)
 
@@ -1819,10 +2197,13 @@ def source(
     left = cast(pybamm.Symbol, left)
 
     allowed_domains = [["cell"], ["current collector"]]
-    if left.domain not in allowed_domains or right_domain not in allowed_domains:
+    if (
+        left._domains["primary"] not in allowed_domains
+        or right_domain not in allowed_domains
+    ):
         raise pybamm.DomainError(
             "'source' only implemented in the 'cell' or 'current collector' domains, "
-            f"but symbols have domains {left.domain} and {right_domain}"
+            f"but symbols have domains {left._domains['primary']} and {right_domain}"
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

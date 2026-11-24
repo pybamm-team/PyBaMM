@@ -3,14 +3,19 @@
 #
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
-from scipy.sparse import csr_matrix, issparse
+from pybammsolvers import idaklu
+from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sympy
 
 
 class Array(pybamm.Symbol):
@@ -35,9 +40,13 @@ class Array(pybamm.Symbol):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
-    entries_string : str
-        String representing the entries (slow to recalculate when copying)
+    entries_string : tuple, optional
+        Hashable form of the entries (slow to recalculate when copying)
     """
+
+    __slots__ = ("_entries", "_entries_string")
+    # the entries are identified through their (cheap) string form
+    _id_excluded_fields = ("_entries",)
 
     # entries_string is a derived hash cache of entries, which to_json emits.
     _serialise_derived_params = frozenset({"entries_string"})
@@ -49,7 +58,7 @@ class Array(pybamm.Symbol):
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
-        entries_string: str | None = None,
+        entries_string: tuple | None = None,
     ) -> None:
         # if
         if isinstance(entries, list):
@@ -60,7 +69,7 @@ class Array(pybamm.Symbol):
             name = f"Array of shape {entries.shape!s}"
         self._entries = entries.astype(float)
         # Use known entries string to avoid re-hashing, where possible
-        self.entries_string = entries_string
+        self._entries_string = self._make_entries_string(entries_string)
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
@@ -105,37 +114,104 @@ class Array(pybamm.Symbol):
 
     @entries_string.setter
     def entries_string(self, value: tuple | None):
+        pybamm.expression_tree.symbol._warn_mutation(
+            "entries_string", "Construct a new Array with the desired entries."
+        )
+        object.__setattr__(self, "_entries_string", self._make_entries_string(value))
+
+    def _make_entries_string(self, value: tuple | None) -> tuple:
+        """The hashable form of the entries: ``value`` if given, else computed."""
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
-        # Slightly different syntax for sparse and non-sparse matrices
         if value is not None:
-            self._entries_string = value
-        else:
-            entries = self._entries
-            if issparse(entries):
-                dct = entries.__dict__
-                entries_string = ["shape", str(dct["_shape"])]
-                for key in ["data", "indices", "indptr"]:
-                    entries_string += [key, dct[key].tobytes()]
-                self._entries_string = tuple(entries_string)
-                # self._entries_string = str(entries.__dict__)
-            else:
-                self._entries_string = (entries.tobytes(),)
-
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
-        self._id = hash(
-            (self.__class__, self.name, *self.entries_string, *tuple(self.domain))
-        )
+            return value
+        entries = self._entries
+        # Slightly different syntax for sparse and non-sparse matrices
+        if issparse(entries):
+            dct = entries.__dict__
+            entries_string = ["shape", str(dct["_shape"])]
+            for key in ["data", "indices", "indptr"]:
+                entries_string += [key, dct[key].tobytes()]
+            return tuple(entries_string)
+        return (entries.tobytes(),)
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
-        return casadi.MX(self.evaluate(t, y, y_dot, inputs))
+        return casadi.MX(to_casadi_dm(self.evaluate(t, y, y_dot, inputs)))
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        entries = self.evaluate()
+        # The Rust sparse node is only valid as a matmul's left operand, so a sparse
+        # column goes dense; a matrix would cost rows * cols and cannot compile
+        if issparse(entries):
+            sparse = cast(csr_matrix, entries)
+            rows, columns = sparse.shape
+            if columns > 1:
+                raise NotImplementedError(
+                    f"Rust conversion keeps a sparse matrix only as the left operand "
+                    f"of a matrix product, so the {rows}x{columns} sparse matrix "
+                    f"'{self.name}' cannot be lowered here. {self._RUST_FALLBACK_HINT}"
+                )
+            entries = sparse.toarray()
+        entries = np.asarray(entries, dtype=float)
+        if entries.ndim == 2 and entries.shape[1] > 1:
+            return graph.dense_matrix(
+                np.ascontiguousarray(entries).ravel(),
+                entries.shape[0],
+                entries.shape[1],
+            )
+        return graph.array(entries.flatten())
+
+    def _to_rust_matmul_left(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        entries = self.evaluate()
+        if not issparse(entries):
+            return self._to_rust_inner(graph, rust_symbols)
+        # Keyed apart from the dense value of the same symbol
+        key = (self.id, "matmul left")
+        cached = rust_symbols.get(key)
+        if cached is None:
+            cached = self._rust_sparse_matrix(graph, entries)
+            rust_symbols[key] = cached
+        return cached
+
+    @staticmethod
+    def _rust_sparse_matrix(
+        graph: pybamm.rust.ExprGraph, entries: csr_matrix
+    ) -> pybamm.rust.Expr:
+        """
+        Allocate a sparse matrix node, each row stored in ascending column order.
+
+        Parameters
+        ----------
+        graph : :class:`pybamm.rust.ExprGraph`
+            The graph to allocate the node in.
+        entries : :class:`scipy.sparse.csr_matrix`
+            The matrix, in any stored order.
+
+        Returns
+        -------
+        :class:`pybamm.rust.Expr`
+            The sparse matrix node.
+        """
+        # Rows sum in stored order; in column order a stencil's rounding telescopes
+        csr = csr_matrix(entries, copy=True)
+        csr.sum_duplicates()
+        return graph.sparse_matrix(
+            csr.indptr.tolist(),
+            csr.indices.tolist(),
+            csr.data.astype(float),
+            csr.shape[0],
+            csr.shape[1],
+        )
 
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size
-        jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
+        jac = csr_matrix((self.size, variable.size))
         return pybamm.Matrix(jac)
 
     def create_copy(
@@ -147,7 +223,7 @@ class Array(pybamm.Symbol):
         return self.__class__(
             self.entries,
             self.name,
-            domains=self.domains,
+            domains=self._domains,
             entries_string=self.entries_string,
         )
 
@@ -167,6 +243,8 @@ class Array(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Array:
         """Returns the value returned by the node when evaluated."""
+        import sympy
+
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 
@@ -215,3 +293,58 @@ def meshgrid(
     """
     [x_grid, y_grid] = np.meshgrid(x.entries, y.entries)
     return pybamm.Array(x_grid), pybamm.Array(y_grid)
+
+
+def to_casadi_dm(entries) -> casadi.DM:
+    """
+    Convert a numpy array or scipy sparse matrix to a casadi.DM.
+
+    When pybammsolvers links the Python casadi library, the buffers are copied
+    once in C++; casadi's own conversion copies element by element.
+
+    Parameters
+    ----------
+    entries : numpy.ndarray or scipy.sparse matrix
+        The values, at most two-dimensional; a 1D array becomes a column.
+
+    Returns
+    -------
+    casadi.DM
+        The values, sparse if ``entries`` is sparse.
+    """
+    if issparse(entries):
+        compressed_rows = entries.format == "csr"
+        compressed = entries if compressed_rows else csc_matrix(entries)
+        # casadi aborts the process on unsorted or duplicate entries
+        if not compressed.has_canonical_format:
+            compressed = compressed.copy()
+            compressed.sum_duplicates()
+        if not idaklu.shares_python_casadi:
+            return casadi.DM(csc_matrix(compressed))
+        matrix = casadi.DM()
+        idaklu.fill_casadi_dm_sparse(
+            # SWIG's address attribute is not in casadi's stubs
+            # pyrefly: ignore[missing-attribute]
+            int(matrix.this),
+            compressed.shape[0],
+            compressed.shape[1],
+            compressed.indptr.astype(np.int64),
+            compressed.indices.astype(np.int64),
+            compressed.data.astype(np.float64),
+            compressed_rows=compressed_rows,
+        )
+    else:
+        if not idaklu.shares_python_casadi:
+            return casadi.DM(entries)
+        matrix = casadi.DM()
+        values = np.asarray(entries, dtype=np.float64)
+        if values.ndim < 2:
+            values = values.reshape(-1, 1)
+        idaklu.fill_casadi_dm_dense(
+            # pyrefly: ignore[missing-attribute]
+            int(matrix.this),
+            values.shape[0],
+            values.shape[1],
+            values.ravel(order="F"),
+        )
+    return matrix

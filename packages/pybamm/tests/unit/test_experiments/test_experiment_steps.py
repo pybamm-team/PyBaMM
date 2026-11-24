@@ -1,6 +1,7 @@
 #
 # Test the experiment steps
 #
+import warnings
 from datetime import datetime
 
 import numpy as np
@@ -267,6 +268,35 @@ class TestExperimentSteps:
             pybamm.step.string("Discharge at 1 B for 2 hours")
         with pytest.raises(ValueError, match=r"time units must be"):
             pybamm.step.string("Discharge at 1 A for 2 years")
+        # used to fail with "not enough values to unpack"
+        with pytest.raises(ValueError, match=r"Instruction must be"):
+            pybamm.step.string("Charge 1 A for 2 hours")
+        with pytest.raises(ValueError, match=r"Instruction must be"):
+            pybamm.step.string("rest for 2 hours")
+        # used to fail with "too many values to unpack"
+        with pytest.raises(ValueError, match=r"'until' once"):
+            pybamm.step.string("Charge at 1 C until 4.1 V or until 1 hour")
+        with pytest.raises(ValueError, match=r"'for' once"):
+            pybamm.step.string("Discharge at 1 A for 1 hour for 2 hours")
+        # used to complain about the units
+        with pytest.raises(ValueError, match=r"duration must come before 'until'"):
+            pybamm.step.string("Charge at 1 C until 4.2 V for 1 hour")
+
+    @pytest.mark.parametrize(
+        ("text", "value"),
+        [
+            ("Discharge at 1 A for 1 hour  ", 1),
+            ("  Discharge at 1 A for 1 hour", 1),
+            ("Discharge at 1 A  for 1 hour", 1),
+            ("Discharge at 1 A for 1 hour\n", 1),
+            ("  Rest for 1 hour", 0),
+        ],
+    )
+    def test_step_string_extra_whitespace(self, text, value):
+        step = pybamm.step.string(text)
+        assert step.value == value
+        assert step.duration == 3600
+        assert step.description == text
 
     def test_start_times(self):
         # Test start_times
@@ -368,6 +398,41 @@ class TestExperimentSteps:
         termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
         assert termination_lt_4_1_oo == termination_lt_4_1
         assert termination_gt_4_1_oo == termination_gt_4_1
+
+    def test_voltage_termination_without_direction_warns(self):
+        variables = {"Battery voltage [V]": 4.0}
+
+        # Rest and voltage-controlled steps have no charge or discharge direction, so
+        # a voltage termination without an operator gives no event
+        for step_string in [
+            "Rest for 1 hour or until 3.5 V",
+            "Hold at 4.1 V until 4.2 V",
+        ]:
+            with pytest.warns(UserWarning, match=r"voltage termination at .* ignored"):
+                step = pybamm.step.string(step_string)
+            assert step.get_termination_events(variables) == []
+
+        # The warning points at the caller, not at PyBaMM's step classes
+        with pytest.warns(UserWarning, match=r"voltage termination") as record:
+            step = pybamm.step.rest(3600, termination="3.5V")
+        assert record[0].filename == __file__
+
+        # Copying the step for an experiment does not warn a second time
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pybamm.Experiment([step])
+
+        # An operator, or a charge or discharge direction, gives the event its sign
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for step in [
+                pybamm.step.string("Rest for 1 hour or until > 3.5 V"),
+                pybamm.step.string("Hold at 4.1 V until < 4.2 V"),
+                pybamm.step.string("Discharge at 1 A until 3 V"),
+                pybamm.step.string("Charge at 1 A until 4.2 V"),
+                pybamm.step.voltage(4.1, termination="4.2V", direction="charge"),
+            ]:
+                assert len(step.get_termination_events(variables)) == 1
 
     def test_symbolic_termination_expression_helpers(self):
         single_termination_step = pybamm.step.current(
@@ -497,9 +562,160 @@ class TestExperimentSteps:
 
         assert len({current, voltage, c_rate, power}) == 4
 
+    def test_drive_cycles_differing_in_the_middle_not_equal(self):
+        # Regression: numpy shortens the repr of large arrays to their ends
+        time = np.linspace(0, 1000, 2001)
+        drive_cycle = np.column_stack([time, np.ones_like(time)])
+        changed = drive_cycle.copy()
+        changed[1000, 1] = 5
+
+        step = pybamm.step.current(drive_cycle)
+        same = pybamm.step.current(drive_cycle.copy())
+        different = pybamm.step.current(changed)
+
+        assert step == same
+        assert hash(step) == hash(same)
+        assert step != different
+        assert step.basic_repr() != different.basic_repr()
+        assert len({step, same, different}) == 2
+
     def test_steps_with_same_value_same_type_equal(self):
         a = pybamm.step.Current(4.2)
         b = pybamm.step.Current(4.2)
         assert a == b
         assert hash(a) == hash(b)
         assert len({a, b}) == 1
+
+    def test_battery_steps_drive_the_current(self):
+        step = pybamm.step.current(2)
+        assert step.controls == ("Current function [A]",)
+        parameter_values = pybamm.ParameterValues({})
+        assert step.control_target_values(parameter_values) == {
+            "Current function [A]": 2
+        }
+
+    def test_control_step(self):
+        def residual(variables, target):
+            return variables["Net power [W]"] - target
+
+        step = pybamm.step.control(
+            explicit={"Coolant temperature [K]": 290},
+            implicit={"Heating power [W]": (residual, 50)},
+            duration=60,
+        )
+        assert step.controls == ("Coolant temperature [K]", "Heating power [W]")
+        assert step.is_implicit()
+        assert step.direction is None
+        assert step.duration == 60
+        assert step.targets == {
+            "Coolant temperature [K]": 290,
+            "Heating power [W]": 50,
+        }
+        parameter_values = pybamm.ParameterValues({})
+        assert step.control_target_values(parameter_values) == step.targets
+        assert step.to_dict()["explicit"] == {"Coolant temperature [K]": 290}
+        assert "value" not in step.to_dict()
+
+        variables = {
+            "Coolant temperature [K]": pybamm.Variable("Coolant temperature [K]"),
+            "Net power [W]": pybamm.Variable("Net power [W]"),
+        }
+        residuals = step.get_control_residuals(variables)
+        assert residuals["Coolant temperature [K]"] == (
+            variables["Coolant temperature [K]"] - pybamm.Scalar(290)
+        )
+        assert residuals["Heating power [W]"] == (
+            variables["Net power [W]"] - pybamm.Scalar(50)
+        )
+        target = pybamm.InputParameter("target")
+        residuals = step.get_control_residuals(variables, {"Heating power [W]": target})
+        assert residuals["Heating power [W]"] == variables["Net power [W]"] - target
+
+        # Explicit only, with a function of time and a time series
+        step = pybamm.step.ControlStep(
+            {"A": lambda t: 2 * t, "B": np.array([[0, 1], [10, 2]])}
+        )
+        assert not step.is_implicit()
+        assert step.duration == 10
+        assert not step.uses_default_duration
+        assert step.control_target_values(parameter_values) == {"A": None, "B": None}
+
+        step = pybamm.step.ControlStep({"A": 1})
+        assert step.duration == 24 * 3600
+        assert step.uses_default_duration
+
+    def test_control_step_equality_and_copy(self):
+        def residual(variables):
+            return variables["Power [W]"]
+
+        a = pybamm.step.ControlStep({"A": 1}, {"B": residual}, duration=10)
+        assert a == pybamm.step.ControlStep({"A": 1}, {"B": residual}, duration=10)
+        assert a != pybamm.step.ControlStep({"A": 2}, {"B": residual}, duration=10)
+        assert a != pybamm.step.ControlStep({"B": 1}, {"A": residual}, duration=10)
+        assert "explicit={'A': 1}" in repr(a)
+
+        copied = a.copy()
+        assert copied == a
+        assert copied is not a
+        assert copied.controls == a.controls
+        # Copies do not share their dicts
+        copied.input_explicit["A"] = 3
+        copied.targets["A"] = 3
+        assert a.input_explicit == {"A": 1}
+        assert a.targets == {"A": 1}
+
+        # Steps that only differ in their targets share a control structure
+        b = pybamm.step.ControlStep({"A": 2}, {"B": residual}, duration=20)
+        assert a.unified_branch_repr() == b.unified_branch_repr()
+
+    def test_control_steps_with_time_series_differing_in_the_middle(self):
+        # numpy shortens the repr of large arrays to their ends
+        time = np.linspace(0, 1000, 2001)
+        series = np.column_stack([time, np.ones_like(time)])
+        changed = series.copy()
+        changed[1000, 1] = 5
+
+        def residual(variables, target):
+            return variables["Net power [W]"] - target
+
+        def step(value, target):
+            return pybamm.step.control(
+                explicit={"Coolant temperature [K]": value},
+                implicit={"Heating power [W]": (residual, target)},
+            )
+
+        base = step(series, series)
+        same = step(series.copy(), series.copy())
+        assert base == same
+        assert hash(base) == hash(same)
+        assert repr(base) == repr(step(changed, changed))
+        assert base != step(changed, series)
+        assert base != step(series, changed)
+
+        experiment = pybamm.Experiment([base, step(changed, series)])
+        assert len(experiment.unique_steps) == 2
+        np.testing.assert_array_equal(
+            experiment.steps[1].input_explicit["Coolant temperature [K]"], changed
+        )
+
+    def test_control_step_errors(self):
+        with pytest.raises(ValueError, match=r"at least one control"):
+            pybamm.step.ControlStep()
+        with pytest.raises(ValueError, match=r"Controls \['A'\] cannot be both"):
+            pybamm.step.ControlStep({"A": 1}, {"A": lambda variables: 0})
+        with pytest.raises(TypeError, match=r"residual of 'A' must be a function"):
+            pybamm.step.ControlStep(implicit={"A": (1, 2)})
+        with pytest.raises(ValueError, match=r"Drive cycle must start at t=0"):
+            pybamm.step.ControlStep({"A": np.array([[1, 1], [2, 2]])})
+        with pytest.raises(TypeError, match=r"only 1 positional argument"):
+            pybamm.step.ControlStep({"A": lambda t, y: t})
+        with pytest.raises(
+            ValueError, match=r"'Ambient temperature \[K\]' cannot be a"
+        ):
+            pybamm.step.ControlStep({"Ambient temperature [K]": 300})
+        with pytest.raises(
+            ValueError, match=r"'Ambient temperature \[K\]' cannot be a"
+        ):
+            pybamm.step.ControlStep(
+                implicit={"Ambient temperature [K]": lambda variables: 0}
+            )

@@ -2,10 +2,58 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 pytest.importorskip("pybamm", reason="PyBaMM not installed")
 import pybamm
+
+
+def _jump_dae():
+    """``y' = -a y + z``, ``0 = z - b y - c [t > 0.5]`` from the guess ``z = 0``."""
+    model = pybamm.BaseModel()
+    y = pybamm.Variable("y")
+    z = pybamm.Variable("z")
+    a, b, c = (pybamm.InputParameter(name) for name in "abc")
+    model.rhs = {y: -a * y + z}
+    model.algebraic = {z: z - b * y - c * (pybamm.t > 0.5)}
+    model.initial_conditions = {y: 1, z: 0}
+    model.variables = {"z": z}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+def test_algebraic_sensitivities_at_t0_are_consistent_without_calc_ic():
+    """z(0) = b y(0) with y(0) = 1 gives dz/db(0) = 1, not the zero of the
+    guess z = 0, with the states kept as given."""
+    solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, options={"calc_ic": False})
+    sol = solver.solve(
+        _jump_dae(),
+        [0, 1],
+        inputs={"a": 2.0, "b": 0.5, "c": 1.0},
+        calculate_sensitivities=True,
+    )
+
+    sensitivities = sol["z"].sensitivities
+    np.testing.assert_allclose(sensitivities["a"][0], 0, atol=1e-10)
+    np.testing.assert_allclose(sensitivities["b"][0], 1, rtol=1e-9)
+    np.testing.assert_allclose(sensitivities["c"][0], 0, atol=1e-12)
+
+
+def test_restart_after_discontinuity_stores_the_right_limit():
+    """The right point of the t_eval pair bracketing t = 0.5 holds the right
+    limit, where z and dz/dc have jumped by c and 1."""
+    sol = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12).solve(
+        _jump_dae(),
+        [0, 1],
+        inputs={"a": 2.0, "b": 0.5, "c": 1.0},
+        calculate_sensitivities=True,
+    )
+
+    left, right = np.flatnonzero(sol.t > 0.5)[0] - 1, np.flatnonzero(sol.t > 0.5)[0]
+    z = sol["z"](sol.t)
+    np.testing.assert_allclose(z[right] - z[left], 1.0, rtol=1e-9)
+    np.testing.assert_allclose(sol["z"].sensitivities["c"][right], 1.0, rtol=1e-9)
 
 
 def test_internal_ic_keeps_converged_state_at_tiny_atol():

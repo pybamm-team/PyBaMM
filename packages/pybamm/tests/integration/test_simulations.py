@@ -7,7 +7,7 @@ import pybamm
 
 class TestSimulationPickleRoundtrip:
     """Verify that pickling a Simulation and re-solving produces
-    bit-exact identical raw solver output (sol.t, sol.y, sol.yp)."""
+    bit-exact identical raw solver output (sol.t, sol.all_ys, sol.all_yps)."""
 
     @pytest.mark.parametrize("param_set", ["Chen2020", "Ai2020", "Marquis2019"])
     @pytest.mark.parametrize("initial_soc", [None, 0.5, "3.5 V"])
@@ -47,11 +47,15 @@ class TestSimulationPickleRoundtrip:
                 sol_orig.t, sol_loaded.t, err_msg=f"{tag} sol.t mismatch"
             )
             np.testing.assert_array_equal(
-                sol_orig.y, sol_loaded.y, err_msg=f"{tag} sol.y mismatch"
+                sol_orig.all_ys[0],
+                sol_loaded.all_ys[0],
+                err_msg=f"{tag} sol.all_ys[0] mismatch",
             )
-            if sol_orig.yp is not None:
+            if sol_orig.all_yps[0] is not None:
                 np.testing.assert_array_equal(
-                    sol_orig.yp, sol_loaded.yp, err_msg=f"{tag} sol.yp mismatch"
+                    sol_orig.all_yps[0],
+                    sol_loaded.all_yps[0],
+                    err_msg=f"{tag} sol.all_yps[0] mismatch",
                 )
 
 
@@ -93,7 +97,7 @@ class TestSimulationConsistentState:
             include_temperature=False,
         )
         cc_solver = sim._get_built_experiment_solver(cc_step)
-        mapper_p = cc_solver._set_up_model_inputs(cc_model, cv_inputs_dict)
+        mapper_p = cc_solver.set_up_model_inputs(cc_model, cv_inputs_dict)
         p_vec = casadi.vertcat(*mapper_p.values())
         y_from = cc_solution.last_state.all_ys[0]
         seed = np.asarray(mapper_func(float(cc_solution.t[-1]), y_from, p_vec)).ravel()

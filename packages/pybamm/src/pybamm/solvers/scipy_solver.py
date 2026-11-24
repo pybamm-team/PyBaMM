@@ -5,9 +5,9 @@ import warnings
 
 import casadi
 import numpy as np
-import scipy.integrate as it
 
 import pybamm
+from pybamm.solvers.base_solver import stack_inputs
 
 
 class ScipySolver(pybamm.BaseSolver):
@@ -88,16 +88,18 @@ class ScipySolver(pybamm.BaseSolver):
             as well as various diagnostic messages.
 
         """
+        import scipy.integrate as it
+
         # scipy solver does not support sensitivity analysis
         if model.calculate_sensitivities:
             raise NotImplementedError(
                 "Sensitivity analysis is not implemented for the Scipy solver."
             )
 
-        # Save inputs dictionary, and if necessary convert inputs to a casadi vector
+        # Save inputs dictionary, and if necessary convert inputs to a stacked vector
         inputs_dict = inputs_dict or {}
-        if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        if model.uses_stacked_inputs:
+            inputs = stack_inputs(inputs_dict)
         else:
             inputs = inputs_dict
 

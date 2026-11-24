@@ -33,7 +33,7 @@ class TestJaxSolver:
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.t, t_eval)
             np.testing.assert_allclose(
-                solution.y[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-6
+                solution.all_ys[0][0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-6
             )
 
             # Test time
@@ -42,7 +42,7 @@ class TestJaxSolver:
 
             second_solution = solver.solve(model, t_eval)
 
-            np.testing.assert_array_equal(second_solution.y, solution.y)
+            np.testing.assert_array_equal(second_solution.all_ys[0], solution.all_ys[0])
 
     def test_semi_explicit_model(self):
         # Create model
@@ -69,15 +69,17 @@ class TestJaxSolver:
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         soln = np.exp(0.1 * solution.t)
-        np.testing.assert_allclose(solution.y[0], soln, rtol=1e-7, atol=1e-7)
-        np.testing.assert_allclose(solution.y[-1], 2 * soln, rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(solution.all_ys[0][0], soln, rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(
+            solution.all_ys[0][-1], 2 * soln, rtol=1e-7, atol=1e-7
+        )
 
         # Test time
         assert solution.total_time == solution.solve_time + solution.set_up_time
         assert solution.termination == "final time"
 
         second_solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(second_solution.y, solution.y)
+        np.testing.assert_array_equal(second_solution.all_ys[0], solution.all_ys[0])
 
     def test_solver_sensitivities(self):
         # Create model
@@ -134,8 +136,7 @@ class TestJaxSolver:
 
         t_eval = np.linspace(0, 3, 100)
 
-        # solver needs a model converted to jax
-        for convert_to_format in ["casadi", "python", "something_else"]:
+        for convert_to_format in ["casadi", "python"]:
             model.convert_to_format = convert_to_format
 
             solver = pybamm.JaxSolver()
@@ -191,13 +192,13 @@ class TestJaxSolver:
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
 
         np.testing.assert_allclose(
-            solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-6
+            solution.all_ys[0][0], np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-6
         )
 
         solution = solver.solve(model, t_eval, inputs={"rate": 0.2})
 
         np.testing.assert_allclose(
-            solution.y[0], np.exp(-0.2 * solution.t), rtol=1e-6, atol=1e-6
+            solution.all_ys[0][0], np.exp(-0.2 * solution.t), rtol=1e-6, atol=1e-6
         )
 
     def test_get_solve(self):
@@ -270,7 +271,7 @@ class TestJaxSolver:
                 solution = solutions[i]
                 np.testing.assert_array_equal(solution.t, t_eval)
                 np.testing.assert_allclose(
-                    solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
+                    solution.all_ys[0][0], np.exp(-0.01 * (i + 1) * solution.t)
                 )
 
     def test_model_solver_multiple_input_params_jax_format(self, subtests):
@@ -307,4 +308,4 @@ class TestJaxSolver:
                 np.testing.assert_equal(multi_sol["v"](0), ic["v0"])
 
                 single_sol = single_solutions[i]
-                np.testing.assert_array_equal(single_sol.y, multi_sol.y)
+                np.testing.assert_array_equal(single_sol.all_ys[0], multi_sol.all_ys[0])

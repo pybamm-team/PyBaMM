@@ -18,12 +18,14 @@ from .electrode_soh_composite import (
     get_initial_stoichiometries_composite,
 )
 from .initial_state import compute_esoh_fingerprint, set_initial_state
+from .initial_state_linearisation import get_initial_state_input_names
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN
 from .newman_tobias import NewmanTobias
 from .basic_dfn import BasicDFN
 from .basic_dfn_2d import BasicDFN2D
+from .basic_dfn_unstructured import BasicDFNUnstructured
 from .basic_spm import BasicSPM
 from .basic_spm_with_3d_thermal import Basic3DThermalSPM
 from .basic_dfn_half_cell import BasicDFNHalfCell

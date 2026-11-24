@@ -3,7 +3,6 @@
 #
 import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
-from scipy.sparse.linalg import inv
 
 import pybamm
 from pybamm.util import import_optional_dependency
@@ -82,6 +81,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             to the y-component of the gradient and the second column corresponds
             to the z component of the gradient.
         """
+        from scipy.sparse.linalg import inv
+
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]
@@ -109,7 +110,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         grad = pybamm.Concatenation(
             grad_y, grad_z, check_domain=False, concat_fun=np.hstack
         )
-        grad.copy_domains(symbol)
+        grad = grad.with_domains(symbol)
 
         return grad
 
@@ -350,7 +351,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         integration_vector = self.boundary_integral_vector(child.domain, region=region)
 
         out = integration_vector @ discretised_child
-        out.clear_domains()
+        out = out.without_domains()
         return out
 
     def boundary_integral_vector(self, domain, region):
@@ -430,7 +431,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         boundary_value = boundary_val_vector @ discretised_child
 
-        boundary_value.copy_domains(symbol)
+        boundary_value = boundary_value.with_domains(symbol)
 
         return boundary_value
 

@@ -178,6 +178,27 @@ class TestBroadcasts:
         with pytest.raises(pybamm.DomainError, match=r"Cannot do tertiary broadcast"):
             pybamm.TertiaryBroadcast(a, "negative electrode")
 
+    def test_broadcast_domains_accept_any_sequence_of_names(self):
+        particle = pybamm.Symbol("c", domain="negative particle")
+        in_electrode = pybamm.Symbol(
+            "c",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        broadcasts = [
+            (pybamm.PrimaryBroadcast, pybamm.Scalar(1), ["negative electrode"]),
+            (pybamm.SecondaryBroadcast, particle, ["negative electrode"]),
+            (pybamm.TertiaryBroadcast, in_electrode, ["current collector"]),
+        ]
+        for broadcast, child, domain in broadcasts:
+            assert broadcast(child, tuple(domain)) == broadcast(child, domain)
+        full = pybamm.FullBroadcast(
+            1, broadcast_domains={"primary": ["negative electrode"], "secondary": []}
+        )
+        assert full == pybamm.FullBroadcast(
+            1, broadcast_domains={"primary": ("negative electrode",), "secondary": ()}
+        )
+
     def test_full_broadcast(self):
         a = pybamm.Symbol("a")
         broad_a = pybamm.FullBroadcast(a, ["negative electrode"], "current collector")

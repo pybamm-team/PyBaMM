@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import inv
 
 import pybamm
 from pybamm.util import import_optional_dependency
@@ -82,6 +81,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Concatenation`
             The 3D gradient as concatenation of x, y, z or z, r, theta components
         """
+        from scipy.sparse.linalg import inv
 
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
@@ -102,7 +102,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         if isinstance(discretised_symbol, pybamm.Scalar):  # pragma: no cover
             zeros = pybamm.Vector(np.zeros((mesh.npts, 1)))
             grad = pybamm.Concatenation(zeros, zeros, zeros, check_domain=False)
-            grad.copy_domains(symbol)
+            grad = grad.with_domains(symbol)
             return grad
 
         grad_x = mass_inv @ (grad_x_matrix @ discretised_symbol)
@@ -133,7 +133,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                 f"Unknown coordinate system '{coord_sys}'"
             )  # pragma: no cover
 
-        grad.copy_domains(symbol)
+        grad = grad.with_domains(symbol)
 
         return grad
 
@@ -228,6 +228,8 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Symbol`
             The divergence of the vector field
         """
+        from scipy.sparse.linalg import inv
+
         domain_key = symbol.domain[0]
 
         if not (
@@ -281,7 +283,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         div_z = mass_inv @ (grad_z_T @ Fz)
 
         div_result = div_x + div_y + div_z
-        div_result.clear_domains()
+        div_result = div_result.without_domains()
         return div_result
 
     def stiffness_matrix(self, symbol, boundary_conditions):
@@ -460,7 +462,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         """
         integration_vector = self.boundary_integral_vector(child.domain, region=region)
         out = integration_vector @ discretised_child
-        out.clear_domains()
+        out = out.without_domains()
         return out
 
     def boundary_integral_vector(self, domain, region):
@@ -522,7 +524,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
                 integration_vector @ pybamm.Vector(np.ones(integration_vector.shape[1]))
             )
             boundary_value = boundary_val_vector @ discretised_child
-            boundary_value.copy_domains(symbol)
+            boundary_value = boundary_value.with_domains(symbol)
             return boundary_value
 
         elif isinstance(symbol, pybamm.BoundaryGradient):

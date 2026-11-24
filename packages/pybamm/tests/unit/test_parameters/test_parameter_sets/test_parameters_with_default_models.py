@@ -11,11 +11,39 @@ class TestParameterValuesWithModel:
             "Ai2020": pybamm.lithium_ion.DFN(
                 {"particle mechanics": "swelling and cracking"}
             ),
+            "Bonkile2024": pybamm.lithium_ion.DFN(
+                {
+                    "particle phases": ("2", "1"),
+                    "open-circuit potential": (
+                        ("single", "current sigmoid"),
+                        "single",
+                    ),
+                    "SEI": "solvent-diffusion limited",
+                    "lithium plating": "partially reversible",
+                    "particle mechanics": (
+                        ("swelling and cracking", "swelling only"),
+                        "swelling only",
+                    ),
+                    "loss of active material": "stress-driven",
+                    "thermal": "lumped",
+                }
+            ),
             "Chen2020": pybamm.lithium_ion.DFN(),
             "Chen2020_composite": pybamm.lithium_ion.DFN(
                 {
                     "particle phases": ("2", "1"),
                     "open-circuit potential": (("single", "current sigmoid"), "single"),
+                    "thermal": "lumped",
+                }
+            ),
+            "MolicelP45B_AboutEnergy2026": pybamm.lithium_ion.DFN(
+                {
+                    "particle phases": ("2", "1"),
+                    "open-circuit potential": (
+                        ("single", "one-state hysteresis"),
+                        "single",
+                    ),
+                    "contact resistance": "true",
                 }
             ),
             "Ecker2015": pybamm.lithium_ion.DFN(),

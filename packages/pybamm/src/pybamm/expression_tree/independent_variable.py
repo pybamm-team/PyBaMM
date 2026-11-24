@@ -3,13 +3,17 @@
 #
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sympy
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
@@ -35,6 +39,8 @@ class IndependentVariable(pybamm.Symbol):
         deprecated.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         name: str,
@@ -52,7 +58,7 @@ class IndependentVariable(pybamm.Symbol):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(self.domains)
+        return pybamm.evaluate_for_shape_using_domain(self._domains)
 
     def _jac(self, variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
@@ -60,6 +66,8 @@ class IndependentVariable(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -71,13 +79,15 @@ class IndependentVariable(pybamm.Symbol):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(self.name, domains=self.domains)
+        return self.__class__(self.name, domains=self._domains)
 
 
 class Time(IndependentVariable):
     """
     A node in the expression tree representing time.
     """
+
+    __slots__ = ()
 
     def __init__(self):
         super().__init__("time")
@@ -117,8 +127,15 @@ class Time(IndependentVariable):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        return graph.time()
+
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         return sympy.Symbol("t")
 
 
@@ -142,6 +159,8 @@ class SpatialVariable(IndependentVariable):
         deprecated.
     """
 
+    __slots__ = ("coord_sys", "direction")
+
     def __init__(
         self,
         name: str,
@@ -155,27 +174,29 @@ class SpatialVariable(IndependentVariable):
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
-        domain = self.domain
+        primary_domain = self._domains["primary"]
         self.direction = direction
 
-        if domain == []:
+        if primary_domain == []:
             raise ValueError("domain must be provided")
 
         # Check symbol name vs domain name
-        if name == "r_n" and not all(n in domain[0] for n in ["negative", "particle"]):
+        if name == "r_n" and not all(
+            n in primary_domain[0] for n in ["negative", "particle"]
+        ):
             # catches "negative particle", "negative secondary particle", etc
             raise pybamm.DomainError(
                 "domain must be negative particle if name is 'r_n'"
             )
         elif name == "r_p" and not all(
-            n in domain[0] for n in ["positive", "particle"]
+            n in primary_domain[0] for n in ["positive", "particle"]
         ):
             # catches "positive particle", "positive secondary particle", etc
             raise pybamm.DomainError(
                 "domain must be positive particle if name is 'r_p'"
             )
         elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
-            "particle" in dom for dom in domain
+            "particle" in dom for dom in primary_domain
         ):
             raise pybamm.DomainError(f"domain cannot be particle if name is '{name}'")
 
@@ -185,7 +206,9 @@ class SpatialVariable(IndependentVariable):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
+        return self.__class__(
+            self.name, domains=self._domains, coord_sys=self.coord_sys
+        )
 
     def to_json(self):
         return {
@@ -223,6 +246,8 @@ class SpatialVariableEdge(SpatialVariable):
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
     """
+
+    __slots__ = ()
 
     def _evaluates_on_edges(self, dimension):
         return True

@@ -7,10 +7,12 @@ import pytest
 
 import pybamm
 from tests import (
+    assert_symbolic_mesh_matches_numeric,
     get_1p1d_mesh_for_testing,
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
     get_p2d_mesh_for_testing,
+    get_symbolic_length_discretisation_for_testing,
 )
 
 
@@ -512,6 +514,51 @@ class TestExtrapolation:
         np.testing.assert_allclose(
             surf_eqn_disc.evaluate(None, linear_y), y_surf, rtol=1e-7, atol=1e-6
         )
+
+    @pytest.mark.parametrize("order", ["linear", "quadratic"])
+    @pytest.mark.parametrize("use_bcs", [False, True])
+    def test_extrapolate_symbolic_length_with_secondary_domain(self, order, use_bcs):
+        c = pybamm.Variable(
+            "c", "particle", auxiliary_domains={"secondary": "electrode"}
+        )
+        expressions = [
+            operator(c, side)
+            for operator in (pybamm.BoundaryValue, pybamm.BoundaryGradient)
+            for side in ("left", "right")
+        ]
+        options = {
+            "extrapolation": {
+                "order": {"gradient": order, "value": order},
+                "use bcs": use_bcs,
+            }
+        }
+
+        def discretise(radius):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, spatial_method=pybamm.FiniteVolume(options)
+            )
+            disc.set_variable_slices([c])
+            disc.bcs = {
+                c: {
+                    "left": (pybamm.Scalar(1), "Neumann"),
+                    "right": (pybamm.Scalar(2), "Dirichlet"),
+                }
+            }
+            return [disc.process_symbol(expr) for expr in expressions]
+
+        # With the bcs, the left value adds an input-dependent scalar to a vector,
+        # which pybamm's Jacobian does not support
+        check_jacobian = [not use_bcs, True, True, True]
+        y = np.linspace(0, 1, 18)[:, np.newaxis] ** 2
+        for symbolic, numeric, jacobian in zip(
+            discretise(pybamm.InputParameter("R")),
+            discretise(pybamm.Scalar(2)),
+            check_jacobian,
+            strict=True,
+        ):
+            assert_symbolic_mesh_matches_numeric(
+                symbolic, numeric, y, {"R": 2}, check_jacobian=jacobian
+            )
 
     def test_extrapolate_symbolic(self):
         mesh = get_mesh_for_testing_symbolic()

@@ -168,7 +168,7 @@ class PolynomialProfile(BaseParticle):
             # The concentration is given by c = A + B*r**2 + C*r**4
             # eqs 24-26 in Subramanian2005
             A = 39 / 4 * c_s_surf - 3 * q_s_rav * R - 35 / 4 * c_s_rav
-            B = -35 * c_s_surf + 10 * q_s_rav + 35 * c_s_rav
+            B = -35 * c_s_surf + 10 * q_s_rav * R + 35 * c_s_rav
             C = 105 / 4 * c_s_surf - 7 * q_s_rav * R - 105 / 4 * c_s_rav
         A = pybamm.PrimaryBroadcast(A, [f"{domain} particle"])
         B = pybamm.PrimaryBroadcast(B, [f"{domain} particle"])

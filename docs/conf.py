@@ -69,6 +69,9 @@ extensions = [
     "sphinx_gallery.load_style",
 ]
 
+# $...$ and $$...$$ maths in Markdown pages, as in the example notebooks
+myst_enable_extensions = ["dollarmath", "amsmath"]
+
 
 napoleon_use_rtype = True
 napoleon_google_docstring = False
@@ -130,6 +133,23 @@ suppress_warnings = []
 html_theme = "pydata_sphinx_theme"
 
 html_static_path = ["_static"]
+
+# "Ask PyBaMM": a chat button that answers questions from these docs, the model zoo and papers that use PyBaMM,
+# citing the section or page each claim comes from. Hosted by Ionworks (https://ionworks.com/experts/expert/pybamm).
+# Bottom-left, since Read the Docs puts its version menu in the bottom-right corner.
+html_js_files = [
+    (
+        "https://ionworks.com/experts/widget.js",
+        {
+            "data-expert": "pybamm",
+            "data-position": "left",
+            "data-question-1": "Can I model lithium plating with the DFN?",
+            "data-question-2": "Which model options add thermal effects?",
+            "data-question-3": "How do I run a drive cycle experiment?",
+            "defer": "defer",
+        },
+    ),
+]
 
 # Theme
 
@@ -198,7 +218,10 @@ html_file_suffix = ".html"
 
 htmlhelp_basename = "pybamm"
 
-html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
+html_sidebars = {
+    "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
+    "index": [],  # Remove the left side-bar for the home page
+}
 
 # For edit button
 html_context.update(
@@ -348,7 +371,7 @@ if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
 
 if os.environ.get("READTHEDOCS_VERSION") == "stable":
     notebooks_version = version
-    append_to_url = f"blob/v{notebooks_version}"
+    append_to_url = f"blob/pybamm-v{notebooks_version}"
 
 if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
     notebooks_version = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")

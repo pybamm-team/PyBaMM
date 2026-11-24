@@ -3,7 +3,7 @@
 #
 from __future__ import annotations
 
-from collections.abc import Generator, Sequence
+from collections.abc import Iterable, Sequence
 
 import pybamm
 
@@ -15,7 +15,7 @@ class SymbolUnpacker:
 
     Parameters
     ----------
-    classes_to_find : list of pybamm classes
+    classes_to_find : class or tuple of classes
         Classes to identify in the equations
     unpacked_symbols: set, optional
         cached unpacked equations
@@ -25,7 +25,7 @@ class SymbolUnpacker:
 
     def __init__(
         self,
-        classes_to_find: Sequence[pybamm.Symbol] | type[pybamm.Symbol],
+        classes_to_find: type[pybamm.Symbol] | tuple[type[pybamm.Symbol], ...],
         unpacked_symbols: dict | None = None,
     ):
         self.classes_to_find = classes_to_find
@@ -33,7 +33,7 @@ class SymbolUnpacker:
 
     def unpack_list_of_symbols(
         self,
-        list_of_symbols: Sequence[pybamm.Symbol] | Generator[pybamm.Symbol, None, None],
+        list_of_symbols: Iterable[pybamm.Symbol],
     ) -> set[pybamm.Symbol]:
         """
         Unpack a list of symbols. See :meth:`SymbolUnpacker.unpack()`
@@ -45,7 +45,7 @@ class SymbolUnpacker:
 
         Returns
         -------
-        list of :class:`pybamm.Symbol`
+        set of :class:`pybamm.Symbol`
             Set of unpacked symbols with class in `self.classes_to_find`
         """
         all_instances = set()
@@ -56,7 +56,10 @@ class SymbolUnpacker:
         return all_instances
 
     def unpack_parameter_values(
-        self, parameter_values: pybamm.ParameterValues | dict
+        self,
+        parameter_values: pybamm.ParameterValues
+        | pybamm.parameters.ParameterStore
+        | dict,
     ) -> set[pybamm.Symbol]:
         """
         Unpack a parameter values object.
@@ -67,7 +70,7 @@ class SymbolUnpacker:
 
     def unpack_symbol(
         self, symbol: Sequence[pybamm.Symbol] | pybamm.Symbol
-    ) -> list[pybamm.Symbol]:
+    ) -> set[pybamm.Symbol]:
         """
         This function recurses down the tree, unpacking the symbols and saving the ones
         that have a class in `self.classes_to_find`.
@@ -79,33 +82,23 @@ class SymbolUnpacker:
 
         Returns
         -------
-        list of :class:`pybamm.Symbol`
-            List of unpacked symbols with class in `self.classes_to_find`
+        set of :class:`pybamm.Symbol`
+            Set of unpacked symbols with class in `self.classes_to_find`
         """
 
-        try:
-            return self._unpacked_symbols[symbol]
-        except KeyError:
-            unpacked = self._unpack(symbol)
-            self._unpacked_symbols[symbol] = unpacked
-            return unpacked
+        value = self._unpacked_symbols.get(symbol)
+        if value is not None:
+            return value
 
-    def _unpack(self, symbol):
+        unpacked = self._unpack(symbol)
+        self._unpacked_symbols[symbol] = unpacked
+        return unpacked
+
+    def _unpack(self, symbol) -> set[pybamm.Symbol]:
         """See :meth:`SymbolUnpacker.unpack()`."""
         # found a symbol of the right class -> return it
         if isinstance(symbol, self.classes_to_find):
             return {symbol}
 
-        children = symbol.children
-
-        if len(children) == 0:
-            # not the right class and no children so the class to find doesn't appear
-            return set()
-        else:
-            # iterate over all children
-            found_vars = set()
-            for child in children:
-                # call back unpack_symbol to cache values
-                child_vars = self.unpack_symbol(child)
-                found_vars.update(child_vars)
-            return found_vars
+        # flatten the per-dependent sets into one set
+        return {found for leaf in symbol.leaves for found in self.unpack_symbol(leaf)}

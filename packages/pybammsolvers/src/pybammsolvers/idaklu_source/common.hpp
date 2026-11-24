@@ -107,6 +107,12 @@ std::vector<sunrealtype> makeSortedUnique(const T input_begin, const T input_end
 std::vector<sunrealtype> makeSortedUnique(const np_array& input_np);
 
 /**
+ * @brief Set up a KLU linear solver: AMD fill-reducing ordering and the given
+ * threshold partial pivoting tolerance
+ */
+void configure_klu(SUNLinearSolver LS, sunrealtype pivot_tolerance);
+
+/**
  * @brief Apply a small perturbation to a time value to avoid roundoff errors
  */
 inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
@@ -115,6 +121,18 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
   const sunrealtype sign = increasing ? SUN_RCONST(1.0) : -SUN_RCONST(1.0);
   // Relative nudge ensures progress away from t, absolute nudge covers t == 0
   return (SUN_RCONST(1.0) + delta) * t + delta * sign;
+}
+
+/**
+ * @brief Whether IDAS, stopping at t_b from t_a, may return without evaluating
+ * the model past t_a
+ *
+ * Uses the 100 * uround tolerance IDAS uses to decide a stop time is reached,
+ * scaled by |t_a| + |t_b| in place of IDAS's |t_n| + |h|.
+ */
+inline bool within_roundoff(const sunrealtype t_a, const sunrealtype t_b) {
+  const sunrealtype tol = SUN_RCONST(100.0) * std::numeric_limits<sunrealtype>::epsilon();
+  return SUNRabs(t_b - t_a) <= tol * (SUNRabs(t_a) + SUNRabs(t_b));
 }
 
 // IDA uses id values of 1.0 for differential and 0.0 for algebraic,

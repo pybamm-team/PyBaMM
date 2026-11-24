@@ -9,8 +9,13 @@
 *.csv
 *.hidden
 *.pkl
-.claude
+# The shared agent config and its hooks are tracked; everything else under
+# .claude/ (settings.local.json, worktrees/) is per-developer state.
+.claude/*
+!.claude/hooks/
+!.claude/settings.json
 .local
+.benchmarks
 
 # don't ignore important .txt and .csv files
 !requirements*
@@ -19,7 +24,7 @@
 !src/pybamm/CITATIONS.bib
 !src/pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
-!benchmarks/benchmark_images/*.png
+!packages/pybamm-model-zoo/src/pybamm_model_zoo/**/data/**/*.csv
 
 # running files
 *.pyc
@@ -37,6 +42,10 @@ packages/pybamm/src/pybamm/_version.py
 
 # Benchmark artifact (dropped in cwd; lands at repo root when solver tests run from here)
 performance_results.json
+
+# Benchmark image build inputs/outputs (see tests/benchmarks/Dockerfile)
+solver-wheels/
+benchmark-image.tar.zst
 
 # Sphinx build files
 docs/_build/
@@ -71,6 +80,9 @@ dist/
 coverage.xml
 htmlcov/
 
+# local secrets
+.env
+
 # virtual environment
 .venv
 env/
@@ -92,6 +104,7 @@ pyvenv.cfg
 # third party
 third-party
 *.so
+*.pyd
 
 
 # test

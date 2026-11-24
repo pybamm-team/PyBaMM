@@ -89,11 +89,7 @@ def get_interp_fun(variable_name, domain):
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
     fun = pybamm.Interpolant(comsol_t, variable.T, pybamm.t)
-
-    fun.domains = {"primary": domain}
-    fun.mesh = mesh[domain]
-    fun.secondary_mesh = None
-    return fun
+    return fun.with_domains({"primary": domain}).with_mesh(mesh[domain])
 
 
 comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
@@ -124,7 +120,7 @@ comsol_model.update_processed_variables(comsol_model.variables)
 # Make new solution with same t and y
 # Update solution scales to match the pybamm model
 comsol_solution = pybamm.Solution(
-    pybamm_solution.t, pybamm_solution.y, comsol_model, {}
+    pybamm_solution.all_ts, pybamm_solution.all_ys, comsol_model, {}
 )
 
 # plot

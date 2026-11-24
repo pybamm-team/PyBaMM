@@ -100,22 +100,18 @@ class RegulariseSqrtAndPower:
         return expr.create_copy(new_children=new_children)
 
     def _process(self, sym, resolved_scales):
-        """Recursively replace Sqrt/Power with RegPower."""
-        if not sym.children:
-            return sym
+        """Replace Sqrt/Power with RegPower."""
 
-        new_children = [self._process(child, resolved_scales) for child in sym.children]
+        def regularise(node, new_leaves):
+            if isinstance(node, pybamm.Sqrt | pybamm.Power):
+                base = new_leaves[0]
+                exponent = 0.5 if isinstance(node, pybamm.Sqrt) else new_leaves[1]
+                scale = self._get_scale(base, resolved_scales)
+                if scale is not None or self._depends_on_state(base):
+                    return pybamm.RegPower(base, exponent, scale=scale)
+            return pybamm.rebuild(node, new_leaves)
 
-        if isinstance(sym, pybamm.Sqrt | pybamm.Power):
-            base = new_children[0]
-            exponent = 0.5 if isinstance(sym, pybamm.Sqrt) else new_children[1]
-            scale = self._get_scale(base, resolved_scales)
-            if scale is not None or self._depends_on_state(base):
-                return pybamm.RegPower(base, exponent, scale=scale)
-
-        if any(n is not o for n, o in zip(new_children, sym.children, strict=True)):
-            return sym.create_copy(new_children=new_children)
-        return sym
+        return pybamm.tree_map(regularise, sym)
 
     @staticmethod
     def _depends_on_state(expr):

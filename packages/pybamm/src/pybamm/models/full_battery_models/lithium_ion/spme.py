@@ -21,6 +21,8 @@ class SPMe(SPM):
 
     """
 
+    fixed_options = {}
+
     def __init__(
         self, options=None, name="Single Particle Model with electrolyte", build=True
     ):
@@ -46,7 +48,7 @@ class SPMe(SPM):
 
     def set_electrolyte_concentration_submodel(self):
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param, self.options
+            self.param, self.options, x_average_state=True
         )
 
     def set_electrolyte_potential_submodel(self):

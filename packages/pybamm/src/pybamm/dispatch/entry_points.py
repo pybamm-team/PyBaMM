@@ -1,21 +1,55 @@
 import importlib.metadata
 import textwrap
 from collections.abc import Callable, Mapping
+from importlib.util import find_spec
+
+from packaging.requirements import Requirement
+from packaging.version import Version
+
+import pybamm
+
+
+def _entry_point_is_available(entry_point: importlib.metadata.EntryPoint) -> bool:
+    if (
+        entry_point.group != "pybamm_parameter_sets"
+        or entry_point.value
+        != "pybamm.input.parameters.lithium_ion."
+        "MolicelP45B_AboutEnergy2026:get_parameter_values"
+    ):
+        return True
+
+    try:
+        if find_spec("bpx") is None:
+            return False
+        bpx_version = Version(importlib.metadata.version("bpx"))
+    except (importlib.metadata.PackageNotFoundError, ValueError):
+        return False
+
+    distribution = entry_point.dist
+    if distribution is None:
+        return False
+    return any(
+        bpx_version in requirement.specifier
+        for requirement in map(Requirement, distribution.requires or ())
+        if requirement.name == "bpx"
+        and (
+            requirement.marker is None or requirement.marker.evaluate({"extra": "bpx"})
+        )
+    )
 
 
 class EntryPoint(Mapping):
     """
     A mapping interface for accessing PyBaMM models and parameter sets through entry points.
 
-    This class provides a unified way to load, and instantiate PyBaMM models
-    and parameter sets that have been registered as entry points.
-
     Access via :py:data:`pybamm.parameter_sets` for parameter sets - provides access
-    to all registered battery parameter sets (e.g., 'Chen2020', 'Ai2020') that can
-    be used to parameterise battery models.
+    to installed battery parameter sets (e.g., 'Chen2020', 'Ai2020'). Sets needing
+    an extra are listed by ``get_entries("pybamm_parameter_sets")``.
 
     Access via :py:data:`pybamm.Model` for models - provides access to all registered
     battery models (e.g., 'SPM', 'DFN').
+
+    Names are listed in sorted order, whichever package registers them.
 
     .. attention::
 
@@ -23,15 +57,15 @@ class EntryPoint(Mapping):
 
     Examples
     --------
-    Listing available parameter sets:
+    Checking that a parameter set is available:
         >>> import pybamm
-        >>> list(pybamm.parameter_sets)  # doctest: +ELLIPSIS
-        ['Ai2020', 'Chayambuka2022', ...]
+        >>> "Ai2020" in pybamm.parameter_sets
+        True
 
-    Listing available models:
+    Checking that a model is available:
         >>> import pybamm
-        >>> list(pybamm.dispatch.models) # doctest: +ELLIPSIS
-        ['DFN', 'MPM', ...]
+        >>> "SPM" in pybamm.dispatch.models
+        True
 
     Get the docstring for a parameter set or model:
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))  # doctest: +ELLIPSIS
@@ -55,12 +89,17 @@ class EntryPoint(Mapping):
             self._all_entries = {}
             self.group = group
             for entry_point in self.get_entries(self.group):
-                self._all_entries[entry_point.name] = entry_point
+                if _entry_point_is_available(entry_point):
+                    self._all_entries[entry_point.name] = entry_point
 
     @staticmethod
     def get_entries(group_name):
-        """Wrapper for the importlib version logic"""
-        return importlib.metadata.entry_points(group=group_name)
+        """Return the entry points registered to ``group_name``, sorted by name"""
+        # Without sorting, the order depends on which installed package is found first
+        return sorted(
+            importlib.metadata.entry_points(group=group_name),
+            key=lambda entry: entry.name,
+        )
 
     def __new__(cls, group):
         """Ensure only two instances of entry points exist, one for parameter sets and the other for models"""
@@ -88,8 +127,25 @@ class EntryPoint(Mapping):
             pass
         return entry_point
 
+    def __contains__(self, key) -> bool:
+        return key in self._all_entries
+
     def __iter__(self):
         return self._all_entries.__iter__()
+
+    def items(self):
+        """Yield ``(name, value)`` pairs, skipping entries whose optional
+        dependencies are not installed."""
+        for key in self:
+            try:
+                yield key, self[key]
+            except ModuleNotFoundError as error:
+                pybamm.logger.info(f"Skipping '{key}': {error}")
+
+    def values(self):
+        """Yield values, skipping entries whose optional dependencies are not
+        installed."""
+        yield from (value for _, value in self.items())
 
     def __len__(self) -> int:
         return len(self._all_entries)
@@ -130,10 +186,10 @@ def Model(model: str, *args, **kwargs):
 
     Examples
     --------
-    Listing available models:
+    Checking that a model is available:
         >>> import pybamm
-        >>> list(pybamm.dispatch.models) # doctest: +ELLIPSIS
-        ['DFN', 'MPM', ...]
+        >>> "SPM" in pybamm.dispatch.models
+        True
         >>> pybamm.Model('SPM') # doctest: +SKIP
         <pybamm.models.full_battery_models.lithium_ion.spm.SPM object>
     """

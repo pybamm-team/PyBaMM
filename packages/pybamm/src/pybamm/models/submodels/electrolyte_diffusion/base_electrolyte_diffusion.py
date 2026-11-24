@@ -127,11 +127,8 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables : dict
             The "Total lithium in electrolyte [mol]" variable.
         """
-        L_x = self.param.L_x
-        A = self.param.A_cc
-
-        eps_c_e_av = pybamm.yz_average(pybamm.x_average(eps_c_e))
-
-        variables = {"Total lithium in electrolyte [mol]": L_x * A * eps_c_e_av}
+        x = pybamm.SpatialVariable("x", domain=eps_c_e.domain)
+        n_Li_e = pybamm.yz_average(pybamm.Integral(eps_c_e, x))
+        variables = {"Total lithium in electrolyte [mol]": self.param.A_cc * n_Li_e}
 
         return variables

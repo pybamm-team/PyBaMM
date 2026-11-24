@@ -3,8 +3,9 @@
 #
 
 import os
+import pickle
 import platform
-import subprocess  # nosec
+import subprocess
 import sys
 from io import StringIO
 
@@ -65,6 +66,13 @@ class TestBaseModel:
         assert isinstance(model.initial_conditions[c0], pybamm.Scalar)
         assert model.initial_conditions[c0].value == 34
 
+        # update accepts iterable pairs as well as mappings
+        d0 = pybamm.Symbol("d0")
+        model.initial_conditions.update([(d0, 5)])
+        assert model.initial_conditions[d0].value == 5
+        with pytest.raises(TypeError, match="does not accept keyword arguments"):
+            model.initial_conditions.update(d0=5)
+
         # Variable in initial conditions should fail
         with pytest.raises(
             TypeError, match=r"Initial conditions cannot contain 'Variable' objects"
@@ -100,6 +108,13 @@ class TestBaseModel:
         assert model.boundary_conditions[c0]["left"][1] == "Dirichlet"
         assert model.boundary_conditions[c0]["right"][1] == "Dirichlet"
 
+        # update accepts iterable pairs as well as mappings
+        model.boundary_conditions.update(
+            [(c0, {"left": (1, "Neumann"), "right": (2, "Neumann")})]
+        )
+        assert model.boundary_conditions[c0]["left"][0].value == 1
+        assert model.boundary_conditions[c0]["right"][1] == "Neumann"
+
         # Check bad bc type
         bad_bcs = {c0: {"left": (-2, "bad type"), "right": (4, "bad type")}}
         with pytest.raises(pybamm.ModelError, match=r"boundary condition"):
@@ -111,6 +126,15 @@ class TestBaseModel:
         model.variables = variables
         assert variables == model.variables
         assert model.variable_names() == list(variables.keys())
+
+    def test_summary_variables_set_get(self):
+        model = pybamm.BaseModel()
+        assert model.summary_variables == []
+        model.variables = {"var": pybamm.Scalar(1)}
+        model.summary_variables = ["var"]
+        assert model.summary_variables == ["var"]
+        with pytest.raises(KeyError, match=r"No cycling variable defined"):
+            model.summary_variables = ["bad var"]
 
     def test_jac_set_get(self):
         model = pybamm.BaseModel()
@@ -159,6 +183,28 @@ class TestBaseModel:
         }
         model.print_parameter_info()
 
+    def test_read_parameters_from_variable_metadata(self):
+        model = pybamm.BaseModel()
+        scale = pybamm.Parameter("scale")
+        reference = pybamm.Parameter("reference")
+        lower_bound = pybamm.Parameter("lower bound")
+        upper_bound = pybamm.Parameter("upper bound")
+        state = pybamm.Variable(
+            "state",
+            scale=scale,
+            reference=reference,
+            bounds=(lower_bound, upper_bound),
+        )
+        model.rhs = {state: pybamm.Scalar(0)}
+        model.initial_conditions = {state: pybamm.Scalar(0)}
+
+        assert {parameter.name for parameter in model.parameters} == {
+            "scale",
+            "reference",
+            "lower bound",
+            "upper bound",
+        }
+
     @pytest.mark.parametrize("symbols", ["c", "d", "e", "f", "h", "i"])
     def test_get_parameter_info(self, symbols):
         model = pybamm.BaseModel()
@@ -189,6 +235,43 @@ class TestBaseModel:
         assert parameter_info["b"][1] == "InputParameter in ['test']"
         assert symbols in parameter_info
         assert parameter_info["g"][1] == "Parameter"
+
+    def test_get_parameter_info_geometry(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.Parameter("a")
+        model.rhs = {u: -a * u}
+        model.initial_conditions = {u: 1}
+        x = pybamm.SpatialVariable("x", "domain")
+        model._default_geometry = pybamm.Geometry(
+            {
+                "domain": {
+                    x: {"min": a, "max": pybamm.Parameter("length")},
+                    "tabs": {"width": pybamm.InputParameter("width")},
+                }
+            }
+        )
+
+        parameter_info = model.get_parameter_info()
+        assert set(parameter_info) == {"a", "length", "width"}
+        assert parameter_info["length"][1] == "Parameter"
+        assert parameter_info["width"][1] == "InputParameter"
+        assert {p.name for p in model.parameters} == {"a"}
+
+    @pytest.mark.parametrize(
+        "particle_size, electrodes",
+        [
+            ("distribution", ["Negative", "Positive"]),
+            (("single", "distribution"), ["Positive"]),
+        ],
+    )
+    def test_get_parameter_info_size_distribution(self, particle_size, electrodes):
+        model = pybamm.lithium_ion.DFN({"particle size": particle_size})
+        parameter_info = model.get_parameter_info()
+        for electrode in electrodes:
+            for bound in ["minimum", "maximum"]:
+                name = f"{electrode} {bound} particle radius [m]"
+                assert parameter_info[name][1] == "Parameter"
 
     @pytest.mark.parametrize(
         "sub, key, parameter_value",
@@ -808,7 +891,7 @@ class TestBaseModel:
         # Compile
         subprocess.run(
             ["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"], check=True
-        )  # nosec
+        )
 
         # Read the generated functions
         x0_fn = casadi.external("x0", "./test.so")
@@ -1752,3 +1835,71 @@ class TestBaseModel:
     def test_y0_property(self):
         model = pybamm.BaseModel()
         assert model.y0 is None
+
+    def test_convert_to_format_validated(self):
+        model = pybamm.BaseModel()
+        for valid in ("python", "casadi", "jax"):
+            model.convert_to_format = valid
+            assert model.convert_to_format == valid
+        with pytest.raises(
+            pybamm.OptionError, match="convert_to_format must be one of"
+        ):
+            model.convert_to_format = "fortran"
+
+    def test_convert_to_format_none_deprecated(self):
+        model = pybamm.BaseModel()
+        with pytest.warns(
+            DeprecationWarning, match=r"convert_to_format=None is deprecated"
+        ):
+            model.convert_to_format = None
+        assert model.convert_to_format is None
+        assert model.uses_stacked_inputs is False
+
+    def test_uses_stacked_inputs(self):
+        model = pybamm.BaseModel()
+        for convert_to_format, stacked in [
+            ("casadi", True),
+            ("python", False),
+            ("jax", False),
+        ]:
+            model.convert_to_format = convert_to_format
+            assert model.uses_stacked_inputs is stacked
+
+    def test_unpickle_convert_to_format_under_its_public_name(self, monkeypatch):
+        # Pickles written before convert_to_format became a property store it
+        # in the instance dict under the public name.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1.0}
+        model.variables = {"u": u}
+        model.convert_to_format = "python"
+
+        def public_name_state(self):
+            state = self.__dict__.copy()
+            state["convert_to_format"] = state.pop("_convert_to_format")
+            return state
+
+        monkeypatch.setattr(
+            pybamm.BaseModel, "__getstate__", public_name_state, raising=False
+        )
+        data = pickle.dumps(model)
+        monkeypatch.undo()
+
+        restored = pickle.loads(data)
+        assert restored.convert_to_format == "python"
+        assert "convert_to_format" not in vars(restored)
+        solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
+        np.testing.assert_allclose(solution["u"](1.0), np.exp(-1.0), rtol=1e-3)
+
+
+class TestModelSolutionObservability:
+    def test_members_format_as_their_reason(self):
+        reason = pybamm.ModelSolutionObservability.DISABLED
+        assert str(reason) == reason.value
+        assert f"{reason}" == reason.value
+        assert reason == reason.value
+
+    def test_only_enabled_is_truthy(self):
+        for reason in pybamm.ModelSolutionObservability:
+            assert bool(reason) is (reason is pybamm.ModelSolutionObservability.ENABLED)

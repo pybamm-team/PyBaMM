@@ -1,7 +1,7 @@
 #
 # Tests for the base lead acid model class
 #
-import os
+import contextlib
 
 import pytest
 
@@ -20,11 +20,9 @@ class TestBaseLithiumIonModel:
 
         # change path and try again
 
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.lithium_ion.BaseModel()
-        assert model.default_parameter_values["Reference temperature [K]"] == 298.15
-        os.chdir(cwd)
+        with contextlib.chdir(".."):
+            model = pybamm.lithium_ion.BaseModel()
+            assert model.default_parameter_values["Reference temperature [K]"] == 298.15
 
     def test_insert_reference_electrode(self):
         model = pybamm.lithium_ion.SPM()
@@ -54,6 +52,36 @@ class TestBaseLithiumIonModel:
             model.calc_esoh = "Yes"
 
     @pytest.mark.parametrize(
+        "phases, calc_esoh", [(("2", "1"), False), (("1", "1"), True)]
+    )
+    def test_calc_esoh_per_electrode_phases(self, phases, calc_esoh):
+        model = pybamm.lithium_ion.SPM({"particle phases": phases})
+        assert model.calc_esoh is calc_esoh
+
+    @pytest.mark.parametrize(
+        "options, explicit",
+        [
+            ({}, True),
+            ({"SEI": ("reaction limited", "none")}, False),
+            (
+                {
+                    "intercalation kinetics": (
+                        "symmetric Butler-Volmer",
+                        "asymmetric Butler-Volmer",
+                    )
+                },
+                True,
+            ),
+        ],
+    )
+    def test_half_cell_counter_electrode_reads_its_own_sei(self, options, explicit):
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive", **options})
+        submodel = model.submodels["negative electrode potential"]
+        assert (
+            isinstance(submodel, pybamm.electrode.ohm.LithiumMetalExplicit) is explicit
+        )
+
+    @pytest.mark.parametrize(
         "options",
         [
             {},
@@ -80,4 +108,47 @@ class TestBaseLithiumIonModel:
         )
         assert (
             "Negative electrode primary phase capacity [A.h]" in model.summary_variables
+        )
+
+    def test_per_phase_particle_mechanics(self):
+        model = pybamm.lithium_ion.DFN(
+            options={
+                "particle phases": ("2", "1"),
+                "particle mechanics": (
+                    ("swelling and cracking", "swelling only"),
+                    "none",
+                ),
+            }
+        )
+        assert isinstance(
+            model.submodels["negative primaryparticle mechanics"],
+            pybamm.particle_mechanics.CrackPropagation,
+        )
+        assert isinstance(
+            model.submodels["negative secondaryparticle mechanics"],
+            pybamm.particle_mechanics.SwellingOnly,
+        )
+        assert isinstance(
+            model.submodels["positive primaryparticle mechanics"],
+            pybamm.particle_mechanics.NoMechanics,
+        )
+
+    def test_per_phase_sei_on_cracks(self):
+        model = pybamm.lithium_ion.DFN(
+            options={
+                "particle phases": ("2", "1"),
+                "particle mechanics": (
+                    ("swelling and cracking", "swelling and cracking"),
+                    "none",
+                ),
+                "SEI": (("none", "solvent-diffusion limited"), "none"),
+                "SEI on cracks": "true",
+                "SEI porosity change": "true",
+            }
+        )
+        assert isinstance(
+            model.submodels["negative primary sei on cracks"], pybamm.sei.NoSEI
+        )
+        assert isinstance(
+            model.submodels["negative secondary sei on cracks"], pybamm.sei.SEIGrowth
         )

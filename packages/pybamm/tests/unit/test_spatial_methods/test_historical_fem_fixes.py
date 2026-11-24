@@ -24,8 +24,7 @@ class TestScikitFEM3DFixes:
         spatial_method = pybamm.ScikitFiniteElement3D()
         spatial_method.build(mesh)
 
-        scalar = pybamm.Scalar(1.0)
-        scalar.domains = {"primary": ["current collector"]}
+        scalar = pybamm.Scalar(1.0).with_domains({"primary": ["current collector"]})
 
         grad_result = spatial_method.gradient(scalar, scalar, {})
 

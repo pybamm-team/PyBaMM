@@ -1,0 +1,11 @@
+"""Run ${ModelName} and report its terminal voltage."""
+
+import pybamm
+import pybamm_model_zoo as zoo
+
+model = zoo.load("${ModelName}")()
+simulation = pybamm.Simulation(model)
+solution = simulation.solve([0, 1800])
+
+for time in (0, 900, 1800):
+    print(f"t = {time:5d} s   V = {solution['Voltage [V]'](time):.5f} V")

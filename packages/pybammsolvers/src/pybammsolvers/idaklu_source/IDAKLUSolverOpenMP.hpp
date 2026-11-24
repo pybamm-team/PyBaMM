@@ -3,6 +3,7 @@
 
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
+#include <cmath>
 #include <vector>
 #include <memory>  // For std::make_unique
 using std::vector;
@@ -20,6 +21,22 @@ using std::vector;
 #include <sunmatrix/sunmatrix_sparse.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunmatrix/sunmatrix_band.h>
+
+/**
+ * @brief A statistics snapshot, taken during solve and printed at flush
+ *
+ * Holds the counters alongside the point-in-time integrator values, which
+ * cannot be re-read once the solve has finished.
+ */
+struct PendingStats {
+  IDAKLUStats stats;
+  int klast = 0;
+  int kcur = 0;
+  sunrealtype hinused = 0.0;
+  sunrealtype hlast = 0.0;
+  sunrealtype hcur = 0.0;
+  sunrealtype tcur = 0.0;
+};
 
 /**
  * @brief Abstract solver class based on OpenMP vectors
@@ -53,37 +70,36 @@ using std::vector;
 template <class ExprSet>
 class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
-  // NB: cppcheck-suppress unusedStructMember is used because codacy reports
-  //     these members as unused even though they are important in child
-  //     classes, but are passed by variadic arguments (and are therefore unnamed)
 public:
   void *ida_mem = nullptr;
   np_array atol_np;
   np_array rhs_alg_id;
-  int const number_of_states;  // cppcheck-suppress unusedStructMember
-  int const number_of_parameters;  // cppcheck-suppress unusedStructMember
-  int const number_of_events;  // cppcheck-suppress unusedStructMember
+  int const number_of_states;
+  int const number_of_parameters;
+  int const number_of_events;
   int number_of_timesteps;
-  int precon_type;  // cppcheck-suppress unusedStructMember
-  N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
-  N_Vector *yyS;  // cppcheck-suppress unusedStructMember
-  N_Vector *yypS;  // cppcheck-suppress unusedStructMember
+  int precon_type;
+  N_Vector yy, yyp, y_cache, yp_cache, avtol;  // y, y', their caches, and absolute tolerance
+  N_Vector *yyS;
+  N_Vector *yypS;
   N_Vector id;              // rhs_alg_id
   sunrealtype rtol;
-  int const jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
-  int const jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
-  int const jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
+  int const jac_times_cjmass_nnz;
+  int const jac_bandwidth_lower;
+  int const jac_bandwidth_upper;
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
   std::unique_ptr<ExprSet> functions;
   vector<sunrealtype> res;
   vector<sunrealtype> res_dvar_dy;
   vector<sunrealtype> res_dvar_dp;
-  bool const sensitivity;  // cppcheck-suppress unusedStructMember
-  bool const save_outputs_only; // cppcheck-suppress unusedStructMember
-  bool save_hermite;  // cppcheck-suppress unusedStructMember
-  bool is_ODE;  // cppcheck-suppress unusedStructMember
-  int length_of_return_vector;  // cppcheck-suppress unusedStructMember
+  // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
+  vector<sunrealtype> dvar_dp_dense;
+  bool const sensitivity;
+  bool const save_outputs_only;
+  bool save_hermite;
+  bool is_ODE;
+  int length_of_return_vector;
 
   // Arrays are stored flat (contiguous) for cache efficiency and zero-copy
   // to numpy. Indexing uses strides:
@@ -95,12 +111,16 @@ public:
   vector<sunrealtype> t;   // [n_timesteps]
   vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
   vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
+  // In save_outputs_only mode yS instead uses the final numpy layout,
+  // yS[(i * stride_y + j) * n_params + p], so no transpose is needed at the end
   vector<sunrealtype> yS;  // [n_timesteps * n_params * length_of_return_vector] (flat)
   vector<sunrealtype> ypS; // [n_timesteps * n_params * number_of_states]        (flat)
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
-  SolverLog log_;
+  PendingStats latest_stats_;  // Most recent GetStats(), for its point-in-time half
+  // One entry per solve; drained by flush_log() where the GIL is held
+  std::vector<PendingStats> pending_stats_;
   std::unique_ptr<HermiteKnotReducer> knot_reducer;  // Hermite knot reduction (nullptr if inactive)
 
   struct SubBlockResources {
@@ -114,8 +134,13 @@ public:
     std::vector<sunindextype> rowvals;
     std::vector<int> data_indices;
     std::vector<sunrealtype> full_jac_buf;
+    bool use_sparse = false;
+    // Sensitivity residuals F_y s + F_p - M s', one per parameter
+    N_Vector* sens_res = nullptr;
+    int number_of_sens_res = 0;
 
     ~SubBlockResources() {
+      if (sens_res) N_VDestroyVectorArray(sens_res, number_of_sens_res);
       if (res_nvec) N_VDestroy(res_nvec);
       if (delta_nvec) N_VDestroy(delta_nvec);
       if (LS) SUNLinSolFree(LS);
@@ -158,7 +183,24 @@ public:
   std::vector<int> rootsfound_;
 
   // ── Solve-duration state (valid only during solve()) ──
+  bool save_hermite_sensitivities_ = false;
   bool use_knot_reduction_ = false;
+  bool use_upsampling_ = false;
+  // Upsampled times go to t_additive, not the states
+  bool upsample_to_t_additive_ = false;
+  std::vector<sunrealtype> t_additive_;
+  // Knot interval whose Hermite spline EvaluateUpsampleOutputAt uses (-1: IDA's)
+  int upsample_knot_ = -1;
+  // An interval of the step being upsampled, ordered by its midpoint error
+  struct UpsampleInterval {
+    sunrealtype error, t_a, f_a, t_m, f_m, t_b, f_b;
+    bool operator<(UpsampleInterval const &other) const { return error < other.error; }
+  };
+  std::vector<UpsampleInterval> upsample_heap_;
+  std::vector<sunrealtype> upsample_times_;
+  // upsampling_fcn at the previous step end, reused as the next step start
+  sunrealtype upsample_f_prev_ = 0.0;
+  bool upsample_f_prev_valid_ = false;
   bool save_adaptive_steps_ = false;
   bool save_interp_steps_ = false;
   int i_save_ = 0;
@@ -166,6 +208,13 @@ public:
   sunrealtype *yp_val_ = nullptr;
   vector<sunrealtype *> yS_val_;
   vector<sunrealtype *> ypS_val_;
+  // State at t0 after consistent initialization, for save_outputs_only
+  std::vector<sunrealtype> y_init_;
+  // Its sensitivities, (number_of_parameters, number_of_states) row-major
+  std::vector<sunrealtype> yS_init_;
+  // |p| per sensitivity parameter, so IDAS weights the scaled sensitivity
+  // pbar*yS like a state. Empty leaves IDAS at its pbar = 1 default.
+  std::vector<sunrealtype> sens_scales_;
 
   SUNContext sunctx;
 
@@ -174,9 +223,9 @@ public:
    * @brief Constructor
    */
   IDAKLUSolverOpenMP(
-    np_array atol_np,
+    const np_array &atol_np,
     double rel_tol,
-    np_array rhs_alg_id,
+    const np_array &rhs_alg_id,
     int number_of_parameters,
     int number_of_events,
     int jac_times_cjmass_nnz,
@@ -201,11 +250,34 @@ public:
     const sunrealtype *y0,
     const sunrealtype *yp0,
     const sunrealtype *inputs,
+    const sunrealtype *pbar,
     bool save_adaptive_steps,
-    bool save_interp_steps,
-    py::object logger = py::none()
+    bool save_interp_steps
   ) override;
 
+
+  /**
+   * @brief Take one IDASolve step towards tout, rejecting non-finite residuals
+   * @param tout The time IDASolve integrates towards
+   * @param t_val Set to the time reached
+   * @return The IDASolve return flag
+   */
+  int Step(sunrealtype tout, sunrealtype &t_val);
+
+  /**
+   * @brief Take the first step after a (re)initialization at t_start
+   *
+   * IDA skips events that read yp in this step, whose flag is ignored. With yp
+   * at t_start from it, those events are evaluated at both ends of the step.
+   * One non-positive at t_start returns IDA_ROOT_RETURN there; otherwise, one
+   * at the end makes IDA restart at t_start with that yp and retake the step,
+   * its root search locating the crossing.
+   * @param t_start The time of the (re)initialization
+   * @param tout The time IDASolve integrates towards
+   * @param t_val Set to the time reached
+   * @return The IDASolve return flag
+   */
+  int FirstStep(sunrealtype t_start, sunrealtype tout, sunrealtype &t_val);
 
   /**
    * @brief Concrete implementation of initialization method
@@ -243,14 +315,24 @@ public:
   void CheckErrors(int const & flag, const char* context);
 
   /**
-   * @brief Print the solver statistics
+   * @brief Print the solver statistics, or buffer them until flush time
    */
-  void PrintStats(IDAKLUStats const& stats);
+  void CaptureStats();
+
+  /**
+   * @brief Print one solver statistics block (GIL held), never throwing
+   */
+  void PrintStats(PendingStats const& pending);
+
+  /**
+   * @brief Write one statistics block to stdout; call through PrintStats
+   */
+  void WriteStats(PendingStats const& pending);
 
   /**
    * @brief Get current statistics from IDA solver
    */
-  IDAKLUStats GetStats();
+  PendingStats GetStats();
 
   /**
    * @brief Save current stats to accumulated_stats
@@ -261,25 +343,39 @@ public:
   void SaveStats();
 
   /**
-   * @brief Set a consistent initialization for ODEs
+   * @brief Restart IDAS at t_val from yy, yyp, yyS and yypS
+   * @param ism The sensitivity method IDAS uses from here
    */
-  void ReinitializeIntegrator(const sunrealtype& t_val);
+  void ReinitializeIntegrator(const sunrealtype& t_val, int ism = IDA_STAGGERED);
 
   /**
-   * @brief Set a consistent initialization for the system of equations.
+   * @brief Hand IDAS the per-parameter scales held in sens_scales_.
+   *
+   * Must run after every IDASensInit/IDASensReInit, both of which reset pbar
+   * to 1.0.
+   */
+  void ApplySensitivityScales();
+
+  /**
+   * @brief Make the states and sensitivities consistent at t_val, then hand
+   * them to IDAS.
+   * @param calc_states If false, only the sensitivities are made consistent
    */
   void ConsistentInitialization(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
-    const int& icopt);
+    const int& icopt,
+    bool calc_states = true);
 
   /**
    * @brief Set a consistent initialization for DAEs.
+   * @param with_sensitivities Whether IDACalcIC also solves the sensitivities
    */
   void ConsistentInitializationDAE(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
-    const int& icopt);
+    const int& icopt,
+    bool with_sensitivities);
 
   /**
    * @brief Use the custom Newton IC solver; returns true on success.
@@ -298,12 +394,50 @@ public:
   void RecoverYp(const sunrealtype& t_val);
 
   /**
+   * @brief Run IDACalcIC from the current yy/yyp and copy its result back,
+   * keeping the current values if it fails.
+   * @param with_sensitivities Whether IDACalcIC also solves for yyS/yypS
+   */
+  void CalcICWithIDAS(
+    const sunrealtype& t_val,
+    const sunrealtype& t_next,
+    int icopt,
+    bool with_sensitivities);
+
+  /**
+   * @brief Make a DAE's sensitivities consistent with the current states.
+   *
+   * Keeps the differential sensitivities, solves the algebraic rows for the
+   * algebraic ones with the algebraic sub-block, and sets yypS = F_y s + F_p,
+   * exact as the sub-block is built only for M = I. Requires the sub-block.
+   * @return False if its solve failed
+   */
+  bool SensitivityConsistentInitialization(const sunrealtype& t_val);
+
+  /**
+   * @brief Evaluate and factorise the algebraic sub-block of the Jacobian at
+   * (t, yy)
+   * @return Zero on success
+   */
+  int FactorizeAlgebraicJacobian(sunrealtype t);
+
+  /**
+   * @brief Solve with the factorised algebraic sub-block
+   * @param rhs The len_alg_ right-hand side
+   * @param solution The len_alg_ solution, which may alias rhs
+   * @return Zero on success
+   */
+  int SolveAlgebraicJacobian(const sunrealtype* rhs, sunrealtype* solution);
+
+  /**
    * @brief Build the algebraic Newton solver for consistent initial conditions.
    * Only built when mass matrix has zeros in algebraic rows (standard-form).
+   * Not built for a full-system solve with an iterative linear solver, which
+   * leaves the initial conditions to IDACalcIC. Without calc_ic, it is built
+   * only for a standard-form DAE's sensitivities.
    */
   void BuildAlgebraicSolver(const sunrealtype* id_val);
 
-  bool CheckMassMatrixAlignment(const sunrealtype* id_val);
   void PrecomputeSubBlockSparsity();
 
   /**
@@ -334,7 +468,8 @@ public:
     const std::vector<sunrealtype> &t_eval,
     const sunrealtype *y0,
     const sunrealtype *yp0,
-    const sunrealtype *inputs
+    const sunrealtype *inputs,
+    const sunrealtype *pbar
   );
 
   /**
@@ -361,9 +496,53 @@ public:
   void StoreInitialPoint(sunrealtype t0);
 
   /**
+   * @brief Copy the current state sensitivities into out, one row per parameter
+   * @param out Replaced by the (number_of_parameters, number_of_states) values,
+   * or emptied without sensitivities
+   */
+  void CopyStateSensitivities(std::vector<sunrealtype> &out) const;
+
+  /**
    * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)
    */
   void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
+
+  /**
+   * @brief Add points inside the last step [t_a, t_b] until linear interpolation
+   * of the upsampled output resolves it
+   */
+  void UpsampleStep(sunrealtype t_a, sunrealtype t_b);
+
+  /**
+   * @brief Add points between the reduced knots until linear interpolation of
+   * the upsampled output on their Hermite spline resolves it
+   */
+  void UpsampleReducedKnots();
+
+  /**
+   * @brief Split [t_a, t_b], worst midpoint first, into upsample_times_
+   */
+  void RefineUpsampleInterval(
+    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b);
+
+  /**
+   * @brief Queue [t_a, t_b] for splitting if linear interpolation of the output
+   * misses its midpoint by more than upsampling_tolerance
+   */
+  void PushUpsampleInterval(
+    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b);
+
+  /**
+   * @brief Evaluate upsampling_fcn at t from the states y
+   */
+  sunrealtype EvaluateUpsampleOutput(sunrealtype t, sunrealtype *y);
+
+  /**
+   * @brief Evaluate upsampling_fcn at t_query on the integrator's interpolant, or
+   * on knot interval upsample_knot_'s Hermite spline, using y_cache so the
+   * current state in yy is left untouched
+   */
+  sunrealtype EvaluateUpsampleOutputAt(sunrealtype t_query);
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize
@@ -382,12 +561,19 @@ public:
   SolutionData BuildSolutionData(int retval);
 
   /**
-   * @brief Reorder sensitivity arrays from solve layout to numpy layout
+   * Trims the arrays to the steps actually taken, and transposes them into the
+   * numpy layout unless save_outputs_only already wrote them that way.
+   * @brief Hand the sensitivity arrays over in numpy layout
    */
   void ReorderSensitivities(
     std::vector<sunrealtype> &yS_out,
     std::vector<sunrealtype> &ypS_out
   );
+
+  /**
+   * @brief Emit buffered log and statistics output (GIL held, serial section)
+   */
+  void flush_log() override;
 
   /**
    * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, ypS_val_, i_save_)

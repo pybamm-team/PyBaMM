@@ -34,6 +34,8 @@ class InputParameter(pybamm.Symbol):
         The size of the input parameter expected, defaults to 1 (scalar input)
     """
 
+    __slots__ = ("_expected_size",)
+
     def __init__(
         self,
         name: str,
@@ -64,7 +66,7 @@ class InputParameter(pybamm.Symbol):
     ) -> pybamm.InputParameter:
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_input_parameter = InputParameter(
-            self.name, self.domain, expected_size=self._expected_size
+            self.name, self._domains["primary"], expected_size=self._expected_size
         )
         return new_input_parameter
 
@@ -74,7 +76,7 @@ class InputParameter(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         if self._expected_size is None:
-            return pybamm.evaluate_for_shape_using_domain(self.domains)
+            return pybamm.evaluate_for_shape_using_domain(self._domains)
         elif self._expected_size == 1:
             return np.nan
         else:
@@ -84,9 +86,14 @@ class InputParameter(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        return graph.input_parameter(self.name, self._expected_size or 1)
+
     def _jac(self, variable: pybamm.StateVector) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
-        n_variable = variable.evaluation_array.count(True)
+        n_variable = variable.size
         nan_vector = self._evaluate_for_shape()
         if isinstance(nan_vector, numbers.Number):
             n_self = 1
@@ -141,7 +148,7 @@ class InputParameter(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "domain": self.domain,
+            "domain": self._domains["primary"],
             "expected_size": self._expected_size,
         }
 

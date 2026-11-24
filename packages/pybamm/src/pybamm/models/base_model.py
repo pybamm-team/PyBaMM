@@ -5,9 +5,11 @@ import json
 import numbers
 import warnings
 from collections import OrderedDict
-from enum import Enum
+from collections.abc import Callable
+from enum import StrEnum
 from itertools import chain
 from pathlib import Path
+from typing import Any, TypeVar, cast
 
 import casadi
 import numpy as np
@@ -17,9 +19,21 @@ import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
+from pybamm.util import _is_flux_boundary_condition
+
+_SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
 
-class ModelSolutionObservability(str, Enum):
+def _prefer_restored(override: property, attribute: str) -> property:
+    """Wrap ``override`` so it returns ``attribute`` on the instance when set."""
+
+    def getter(self):
+        return getattr(self, attribute, None) or override.fget(self)
+
+    return property(getter, override.fset, override.fdel, override.__doc__)
+
+
+class ModelSolutionObservability(StrEnum):
     """
     Enum to specify the observability states for a PyBaMM model's solution.
 
@@ -84,23 +98,63 @@ class BaseModel:
         A dictionary of submodels that the model is composed of.
     use_jacobian: bool
         Whether to use the Jacobian when solving the model (default is True).
-    convert_to_format: str
-        Specifies the format to convert the expression trees representing the RHS,
-        algebraic equations, Jacobian, and events.
-        Options are:
-
-            - None: retain PyBaMM expression tree structure.
-            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
-            - "casadi": convert to CasADi expression tree for Jacobian calculation.
-            - "jax": convert to JAX expression tree.
-
-        Default is "casadi".
     is_discretised: bool
         Indicates whether the model has been discretised (default is False).
     y_slices: None or list
         Slices of the concatenated state vector after discretisation, used to track
         different submodels in the full concatenated solution vector.
     """
+
+    _DEFAULT_CONVERT_TO_FORMAT = "casadi"
+    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Serialise restores a saved discretisation onto ``_default_*`` when the
+        # saved class can't be imported; it must win over an ancestor's override
+        for name in (
+            "default_geometry",
+            "default_var_pts",
+            "default_submesh_types",
+            "default_spatial_methods",
+        ):
+            override = cls.__dict__.get(name)
+            if isinstance(override, property):
+                setattr(cls, name, _prefer_restored(override, f"_{name}"))
+
+    # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are
+    # CasADi functions or pybamm.EvaluatorPython/EvaluatorJax, by convert_to_format.
+    len_rhs: int
+    len_alg: int
+    schema_version: str
+    calculate_sensitivities: list[str]
+    y0_list: list[Any]
+    y0S_list: list[Any] | None
+    initial_conditions_eval: Callable[..., Any]
+    jacp_initial_conditions_eval: Callable[..., Any] | None
+    rhs_eval: Callable[..., Any]
+    algebraic_eval: Callable[..., Any]
+    rhs_algebraic_eval: Callable[..., Any]
+    jac_rhs_eval: Callable[..., Any] | None
+    jac_rhs_action_eval: Callable[..., Any] | None
+    jacp_rhs_eval: Callable[..., Any] | None
+    jac_algebraic_eval: Callable[..., Any] | None
+    jac_algebraic_action_eval: Callable[..., Any] | None
+    jacp_algebraic_eval: Callable[..., Any] | None
+    jac_rhs_algebraic_eval: Callable[..., Any] | None
+    jac_rhs_algebraic_action_eval: Callable[..., Any] | None
+    jacp_rhs_algebraic_eval: Callable[..., Any] | None
+    terminate_events_eval: list[Callable[..., Any]]
+    interpolant_extrapolation_events_eval: list[Callable[..., Any]]
+    discontinuity_events_eval: list[Callable[..., Any]]
+    discontinuity_periods_eval: list[tuple[pybamm.Symbol, Callable[..., Any]]]
+    t_discon_constant_symbols: list[tuple[pybamm.Symbol, pybamm.Symbol]]
+    casadi_rhs: casadi.Function
+    casadi_switch_events: list[casadi.Function]
+    casadi_algebraic: casadi.Function
+    casadi_sensitivities: casadi.Function | None
+    casadi_sensitivities_rhs: casadi.Function | None
+    casadi_sensitivities_algebraic: casadi.Function | None
 
     def __init__(self, name="Unnamed model"):
         self.name = name
@@ -134,14 +188,15 @@ class BaseModel:
         self._fixed_input_parameters = {}
         self._parameter_info = None
         self._is_standard_form_dae = None
-        self._variables_casadi = {}
+        # Built on first read by pybamm.solvers.observation.ObserverCache
+        self._observer_cache = None
         self._geometry = pybamm.Geometry({})
         self._symbol_processor = SymbolProcessor()
         self._solution_observable = ModelSolutionObservability.ENABLED
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
-        self.convert_to_format = "casadi"
+        self.convert_to_format = self._DEFAULT_CONVERT_TO_FORMAT
 
         # Model is not initially discretised or parameterised
         self.is_discretised = False
@@ -177,6 +232,9 @@ class BaseModel:
     @classmethod
     def generic_deserialise(cls, instance, properties):
         # Initialise model with stored variables that have already been discretised
+        instance.convert_to_format = properties.get(
+            "convert_to_format", instance.convert_to_format
+        )
         instance._concatenated_rhs = properties["concatenated_rhs"]
         instance._concatenated_algebraic = properties["concatenated_algebraic"]
         instance._concatenated_initial_conditions = properties[
@@ -192,31 +250,19 @@ class BaseModel:
 
         def assign_meshes_to_variables(variables_dict, mesh):
             if not mesh:
-                return
-            for var in variables_dict.values():
-                if var.domain != []:
-                    var.mesh = mesh[var.domain]
-
-                if var.domains["secondary"] != []:
-                    var.secondary_mesh = mesh[var.domains["secondary"]]
-                else:
-                    var.secondary_mesh = None
-
-                if var.domains["tertiary"] != []:
-                    var.tertiary_mesh = mesh[var.domains["tertiary"]]
-                else:
-                    var.tertiary_mesh = None
+                return variables_dict
+            return {name: var.with_meshes(mesh) for name, var in variables_dict.items()}
 
         # add optional properties not required for model to solve
         _variables = properties.get("variables") or {}
-        instance._variables = pybamm.FuzzyDict(_variables)
-        assign_meshes_to_variables(instance._variables, properties.get("mesh"))
-
+        instance._variables = pybamm.FuzzyDict(
+            assign_meshes_to_variables(_variables, properties.get("mesh"))
+        )
         if properties["geometry"]:
             instance._geometry = pybamm.Geometry(properties["geometry"])
 
         # Also assign meshes to _variables_processed
-        assign_meshes_to_variables(
+        instance._variables_processed = assign_meshes_to_variables(
             instance._variables_processed, properties.get("mesh")
         )
         # Model has already been discretised and parameterised
@@ -236,6 +282,54 @@ class BaseModel:
     @name.setter
     def name(self, value):
         self._name = value
+
+    def __setstate__(self, state: dict) -> None:
+        # Pickles from before convert_to_format was a property hold it under the
+        # public name, which the property shadows; copy rather than mutate state.
+        if "convert_to_format" in state:
+            state = dict(state)
+            state["_convert_to_format"] = state.pop("convert_to_format")
+        # Older pickles carry no observer cache
+        self._observer_cache = None
+        self.__dict__.update(state)
+
+    @property
+    def convert_to_format(self) -> str | None:
+        """
+        The format the solver converts the RHS, algebraic equations, Jacobian and
+        events to. Options are:
+
+            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
+            - "casadi": convert to CasADi expression tree for Jacobian calculation.
+            - "jax": convert to JAX expression tree.
+
+        Default is "casadi". ``None`` is deprecated: it evaluates as "python" and
+        raises a ``DeprecationWarning`` when set.
+        """
+        return self._convert_to_format
+
+    @convert_to_format.setter
+    def convert_to_format(self, value: str | None) -> None:
+        if value is None:
+            warnings.warn(
+                "convert_to_format=None is deprecated and will be removed in a "
+                "future release. It evaluates as 'python'; set "
+                "convert_to_format='python' or leave the default instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        elif value not in self._VALID_CONVERT_TO_FORMATS:
+            valid = ", ".join(repr(v) for v in self._VALID_CONVERT_TO_FORMATS)
+            raise pybamm.OptionError(
+                f"convert_to_format must be one of {valid}, got {value!r}"
+            )
+        self._convert_to_format = value
+
+    @property
+    def uses_stacked_inputs(self) -> bool:
+        """Whether the converted evaluators take the inputs stacked into one
+        column vector rather than as a dict."""
+        return self._convert_to_format == "casadi"
 
     @property
     def rhs(self):
@@ -324,6 +418,20 @@ class BaseModel:
                 )
         self._variables = pybamm.FuzzyDict(variables)
 
+    @property
+    def summary_variables(self):
+        """Names of the variables to summarise per cycle when solving an experiment."""
+        return self._summary_variables
+
+    @summary_variables.setter
+    def summary_variables(self, value):
+        for var in value:
+            if var not in self.variables:
+                raise KeyError(
+                    f"No cycling variable defined for summary variable '{var}'"
+                )
+        self._summary_variables = value
+
     def get_processed_variables_dict(self) -> dict[str, pybamm.Symbol]:
         """
         Get a dictionary of processed variables.
@@ -356,6 +464,15 @@ class BaseModel:
         value = self._variables[name]
         self.process_and_register_variable(name, value)
         return self._variables_processed[name]
+
+    def is_algebraic_state(self, symbol: pybamm.Symbol) -> bool:
+        """Whether ``symbol`` is one of the model's algebraic state variables.
+
+        Matched by name, since a model copy keeps a state's name but not its id.
+        """
+        return isinstance(symbol, pybamm.Variable) and symbol.name in {
+            state.name for state in self.algebraic
+        }
 
     def get_processed_variable_or_event(self, name: str) -> pybamm.Symbol:
         """
@@ -423,25 +540,42 @@ class BaseModel:
         value = self.symbol_processor(name=name, symbol=symbol)
         self._variables_processed[name] = value
 
-    def _resolve_coupled_variables(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
-        """Resolve CoupledVariables by looking up their targets in self._variables."""
-        if isinstance(symbol, pybamm.CoupledVariable):
-            if symbol.name not in self._variables:
+    def _resolve_coupled_variables(
+        self,
+        symbol: pybamm.Symbol,
+        cache: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
+    ) -> pybamm.Symbol:
+        """
+        Resolve CoupledVariables by looking up their targets in self._variables.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The expression to resolve.
+        cache : dict, optional
+            Memo of ``{original node: resolved node}``. Pass the same dict across
+            calls to resolve shared subtrees only once.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The resolved expression.
+        """
+        if cache is None:
+            cache = {}
+
+        def resolve(node, new_leaves):
+            if not isinstance(node, pybamm.CoupledVariable):
+                return pybamm.rebuild(node, new_leaves)
+            if isinstance(node, pybamm.CoupledVariableDot):
+                return resolve(node.get_coupled_variable(), new_leaves).diff(pybamm.t)
+            if node.name not in self._variables:
                 raise ValueError(
-                    f"CoupledVariable '{symbol.name}' not found in model.variables"
+                    f"CoupledVariable '{node.name}' not found in model.variables"
                 )
-            return self._resolve_coupled_variables(self._variables[symbol.name])
-        elif hasattr(symbol, "children") and symbol.children:
-            new_children = []
-            changed = False
-            for child in symbol.children:
-                new_child = self._resolve_coupled_variables(child)
-                new_children.append(new_child)
-                if new_child is not child:
-                    changed = True
-            if changed:
-                return symbol.create_copy(new_children=new_children)
-        return symbol
+            return self._resolve_coupled_variables(self._variables[node.name], cache)
+
+        return pybamm.tree_map(resolve, symbol, cache=cache)
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """
@@ -925,11 +1059,13 @@ class BaseModel:
                 parameter_info[submodel_name] = submodel_info
 
         else:
-            parameters = self._find_symbols(pybamm.Parameter)
+            parameters = self._find_symbols(pybamm.Parameter, include_geometry=True)
             for param in parameters:
                 parameter_info[param.name] = (param, "Parameter")
 
-            input_parameters = self._find_symbols(pybamm.InputParameter)
+            input_parameters = self._find_symbols(
+                pybamm.InputParameter, include_geometry=True
+            )
             for input_param in input_parameters:
                 if not input_param.domain:
                     parameter_info[input_param.name] = (input_param, "InputParameter")
@@ -939,7 +1075,9 @@ class BaseModel:
                         f"InputParameter in {input_param.domain}",
                     )
 
-            function_parameters = self._find_symbols(pybamm.FunctionParameter)
+            function_parameters = self._find_symbols(
+                pybamm.FunctionParameter, include_geometry=True
+            )
             for func_param in function_parameters:
                 if func_param.name not in parameter_info:
                     input_names = "', '".join(func_param.input_names)
@@ -1112,22 +1250,36 @@ class BaseModel:
             table.encode("utf-8")
             print(table)
 
-    def _find_symbols(self, typ, fixed_input_parameters=None) -> list[pybamm.Symbol]:
-        """Find all the instances of `typ` in the model"""
+    def _find_symbols(
+        self,
+        typ: type[_SymbolT] | tuple[type[_SymbolT], ...],
+        fixed_input_parameters=None,
+        include_geometry=False,
+    ) -> list[_SymbolT]:
+        """Find all the instances of `typ` in the model (and, optionally, in its
+        default geometry)"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.rhs.keys(),
             self.rhs.values(),
+            self.algebraic.keys(),
             self.algebraic.values(),
+            self.initial_conditions.keys(),
             self.initial_conditions.values(),
+            self.boundary_conditions.keys(),
             (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        if include_geometry:
+            all_items = chain(
+                all_items, pybamm.Geometry(self.default_geometry).parameters
+            )
+        symbols = pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items)
+        # The unpacker only returns instances of `typ`
+        return cast(list[_SymbolT], list(symbols))
 
     def _find_symbols_by_submodel(
         self, typ, submodel, fixed_input_parameters=None
@@ -1135,11 +1287,14 @@ class BaseModel:
         """Find all the instances of `typ` in the submodel"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.submodels[submodel].fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.submodels[submodel].rhs.keys(),
             self.submodels[submodel].rhs.values(),
+            self.submodels[submodel].algebraic.keys(),
             self.submodels[submodel].algebraic.values(),
+            self.submodels[submodel].initial_conditions.keys(),
             self.submodels[submodel].initial_conditions.values(),
+            self.submodels[submodel].boundary_conditions.keys(),
             (
                 x[side][0]
                 for x in self.submodels[submodel].boundary_conditions.values()
@@ -1149,8 +1304,7 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.submodels[submodel].events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        return list(pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items))
 
     def new_copy(self):
         """
@@ -1165,7 +1319,8 @@ class BaseModel:
         new_model._variables = self.variables.copy()
         new_model._variables_processed = self._variables_processed.copy()
         new_model._events = self.events.copy()
-        new_model._variables_casadi = self._variables_casadi.copy()
+        if self._observer_cache is not None:
+            new_model._observer_cache = self._observer_cache.copy()
         new_model._symbol_processor = self.symbol_processor.copy()
         new_model._solution_observable = self._solution_observable
         new_model.switching_control_variables = self.switching_control_variables.copy()
@@ -1350,7 +1505,8 @@ class BaseModel:
 
         def _extract_from_y_slices(var, solution_var, solution_model, solution):
             solution_y_slice = solution_model.y_slices[solution_var][0]
-            y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
+            y = solution.all_ys[-1]
+            y_last = y[:, -1] if y.ndim > 1 else y
 
             # Validate slice bounds
             slice_stop = (
@@ -1547,15 +1703,6 @@ class BaseModel:
                 "Both models must define y_slices to build an initial state mapper."
             )
 
-        from_vars_by_id = {var.id: var for var in from_model.y_slices}
-        from_vars_by_name = {var.name: var for var in from_model.y_slices}
-
-        def _resolve_from_var(target_var):
-            from_var = from_vars_by_id.get(target_var.id)
-            if from_var is None:
-                from_var = from_vars_by_name.get(target_var.name)
-            return from_var
-
         entries = []
         for var in self.initial_conditions:
             if var in self.y_slices:
@@ -1571,7 +1718,7 @@ class BaseModel:
                     "Could not find a y-slice for an initial condition variable."
                 )
 
-            from_var = _resolve_from_var(var)
+            from_var = var if var in from_model.y_slices else None
             from_slice = None
             if from_var is not None:
                 from_slice = from_model.y_slices[from_var][0]
@@ -1770,29 +1917,42 @@ class BaseModel:
                     f"no initial condition given for variable '{var}'"
                 )
 
+    def variables_matching_keys(self) -> dict[str, pybamm.Symbol]:
+        """
+        Variable expressions at the same processing stage as the equation keys.
+
+        Before parameters are set this is ``variables``. Afterwards the rhs and
+        algebraic keys are processed symbols, so only the processed variables are
+        comparable to them by identity; variables not yet processed (delayed
+        processing) are omitted.
+        """
+        if self.is_parameterised or self._variables_processed:
+            return dict(self._variables_processed)
+        return dict(self._variables)
+
     def check_variables(self):
         # Create list of all Variable nodes that appear in the model's list of variables
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-        all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
+        all_vars = unpacker.unpack_list_of_symbols(
+            self.variables_matching_keys().values()
+        )
 
-        # Build a set of names for keys to allow matching by name
-        # instead of by object identity (handles cases where Variables may have different
-        # _id values due to scale/reference processing)
-        var_names_in_keys = set()
-
-        model_keys = list(self.rhs.keys()) + list(self.algebraic.keys())
-
-        for var in model_keys:
+        # Every Variable appearing in the variables must be a key (or a child of a
+        # concatenation key) of rhs or algebraic, compared by symbol identity
+        keyed_vars = set()
+        for var in chain(self.rhs, self.algebraic):
             if isinstance(var, pybamm.Variable):
-                var_names_in_keys.add(var.name)
+                keyed_vars.add(var)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                for child in var.children:
-                    if isinstance(child, pybamm.Variable):
-                        var_names_in_keys.add(child.name)
+                keyed_vars.update(
+                    child
+                    for child in var.children
+                    if isinstance(child, pybamm.Variable)
+                )
 
         for var in all_vars:
-            if var.name not in var_names_in_keys:
+            if var not in keyed_vars:
                 raise pybamm.ModelError(
                     f"No key set for variable '{var}'. Make sure it is included in either "
                     "model.rhs or model.algebraic, in an unmodified form "
@@ -2131,9 +2291,8 @@ class BaseModel:
             with open(filename, "w") as f:
                 json.dump(data, f, indent=2, default=Serialise._json_encoder)
         except OSError as file_err:
-            raise OSError(
-                f"Failed to write {label} to file '{filename}': {file_err}"
-            ) from file_err
+            file_err.add_note(f"Failed to write {label} to file '{filename}'")
+            raise
 
     @staticmethod
     def _find_builtin_module(model_class):
@@ -2193,7 +2352,14 @@ class BaseModel:
         # Build a pristine reference with the same options.
         model_cls = type(self)
         options = model_config.get("options", {})
-        ref = model_cls(options=options) if options else model_cls()
+        if model_config.get("options_format") == "legacy":
+            from pybamm.models.full_battery_models.battery_model_options import (
+                LegacyOptions,
+            )
+
+            options = LegacyOptions(options)
+        # Only models whose constructor takes options have them in their config
+        ref = model_cls(options=options) if options else model_cls()  # pyrefly: ignore[unexpected-keyword]
 
         # --- Variables diff (added / removed keys only) ---
         current_keys = set(self.variables.keys())
@@ -2265,9 +2431,16 @@ class BaseModel:
             model_config: dict = {
                 "type": type(self).__name__,
                 "module": mod_name,
+                "pybamm_version": pybamm.__version__,
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
+                if isinstance(self, pybamm.BaseBatteryModel):
+                    from pybamm.models.full_battery_models.battery_model_options import (
+                        saved_options_format,
+                    )
+
+                    model_config["options_format"] = saved_options_format(self.options)
 
             # Detect user modifications to variables and events.
             # A fresh reference model is instantiated with the same options
@@ -2402,13 +2575,24 @@ class BaseModel:
             model_cls = getattr(mod, type_name, None)
             if model_cls is None:
                 raise ValueError(f"Model '{type_name}' not found in pybamm.{mod_name}")
-            options = data.get("options", {})
-            # JSON has no tuples; convert lists back to tuples
-            if options:
-                options = {
-                    k: tuple(v) if isinstance(v, list) else v
-                    for k, v in options.items()
-                }
+            # JSON has no tuples; convert (nested) lists back to tuples
+            options = Serialise._convert_options(data.get("options", {}))
+            if options and issubclass(model_cls, pybamm.BaseBatteryModel):
+                from pybamm.models.full_battery_models.battery_model_options import (
+                    UNVERSIONED_CONFIG_OPTIONS,
+                    restore_saved_options,
+                )
+
+                version = data.get("pybamm_version")
+                # without a version, only a full to_config dump is a saved config;
+                # a partial one is hand-written and checked as given
+                options_format = data.get("options_format")
+                if (
+                    options_format is not None
+                    or version is not None
+                    or UNVERSIONED_CONFIG_OPTIONS <= set(options)
+                ):
+                    options = restore_saved_options(options, version, options_format)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)
             return model
@@ -2514,8 +2698,13 @@ class EquationDict(dict):
         """Call the update functionality when doing a setitem."""
         self.update({key: value})
 
-    def update(self, equations):
-        equations = self.check_and_convert_equations(equations)
+    def update(self, equations=(), /, **kwargs):
+        if kwargs:
+            raise TypeError(
+                "EquationDict.update does not accept keyword arguments because "
+                "equation keys must be pybamm.Symbol objects"
+            )
+        equations = self.check_and_convert_equations(dict(equations))
         super().update(equations)
 
     def check_and_convert_equations(self, equations):
@@ -2559,8 +2748,8 @@ class BoundaryConditionsDict(dict):
         """Call the update functionality when doing a setitem."""
         self.update({key: value})
 
-    def update(self, bcs):
-        bcs = self.check_and_convert_bcs(bcs)
+    def update(self, bcs=(), /, **kwargs):
+        bcs = self.check_and_convert_bcs(dict(bcs, **kwargs))
         super().update(bcs)
 
     def check_and_convert_bcs(self, boundary_conditions):
@@ -2573,9 +2762,12 @@ class BoundaryConditionsDict(dict):
                     eqn, typ = bc
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
-                if bc[1] not in ["Dirichlet", "Neumann"]:
+                if bc[1] not in [
+                    "Dirichlet",
+                    "Neumann",
+                ] and not _is_flux_boundary_condition(bc[1]):
                     raise pybamm.ModelError(
-                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
+                        f"boundary condition types must be Dirichlet, Neumann or ('Flux', pybamm.Symbol), not '{bc[1]}'"
                     )
 
         return boundary_conditions

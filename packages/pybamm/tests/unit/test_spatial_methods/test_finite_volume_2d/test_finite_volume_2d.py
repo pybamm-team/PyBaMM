@@ -8,6 +8,10 @@ import pybamm
 
 
 class TestFiniteVolume2D:
+    def test_deprecated(self):
+        with pytest.warns(DeprecationWarning, match=r"FiniteVolume2D is deprecated"):
+            pybamm.FiniteVolume2D()
+
     def test_node_to_edge_to_node(self, mesh_2d):
         # Create discretisation
         mesh = mesh_2d
@@ -309,13 +313,18 @@ class TestFiniteVolume2D:
             eqn_disc.evaluate(None, LR.flatten())
             eqn_disc.evaluate(None, TB.flatten())
 
-        for eqn in [
-            var * pybamm.Magnitude(pybamm.grad(var), "lr"),
-            pybamm.Magnitude(pybamm.grad(var), "lr") * var,
-        ]:
-            eqn_disc = disc.process_symbol(eqn)
-            eqn_disc.evaluate(None, LR.flatten())
-            eqn_disc.evaluate(None, TB.flatten())
+        for index in [0, 1]:
+            component = pybamm.Component(pybamm.grad(var), index)
+            edge_shape = disc.process_symbol(component).shape
+            for eqn in [
+                var * component,
+                component * var,
+                var * (2 * component),
+            ]:
+                eqn_disc = disc.process_symbol(eqn)
+                assert eqn_disc.shape == edge_shape
+                eqn_disc.evaluate(None, LR.flatten())
+                eqn_disc.evaluate(None, TB.flatten())
 
     def test_upwind_downwind_2d(self, mesh_2d):
         """
@@ -639,6 +648,55 @@ class TestFiniteVolume2D:
         )
         # Verify it's a VectorField
         assert isinstance(result_both_ghost, pybamm.VectorField)
+
+    def test_upwind_downwind_2d_boundary_values(self, mesh_2d):
+        spatial_method = pybamm.FiniteVolume2D()
+        spatial_method.build(mesh_2d)
+        disc = pybamm.Discretisation(mesh_2d, {"negative electrode": spatial_method})
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        submesh = mesh_2d["negative electrode"]
+        n_lr, n_tb = submesh.npts_lr, submesh.npts_tb
+        y = np.arange(1, n_lr * n_tb + 1, dtype=float)
+        y_grid = y.reshape(n_tb, n_lr)
+
+        def dirichlet(value):
+            if np.ndim(value) == 0:
+                return (pybamm.Scalar(value), "Dirichlet")
+            return (pybamm.Vector(value), "Dirichlet")
+
+        # Constant boundary values, and values varying along each boundary
+        for lr_value, tb_value in [
+            (7.0, 9.0),
+            (-np.arange(1.0, n_tb + 1), -np.arange(1.0, n_lr + 1)),
+        ]:
+            lr_bc, tb_bc = dirichlet(lr_value), dirichlet(tb_value)
+            bcs = {var: {"left": lr_bc, "right": lr_bc, "bottom": tb_bc, "top": tb_bc}}
+
+            upwind = spatial_method.upwind_or_downwind(
+                var, var_disc, bcs, "upwind", "upwind"
+            )
+            downwind = spatial_method.upwind_or_downwind(
+                var, var_disc, bcs, "downwind", "downwind"
+            )
+
+            # lr faces, row by row: the inflow face is the boundary value itself
+            lr_faces = upwind.lr_field.evaluate(None, y).reshape(n_tb, n_lr + 1)
+            np.testing.assert_array_equal(lr_faces[:, 0], lr_value)
+            np.testing.assert_array_equal(lr_faces[:, 1:], y_grid)
+            lr_faces = downwind.lr_field.evaluate(None, y).reshape(n_tb, n_lr + 1)
+            np.testing.assert_array_equal(lr_faces[:, -1], lr_value)
+            np.testing.assert_array_equal(lr_faces[:, :-1], y_grid)
+
+            # tb faces: upwinding uses the bottom value, downwinding the top one
+            tb_faces = upwind.tb_field.evaluate(None, y).reshape(n_tb + 1, n_lr)
+            np.testing.assert_array_equal(tb_faces[0], tb_value)
+            np.testing.assert_array_equal(tb_faces[1:], y_grid)
+            tb_faces = downwind.tb_field.evaluate(None, y).reshape(n_tb + 1, n_lr)
+            np.testing.assert_array_equal(tb_faces[-1], tb_value)
+            np.testing.assert_array_equal(tb_faces[:-1], y_grid)
 
     def test_2d_concatenations(self, mesh_2d):
         # Create discretisation
@@ -1122,6 +1180,36 @@ class TestFiniteVolume2D:
         roundtripped = pickle.loads(pickle.dumps(grad_disc))
         np.testing.assert_array_equal(roundtripped.lr_field.evaluate(None, y), expected)
 
+    def test_edge_direction(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_var = pybamm.grad(var)
+        edge_direction = pybamm.FiniteVolume2D._edge_direction
+
+        assert edge_direction(pybamm.Component(grad_var, 0)) == "lr"
+        assert edge_direction(pybamm.Component(grad_var, 1)) == "tb"
+        with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+            magnitude = pybamm.Magnitude(grad_var, "tb")
+        assert edge_direction(magnitude) == "tb"
+        for index in [2, -1]:
+            with pytest.raises(
+                pybamm.DiscretisationError, match=r"not a 2D lr/tb direction"
+            ):
+                edge_direction(pybamm.Component(grad_var, index))
+
+    def test_edge_direction_of_compound_operands(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_var = pybamm.grad(var)
+        edge_direction = pybamm.FiniteVolume2D._edge_direction
+
+        assert edge_direction(2 * pybamm.Component(grad_var, 0)) == "lr"
+        assert edge_direction(pybamm.NodeToEdge2D(var, "tb") + 1) == "tb"
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"single lr/tb edge direction"
+        ):
+            edge_direction(pybamm.Norm(grad_var))
+
     def test_delta_function(self, mesh_2d):
         # Create discretisation
         mesh = mesh_2d
@@ -1134,3 +1222,193 @@ class TestFiniteVolume2D:
         delta_function = pybamm.DeltaFunction(var, "left", "negative electrode")
         with pytest.raises(NotImplementedError):
             disc.process_symbol(delta_function)
+
+    @pytest.mark.parametrize(("npts_lr", "npts_tb"), [(5, 1), (1, 5)])
+    def test_single_node_direction_raises(self, npts_lr, npts_tb):
+        x = pybamm.SpatialVariable("x", ["negative electrode"], direction="lr")
+        z = pybamm.SpatialVariable("z", ["negative electrode"], direction="tb")
+        geometry = {
+            "negative electrode": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": pybamm.Uniform2DSubMesh},
+            {x: npts_lr, z: npts_tb},
+        )
+        direction = "lr" if npts_lr == 1 else "tb"
+        with pytest.raises(
+            pybamm.DiscretisationError,
+            match=rf"at least 2 nodes in the '{direction}' direction",
+        ):
+            pybamm.Discretisation(mesh, {"negative electrode": pybamm.FiniteVolume2D()})
+
+
+def _mesh_with_current_collector():
+    x = pybamm.SpatialVariable("x", ["negative electrode", "separator"], direction="lr")
+    z = pybamm.SpatialVariable("z", ["negative electrode", "separator"], direction="tb")
+    y = pybamm.SpatialVariable("y", ["current collector"])
+    zero, one = pybamm.Scalar(0), pybamm.Scalar(1)
+    geometry = {
+        "negative electrode": {
+            x: {"min": zero, "max": pybamm.Scalar(0.4)},
+            z: {"min": zero, "max": one},
+        },
+        "separator": {
+            x: {"min": pybamm.Scalar(0.4), "max": one},
+            z: {"min": zero, "max": one},
+        },
+        "current collector": {y: {"min": zero, "max": one}},
+    }
+    submesh_types = {
+        "negative electrode": pybamm.Uniform2DSubMesh,
+        "separator": pybamm.Uniform2DSubMesh,
+        "current collector": pybamm.Uniform1DSubMesh,
+    }
+    return pybamm.Mesh(geometry, submesh_types, {x: 5, z: 4, y: 3})
+
+
+class TestFiniteVolume2DSecondaryDomain:
+    @pytest.fixture
+    def method(self):
+        method = pybamm.FiniteVolume2D()
+        method.build(_mesh_with_current_collector())
+        return method
+
+    @staticmethod
+    def _assert_matches_per_secondary_point(method, build, primaries, sizes):
+        # each current collector point is discretised as a lone 2D domain would be
+        n_aux = method.mesh["current collector"].npts
+
+        def state_vectors(repeats):
+            secondary = {"secondary": ["current collector"]} if repeats > 1 else {}
+            vectors, start = [], 0
+            for primary, size in zip(primaries, sizes, strict=True):
+                vectors.append(
+                    pybamm.StateVector(
+                        slice(start, start + size * repeats),
+                        domains={"primary": [primary], **secondary},
+                    )
+                )
+                start += size * repeats
+            return vectors
+
+        rng = np.random.default_rng(0)
+        blocks = [1 + rng.random((n_aux, size)) for size in sizes]
+        single = build(*state_vectors(1))
+        expected = np.concatenate(
+            [
+                single.evaluate(y=np.concatenate([b[k] for b in blocks])[:, None])
+                for k in range(n_aux)
+            ]
+        )
+        repeated = build(*state_vectors(n_aux))
+        y = np.concatenate([b.ravel() for b in blocks])[:, np.newaxis]
+        np.testing.assert_allclose(
+            repeated.evaluate(y=y), expected, rtol=1e-12, atol=1e-12
+        )
+
+    @pytest.mark.parametrize("field", ["lr_field", "tb_field"])
+    @pytest.mark.parametrize(
+        ("first", "second"), [("Dirichlet", "Neumann"), ("Neumann", "Dirichlet")]
+    )
+    def test_gradient(self, method, field, first, second):
+        def gradient(child):
+            variable = pybamm.Variable("c", domains=child.domains)
+            # non-zero values, as a zero Neumann value is not added at all
+            bcs = {
+                variable: {
+                    "left": (pybamm.Scalar(1), first),
+                    "bottom": (pybamm.Scalar(3), first),
+                    "right": (pybamm.Scalar(2), second),
+                    "top": (pybamm.Scalar(4), second),
+                }
+            }
+            return getattr(method.gradient(variable, child, bcs), field)
+
+        n = method.mesh["negative electrode"].npts
+        self._assert_matches_per_secondary_point(
+            method, gradient, ["negative electrode"], [n]
+        )
+
+    @pytest.mark.parametrize("side", ["left", "right", "top", "bottom"])
+    @pytest.mark.parametrize(
+        "operator", [pybamm.BoundaryValue, pybamm.BoundaryGradient]
+    )
+    def test_boundary_value_or_flux(self, method, side, operator):
+        def boundary(child):
+            symbol = operator(pybamm.Variable("c", domains=child.domains), side)
+            return method.boundary_value_or_flux(symbol, child)
+
+        n = method.mesh["negative electrode"].npts
+        self._assert_matches_per_secondary_point(
+            method, boundary, ["negative electrode"], [n]
+        )
+
+    @pytest.mark.parametrize("direction", ["lr", "tb"])
+    def test_integral(self, method, direction):
+        name = "x" if direction == "lr" else "z"
+        variable = pybamm.SpatialVariable(
+            name, ["negative electrode"], direction=direction
+        )
+
+        def integral(child):
+            symbol = pybamm.Variable("c", domains=child.domains)
+            return method.integral(symbol, child, "primary", [variable])
+
+        n = method.mesh["negative electrode"].npts
+        self._assert_matches_per_secondary_point(
+            method, integral, ["negative electrode"], [n]
+        )
+
+    @pytest.mark.parametrize("direction", ["lr", "tb"])
+    @pytest.mark.parametrize(
+        ("shift_key", "mean"),
+        [
+            ("node to edge", "arithmetic"),
+            ("node to edge", "harmonic"),
+            ("edge to node", "arithmetic"),
+        ],
+    )
+    def test_shift(self, method, direction, shift_key, mean):
+        submesh = method.mesh["negative electrode"]
+        if shift_key == "node to edge":
+            size = submesh.npts
+        elif direction == "lr":
+            size = (submesh.npts_lr + 1) * submesh.npts_tb
+        else:
+            size = submesh.npts_lr * (submesh.npts_tb + 1)
+
+        def shift(child):
+            return method.shift(child, shift_key, mean, direction=direction)
+
+        self._assert_matches_per_secondary_point(
+            method, shift, ["negative electrode"], [size]
+        )
+
+    def test_internal_neumann_condition(self, method):
+        left, right = method.mesh["negative electrode"], method.mesh["separator"]
+
+        def condition(left_child, right_child):
+            return method.internal_neumann_condition(
+                left_child, right_child, left, right
+            )
+
+        self._assert_matches_per_secondary_point(
+            method,
+            condition,
+            ["negative electrode", "separator"],
+            [left.npts, right.npts],
+        )
+
+    def test_concatenation(self, method):
+        def concatenation(left_child, right_child):
+            # non-state-vector children take the reordering path
+            return method.concatenation([2 * left_child, 3 * right_child])
+
+        sizes = [method.mesh["negative electrode"].npts, method.mesh["separator"].npts]
+        self._assert_matches_per_secondary_point(
+            method, concatenation, ["negative electrode", "separator"], sizes
+        )

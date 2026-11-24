@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -22,6 +24,8 @@ class DiscreteTimeData(pybamm.Interpolant):
         The name of the data
 
     """
+
+    __slots__ = ()
 
     def __init__(
         self, time_points: npt.NDArray[np.float64], data: npt.NDArray[Any], name: str
@@ -81,21 +85,30 @@ class DiscreteTimeSum(pybamm.UnaryOperator):
         contains multiple :class:`pybamm.DiscreteTimeData` nodes.
     """
 
+    __slots__ = ()
+
     def __init__(self, child: pybamm.Symbol):
-        self.data = None
-        for node in child.pre_order():
-            if isinstance(node, DiscreteTimeData):
-                # Check that there is exactly one DiscreteTimeData node in the child
-                if self.data is not None:
-                    raise pybamm.ModelError(
-                        "DiscreteTimeSum can only have one DiscreteTimeData node in the child"
-                    )
-                self.data = node
-        if self.data is None:
+        data_nodes = [
+            node for node in child.pre_order() if isinstance(node, DiscreteTimeData)
+        ]
+        if len(data_nodes) > 1:
+            raise pybamm.ModelError(
+                "DiscreteTimeSum can only have one DiscreteTimeData node in the child"
+            )
+        if not data_nodes:
             raise pybamm.ModelError(
                 "DiscreteTimeSum must contain a DiscreteTimeData node"
             )
         super().__init__("discrete time sum", child)
+
+    @property
+    def data(self) -> DiscreteTimeData:
+        """The (unique) :class:`DiscreteTimeData` node inside the child."""
+        return next(
+            node
+            for node in self.child.pre_order()
+            if isinstance(node, DiscreteTimeData)
+        )
 
     @classmethod
     def _from_json(cls, snippet):
@@ -113,4 +126,9 @@ class DiscreteTimeSum(pybamm.UnaryOperator):
 
     def _unary_evaluate(self, child):
         # return result of evaluating the child, we'll only implement the sum once the model is solved (in pybamm.ProcessedVariable)
+        return child
+
+    def _rust_node(self, graph, child):
+        """See :meth:`pybamm.UnaryOperator._rust_node()`."""
+        # Pass-through: actual summation happens in ProcessedVariable
         return child

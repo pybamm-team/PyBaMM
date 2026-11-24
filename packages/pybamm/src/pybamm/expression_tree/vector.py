@@ -17,6 +17,8 @@ class Vector(pybamm.Array):
     node in the expression tree that holds a vector type (e.g. :class:`numpy.array`)
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         entries: npt.NDArray[Any] | list[float] | np.matrix,
@@ -24,7 +26,7 @@ class Vector(pybamm.Array):
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
-        entries_string: str | None = None,
+        entries_string: tuple | None = None,
     ) -> None:
         if isinstance(entries, list | np.matrix):
             entries = np.array(entries)

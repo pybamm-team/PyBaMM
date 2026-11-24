@@ -1,0 +1,80 @@
+# Reusable workflow: one target's solver wheels, nox sessions and Rust tests. Callers
+# run it as a matrix over targets, so a shortage in one runner pool delays only its entry.
+name: Test a target (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: "linux-x64, linux-arm64, windows-x64, macos-arm64 or macos-x64."
+        required: true
+        type: string
+      pythons:
+        description: 'JSON array of Python versions to test; "[]" only builds the wheels.'
+        required: true
+        type: string
+      sessions:
+        description: "Nox session(s) to run, space-separated and in order."
+        default: unit
+        required: false
+        type: string
+      max_parallel:
+        description: "Most legs to run at once, to leave this pool's runners for others."
+        default: 256
+        required: false
+        type: number
+
+permissions: {}
+
+jobs:
+  wheels:
+    name: Solver wheels
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      target: ${{ inputs.target }}
+      cache_wheels: true
+
+  tests:
+    needs: wheels
+    if: inputs.pythons != '[]'
+    name: Tests
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      target: ${{ inputs.target }}
+      pythons: ${{ inputs.pythons }}
+      sessions: ${{ inputs.sessions }}
+      max_parallel: ${{ inputs.max_parallel }}
+
+  # The Rust crate's bitwise tests hold per target, so each target runs them too.
+  rust:
+    if: inputs.pythons != '[]'
+    name: Rust tests
+    # The same map as _nox.yml's runs-on, so these tests never wait for the wheels.
+    runs-on: >-
+      ${{ (inputs.target == 'linux-x64' && (vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
+      || (inputs.target == 'linux-arm64' && (vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))
+      || (inputs.target == 'windows-x64' && (vars.RUNNER_WINDOWS_X64 || 'windows-2025'))
+      || (inputs.target == 'macos-arm64' && (vars.RUNNER_MACOS_ARM64 || 'macos-latest'))
+      || (inputs.target == 'macos-x64' && (vars.RUNNER_MACOS_X64 || 'macos-15-intel')) }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/check-target-runner
+        with:
+          target: ${{ inputs.target }}
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Run the Rust test suite
+        run: >
+          cargo test --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --workspace --all-features

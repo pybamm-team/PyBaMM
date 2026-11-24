@@ -6,7 +6,6 @@ import casadi
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse
-import sympy
 
 import pybamm
 
@@ -20,19 +19,21 @@ class Conditional(pybamm.Symbol):
     expression evaluates to zero with the same shape as the branch children.
     """
 
+    __slots__ = ("_returns_scalar",)
+
     def __init__(self, selector: pybamm.Symbol, *branches: pybamm.Symbol):
         selector = pybamm.convert_to_symbol(selector)
-        branches = [pybamm.convert_to_symbol(branch) for branch in branches]
-        if not branches:
+        branch_symbols = [pybamm.convert_to_symbol(branch) for branch in branches]
+        if not branch_symbols:
             raise ValueError("Conditional requires at least one branch child")
         if selector.shape_for_testing != ():
             raise ValueError("Conditional selector must evaluate to a scalar")
 
-        domains = self.get_children_domains(branches)
-        first_shape = branches[0].shape_for_testing
-        first_size = branches[0].size_for_testing
+        domains = self._combine_children_domains(branch_symbols)
+        first_shape = branch_symbols[0].shape_for_testing
+        first_size = branch_symbols[0].size_for_testing
         returns_scalar = first_size == 1
-        for branch in branches[1:]:
+        for branch in branch_symbols[1:]:
             compatible_shape = (
                 branch.size_for_testing == 1
                 if returns_scalar
@@ -45,7 +46,9 @@ class Conditional(pybamm.Symbol):
                 )
 
         self._returns_scalar = returns_scalar
-        super().__init__("conditional", children=[selector, *branches], domains=domains)
+        super().__init__(
+            "conditional", children=[selector, *branch_symbols], domains=domains
+        )
 
     @classmethod
     def _from_json(cls, snippet: dict):
@@ -53,14 +56,14 @@ class Conditional(pybamm.Symbol):
 
     @property
     def selector(self):
-        return self.children[0]
+        return self._children[0]
 
     @property
     def branches(self):
-        return self.children[1:]
+        return self._children[1:]
 
     def __str__(self):
-        children = ", ".join(str(child) for child in self.children)
+        children = ", ".join(str(child) for child in self._children)
         return f"conditional({children})"
 
     def create_copy(
@@ -132,7 +135,7 @@ class Conditional(pybamm.Symbol):
         return any(branch.evaluates_on_edges(dimension) for branch in self.branches)
 
     def is_constant(self):
-        return all(child.is_constant() for child in self.children)
+        return all(child.is_constant() for child in self._children)
 
     def _diff(self, variable):
         return Conditional(
@@ -160,11 +163,17 @@ class Conditional(pybamm.Symbol):
         full-bandwidth.
         """
         selector = self.selector._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
-        shared = [s for s in (t, y, y_dot) if s is not None] + list(inputs.values())
         converted_branches = [
             branch._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
             for branch in self.branches
         ]
+        shared = [*(s for s in (t, y, y_dot) if s is not None), *inputs.values()]
+        if not all(isinstance(s, casadi.MX) and s.is_valid_input() for s in shared):
+            # Function arguments must be purely symbolic, which inputs sliced from
+            # one vector are not, so the branches take the symbols they depend on
+            shared = casadi.symvar(
+                casadi.vertcat(*(casadi.vec(branch) for branch in converted_branches))
+            )
         union = converted_branches[0].sparsity()
         for converted in converted_branches[1:]:
             union = union.unite(converted.sparsity())
@@ -191,9 +200,20 @@ class Conditional(pybamm.Symbol):
         index = casadi.if_else(on_boundary, -1, floored - 1)
         return switch(index, *shared)
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        converted_selector = self.selector._to_rust_inner(graph, rust_symbols)
+        converted_branches = [
+            branch._to_rust_inner(graph, rust_symbols) for branch in self.branches
+        ]
+        return graph.conditional(converted_selector, converted_branches)
+
     def to_equation(self):
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         return sympy.Function("Conditional")(
-            *[child.to_equation() for child in self.children]
+            *[child.to_equation() for child in self._children]
         )

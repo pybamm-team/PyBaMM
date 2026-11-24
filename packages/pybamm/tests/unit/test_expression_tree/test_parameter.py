@@ -86,18 +86,16 @@ class TestFunctionParameter:
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("a", {"var": var})
 
-        new_input_names = ["first", "second"]
-        func.input_names = new_input_names
-
-        assert func.input_names == new_input_names
-
-        with pytest.raises(TypeError):
-            new_input_names = {"wrong": "input type"}
-            func.input_names = new_input_names
+        assert func.input_names == ["var"]
+        # input names are fixed at construction
+        with pytest.raises(AttributeError):
+            func.input_names = ["first", "second"]
 
         with pytest.raises(TypeError):
-            new_input_names = [var]
-            func.input_names = new_input_names
+            pybamm.FunctionParameter._check_input_names({"wrong": "input type"})
+
+        with pytest.raises(TypeError):
+            pybamm.FunctionParameter._check_input_names([var])
 
     def test_print_name(self):
         def myfun(x):

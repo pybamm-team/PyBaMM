@@ -84,7 +84,7 @@ class TestIDAKLUSolver:
         sol_neg = solver.solve(
             model, t_eval, inputs={param_name: param_value - 0.5 * h}, t_interp=t_interp
         )
-        dyda_fd = (sol_plus.y - sol_neg.y) / h
+        dyda_fd = (sol_plus.all_ys[0] - sol_neg.all_ys[0]) / h
         dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -93,6 +93,60 @@ class TestIDAKLUSolver:
             rtol=1e-2,
             atol=1e-3,
         )
+
+    @pytest.mark.parametrize(
+        ("options", "names"),
+        [
+            ({}, ["Current function [A]"]),
+            (
+                {"calc_ic": False},
+                ["Current function [A]", "Positive electrode conductivity [S.m-1]"],
+            ),
+        ],
+    )
+    def test_dfn_sensitivities_at_t0_match_finite_differences(self, options, names):
+        # At this atol and current IDACalcIC fails, which left dV/dI(t0) = 0
+        parameter_values = pybamm.ParameterValues("Ai2020")
+        inputs = {name: parameter_values[name] for name in names}
+        inputs["Current function [A]"] = 2.0
+        parameter_values.update(dict.fromkeys(names, "[input]"))
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            parameter_values=parameter_values,
+            var_pts={"x_n": 6, "x_s": 5, "x_p": 6, "r_n": 8, "r_p": 8},
+        )
+        sim.build()
+        model = sim.built_model
+        solver = pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-11, options=options)
+        t_eval = [0, 10]
+        t_interp = np.array([0, 1, 10])
+
+        solution = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            calculate_sensitivities=True,
+            t_interp=t_interp,
+        )
+
+        for name in names:
+            step = 1e-3 * inputs[name]
+            voltages = [
+                solver.solve(
+                    model,
+                    t_eval,
+                    inputs={**inputs, name: inputs[name] + sign * step},
+                    t_interp=t_interp,
+                )["Voltage [V]"](t_interp[0])
+                for sign in [1, -1]
+            ]
+            # Only t0 is compared: integration error swamps later differences
+            np.testing.assert_allclose(
+                solution["Voltage [V]"].sensitivities[name][0],
+                (voltages[0] - voltages[1]) / (2 * step),
+                rtol=1e-5,
+                err_msg=name,
+            )
 
     def test_changing_grid(self):
         model = pybamm.lithium_ion.SPM()
@@ -177,11 +231,11 @@ class TestIDAKLUSolver:
         for sol in sols:
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_allclose(sol.y[0], true_solution)
+            np.testing.assert_allclose(sol.all_ys[0][0], true_solution)
 
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
-            np.testing.assert_allclose(sol.y[1:3], true_solution)
+            np.testing.assert_allclose(sol.all_ys[0][1:3], true_solution)
 
     def test_with_experiments(self):
         summary_vars = []
@@ -223,7 +277,7 @@ class TestIDAKLUSolver:
             sols.append(sol)
             summary_vars.append(sol.summary_variables)
 
-        # check computed variables are propegated sucessfully
+        # check computed variables are propagated successfully
         np.testing.assert_array_equal(
             sols[0]["Pressure [Pa]"].data, sols[1]["Pressure [Pa]"].data
         )
@@ -277,7 +331,7 @@ class TestIDAKLUSolver:
             sol_ind = indep_sols[idx]
 
             np.testing.assert_allclose(sol_vec.t, sol_ind.t)
-            np.testing.assert_allclose(sol_vec.y, sol_ind.y)
+            np.testing.assert_allclose(sol_vec.all_ys[0], sol_ind.all_ys[0])
 
     def test_outvars_with_experiments_multi_simulation(self):
         model = pybamm.lithium_ion.SPM()
