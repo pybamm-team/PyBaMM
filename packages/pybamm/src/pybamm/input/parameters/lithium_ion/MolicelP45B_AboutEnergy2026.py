@@ -2,6 +2,7 @@
 Conversion of the About:Energy "User-defined" BPX fields is adapted from AEPyBaMM
 v0.2.3 (https://github.com/About-Energy-OpenSource/AEPyBaMM/tree/v0.2.3),
 ``src/aepybamm/func.py`` and ``src/aepybamm/params.py``.
+Note: installation using ``pybamm[bpx]`` is required to use this parameter set. 
 """
 
 from __future__ import annotations
