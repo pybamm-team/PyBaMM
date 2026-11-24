@@ -261,6 +261,48 @@ class TestEISSimulationSolve:
             )
         with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
             simulation.solve(frequencies)
+        with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
+            simulation.solve(frequencies, inputs={capacity: None})
+
+    @staticmethod
+    def _scale_initial_concentration(model, factor):
+        variable = model.variables[
+            "X-averaged negative particle concentration [mol.m-3]"
+        ]
+        model.initial_conditions[variable] = factor * model.initial_conditions[variable]
+
+    @staticmethod
+    def _add_event(model, cut_off):
+        voltage = model.variables["Voltage [V]"]
+        model.events.append(pybamm.Event("Extra cut-off", voltage - cut_off))
+
+    @staticmethod
+    def _add_voltage_resistance(model, resistance):
+        model.variables["Voltage [V]"] = (
+            model.variables["Voltage [V]"] - resistance * model.variables["Current [A]"]
+        )
+
+    @pytest.mark.parametrize(
+        ("add_symbol", "value"),
+        [
+            (_scale_initial_concentration, 0.9),
+            (_add_event, 2.0),
+            (_add_voltage_resistance, 0.05),
+        ],
+        ids=["initial-condition", "event", "voltage"],
+    )
+    def test_solve_with_input_outside_rhs_and_algebraic(self, add_symbol, value):
+        frequencies = np.logspace(-2, 2, 5)
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        add_symbol(model, pybamm.Scalar(value))
+        reference = pybamm.EISSimulation(model).solve(frequencies).impedance
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        add_symbol(model, pybamm.InputParameter("Extra input"))
+        simulation = pybamm.EISSimulation(model)
+        with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
+            simulation.solve(frequencies)
+        result = simulation.solve(frequencies, inputs={"Extra input": value})
+        np.testing.assert_allclose(result.impedance, reference, rtol=1e-10, atol=1e-12)
 
     def test_impedance_is_independent_of_algebraic_state_order(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})

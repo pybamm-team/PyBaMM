@@ -2306,16 +2306,18 @@ class BaseSolver:
     def set_up_model_inputs(model: pybamm.BaseModel, inputs: dict) -> dict:
         """Set up and order the input parameter values for a model.
 
-        Inputs the model does not use are dropped. Values are not type-checked. If
-        an input used only for observing the solution is missing, it gets a
-        placeholder value and ``solution.observe`` is permanently disabled on
-        ``model``, even if a later call supplies the input.
+        List values are expanded to ``"name (i)"`` keys and values are not
+        type-checked. Inputs referenced by the model's equations, initial
+        conditions, events or variables are required. An input declared in the
+        parameter values but not referenced by the model gets a NaN placeholder if
+        missing, and ``solution.observe`` is then permanently disabled on ``model``,
+        even if a later call supplies the input. Other inputs are dropped.
 
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
             The model whose input parameters are set up.
-        inputs : dict
+        inputs : dict or :class:`pybamm.ParameterValues`
             Input parameter values, keyed by name.
 
         Returns
@@ -2326,7 +2328,7 @@ class BaseSolver:
         Raises
         ------
         :class:`pybamm.SolverError`
-            If a value is missing for an input the model requires to be solved.
+            If a value is missing for a required input.
         """
         inputs = ParameterValues.check_parameter_values(inputs)
 

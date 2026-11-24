@@ -125,9 +125,10 @@ class EISSimulation(BaseSimulation):
             model.get_processed_variable("Voltage [V]"),
             model.get_processed_variable("Current [A]"),
         )
-        # Compile and evaluate against only the inputs the compiled functions read,
-        # so inputs used elsewhere (e.g. other output variables) never shift them
-        if getattr(self, "_input_names_model", None) is not model:
+        # Input names, state ordering and matrices are fixed until the model is rebuilt
+        if getattr(self, "_matrix_model", None) is not model:
+            # Compile against only the inputs the compiled functions read, so
+            # inputs used elsewhere (e.g. other output variables) never shift them
             unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
             symbols = unpacker.unpack_list_of_symbols(
                 [
@@ -139,9 +140,16 @@ class EISSimulation(BaseSimulation):
                 ]
             )
             self._input_names = sorted({symbol.name for symbol in symbols})
-            self._input_names_model = model
+            indices = {
+                var.name: slices[0].start for var, slices in model.y_slices.items()
+            }
+            self._current_index = indices["Current variable [A]"]
+            self._cached_M = csc_matrix(model.mass_matrix.entries)
+            self._cached_b = np.zeros(model.len_rhs_and_alg)
+            self._cached_b[self._current_index] = -1
+            self._matrix_model = model
         inputs = pybamm.ParameterValues.check_parameter_values(inputs_dict or {})
-        missing = [name for name in self._input_names if name not in inputs]
+        missing = [name for name in self._input_names if inputs.get(name) is None]
         if missing:
             missing_str = ", ".join(f"'{name}'" for name in missing)
             raise pybamm.SolverError(f"No value provided for input: [{missing_str}].")
@@ -171,17 +179,6 @@ class EISSimulation(BaseSimulation):
         )(y0).sparse()
         J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
         neg_J = -csc_matrix(J_sparse)
-
-        # State ordering and matrices are fixed until the model is rebuilt.
-        if getattr(self, "_matrix_model", None) is not model:
-            indices = {
-                var.name: slices[0].start for var, slices in model.y_slices.items()
-            }
-            self._current_index = indices["Current variable [A]"]
-            self._cached_M = csc_matrix(model.mass_matrix.entries)
-            self._cached_b = np.zeros(y0.shape[0])
-            self._cached_b[self._current_index] = -1
-            self._matrix_model = model
 
         return self._cached_M, neg_J, self._cached_b
 
