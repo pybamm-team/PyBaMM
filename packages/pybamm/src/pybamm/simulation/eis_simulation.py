@@ -121,7 +121,30 @@ class EISSimulation(BaseSimulation):
             Forcing vector with unit perturbation on the current variable.
         """
         model = self._built_model
-        inputs_dict = pybamm.BaseSolver._set_up_model_inputs(model, inputs_dict or {})
+        outputs = pybamm.numpy_concatenation(
+            model.get_processed_variable("Voltage [V]"),
+            model.get_processed_variable("Current [A]"),
+        )
+        # Inputs that only appear in other output variables never reach the
+        # impedance, so give them a placeholder instead of requiring a value
+        used_inputs = {
+            symbol.name
+            for symbol in pybamm.SymbolUnpacker(
+                pybamm.InputParameter
+            ).unpack_list_of_symbols(
+                [
+                    model.concatenated_rhs,
+                    model.concatenated_algebraic,
+                    model.concatenated_initial_conditions,
+                    outputs,
+                ]
+            )
+        }
+        inputs_dict = dict(inputs_dict or {})
+        for symbol in model.input_parameters:
+            if symbol.name not in used_inputs:
+                inputs_dict.setdefault(symbol.name, np.nan)
+        inputs_dict = pybamm.BaseSolver._set_up_model_inputs(model, inputs_dict)
 
         # Convert inputs to casadi format for Jacobian evaluation
         if model.convert_to_format == "casadi":
@@ -138,10 +161,6 @@ class EISSimulation(BaseSimulation):
             solver.set_up(model, inputs=inputs_dict)
 
         y0 = model.concatenated_initial_conditions.evaluate(0, inputs=inputs_dict)
-        outputs = pybamm.numpy_concatenation(
-            model.get_processed_variable("Voltage [V]"),
-            model.get_processed_variable("Current [A]"),
-        )
         from casadi import MX, Function, jacobian
 
         y = MX.sym("y", y0.size)

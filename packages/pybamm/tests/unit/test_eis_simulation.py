@@ -219,6 +219,17 @@ class TestEISSimulationSolve:
                 result.impedance, reference, rtol=1e-10, atol=1e-12
             )
 
+    def test_solve_without_input_only_used_in_output_variable(self):
+        frequencies = np.logspace(-2, 2, 5)
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        reference = pybamm.EISSimulation(model).solve(frequencies).impedance
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        model.variables["Step capacity [A.h]"] = model.variables[
+            "Discharge capacity [A.h]"
+        ] - pybamm.InputParameter("Start capacity [A.h]")
+        result = pybamm.EISSimulation(model).solve(frequencies)
+        np.testing.assert_allclose(result.impedance, reference, rtol=1e-10, atol=1e-12)
+
     def test_impedance_is_independent_of_algebraic_state_order(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
         frequencies = np.logspace(-2, 4, 12)
