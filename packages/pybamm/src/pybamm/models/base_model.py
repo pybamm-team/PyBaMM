@@ -2352,7 +2352,7 @@ class BaseModel:
         # Build a pristine reference with the same options.
         model_cls = type(self)
         options = model_config.get("options", {})
-        if model_config.get("legacy_options"):
+        if model_config.get("options_format") == "legacy":
             from pybamm.models.full_battery_models.battery_model_options import (
                 LegacyOptions,
             )
@@ -2435,8 +2435,12 @@ class BaseModel:
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
-                if getattr(self.options, "legacy", False):
-                    model_config["legacy_options"] = True
+                if isinstance(self, pybamm.BaseBatteryModel):
+                    from pybamm.models.full_battery_models.battery_model_options import (
+                        saved_options_format,
+                    )
+
+                    model_config["options_format"] = saved_options_format(self.options)
 
             # Detect user modifications to variables and events.
             # A fresh reference model is instantiated with the same options
@@ -2582,13 +2586,13 @@ class BaseModel:
                 version = data.get("pybamm_version")
                 # without a version, only a full to_config dump is a saved config;
                 # a partial one is hand-written and checked as given
-                legacy = data.get("legacy_options", False)
+                options_format = data.get("options_format")
                 if (
-                    legacy
+                    options_format is not None
                     or version is not None
                     or UNVERSIONED_CONFIG_OPTIONS <= set(options)
                 ):
-                    options = restore_saved_options(options, version, legacy)
+                    options = restore_saved_options(options, version, options_format)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)
             return model

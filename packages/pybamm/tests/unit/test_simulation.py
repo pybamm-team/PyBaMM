@@ -1232,6 +1232,7 @@ class TestSimulation:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+            "surface form": "algebraic",
         }
         model = pybamm.lithium_ion.SPM(options=options)
         param = pybamm.ParameterValues("Chen2020_composite")
@@ -1257,6 +1258,7 @@ class TestSimulation:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+            "surface form": "algebraic",
         }
         model = pybamm.lithium_ion.SPM(options=options)
         param = pybamm.ParameterValues("Chen2020_composite")
@@ -1278,6 +1280,7 @@ class TestSimulation:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+            "surface form": "algebraic",
         }
         model = pybamm.lithium_ion.SPM(options=options)
         param = pybamm.ParameterValues("Chen2020_composite")

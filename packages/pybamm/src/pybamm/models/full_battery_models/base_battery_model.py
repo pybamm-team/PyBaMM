@@ -56,7 +56,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             options=restore_saved_options(
                 properties["options"],
                 properties.get("pybamm_version"),
-                properties.get("legacy_options", False),
+                properties.get("options_format"),
             ),
             name=properties["name"] + "_saved",
         )

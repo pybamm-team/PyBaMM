@@ -889,6 +889,7 @@ class TestSerialise:
         data = json.loads((tmp_path / "model.json").read_text())
         # 26.9 stored this default for one-electrode mechanics.
         data["options"]["stress-induced diffusion"] = "true"
+        del data["options_format"]
         data["pybamm_version"] = version
         if loads:
             loaded = Serialise().load_model(data)
@@ -2713,6 +2714,7 @@ class TestSerializationEdgeCases:
         )
         data = Serialise.serialise_custom_model(model)
         data["model"]["options"]["stress-induced diffusion"] = "true"
+        del data["model"]["options_format"]
         data["pybamm_version"] = version
 
         if loads:

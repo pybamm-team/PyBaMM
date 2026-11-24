@@ -1806,6 +1806,14 @@ class TestSavedOptions:
     def test_restore_keeps_options_saved_with_per_electrode_checks(self, version):
         assert restore_saved_options(self.LEGACY, version) is self.LEGACY
 
+    @pytest.mark.parametrize("version", ["26.10.1.1.dev3", "27.1", None])
+    def test_restore_follows_options_format_over_version(self, version):
+        assert restore_saved_options(self.LEGACY, version, "per-electrode") is (
+            self.LEGACY
+        )
+        restored = restore_saved_options(self.LEGACY, version, "legacy")
+        assert type(restored) is LegacyOptions
+
     def test_legacy_options_skip_per_electrode_checks(self):
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             BatteryModelOptions(self.LEGACY)
