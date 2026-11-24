@@ -2352,6 +2352,12 @@ class BaseModel:
         # Build a pristine reference with the same options.
         model_cls = type(self)
         options = model_config.get("options", {})
+        if model_config.get("options_format") == "legacy":
+            from pybamm.models.full_battery_models.battery_model_options import (
+                LegacyOptions,
+            )
+
+            options = LegacyOptions(options)
         # Only models whose constructor takes options have them in their config
         ref = model_cls(options=options) if options else model_cls()  # pyrefly: ignore[unexpected-keyword]
 
@@ -2425,9 +2431,16 @@ class BaseModel:
             model_config: dict = {
                 "type": type(self).__name__,
                 "module": mod_name,
+                "pybamm_version": pybamm.__version__,
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
+                if isinstance(self, pybamm.BaseBatteryModel):
+                    from pybamm.models.full_battery_models.battery_model_options import (
+                        saved_options_format,
+                    )
+
+                    model_config["options_format"] = saved_options_format(self.options)
 
             # Detect user modifications to variables and events.
             # A fresh reference model is instantiated with the same options
@@ -2562,13 +2575,24 @@ class BaseModel:
             model_cls = getattr(mod, type_name, None)
             if model_cls is None:
                 raise ValueError(f"Model '{type_name}' not found in pybamm.{mod_name}")
-            options = data.get("options", {})
-            # JSON has no tuples; convert lists back to tuples
-            if options:
-                options = {
-                    k: tuple(v) if isinstance(v, list) else v
-                    for k, v in options.items()
-                }
+            # JSON has no tuples; convert (nested) lists back to tuples
+            options = Serialise._convert_options(data.get("options", {}))
+            if options and issubclass(model_cls, pybamm.BaseBatteryModel):
+                from pybamm.models.full_battery_models.battery_model_options import (
+                    UNVERSIONED_CONFIG_OPTIONS,
+                    restore_saved_options,
+                )
+
+                version = data.get("pybamm_version")
+                # without a version, only a full to_config dump is a saved config;
+                # a partial one is hand-written and checked as given
+                options_format = data.get("options_format")
+                if (
+                    options_format is not None
+                    or version is not None
+                    or UNVERSIONED_CONFIG_OPTIONS <= set(options)
+                ):
+                    options = restore_saved_options(options, version, options_format)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)
             return model

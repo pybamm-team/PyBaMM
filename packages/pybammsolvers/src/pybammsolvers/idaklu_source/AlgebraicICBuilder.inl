@@ -51,9 +51,8 @@ class SubBlockSystem : public NonlinearSystem {
 public:
   SubBlockSystem(
     ExprSet* funcs, N_Vector yy,
-    IDAKLUSolverOpenMP<ExprSet>& solver,
-    bool use_sparse)
-    : funcs_(funcs), yy_(yy), solver_(solver), use_sparse_(use_sparse) {}
+    IDAKLUSolverOpenMP<ExprSet>& solver)
+    : funcs_(funcs), yy_(yy), solver_(solver) {}
 
   void eval_residual(sunrealtype t, const sunrealtype* x_alg, sunrealtype* res_out) override {
     sunrealtype* yy_data = NV_DATA(yy_);
@@ -68,53 +67,64 @@ public:
 
   int solve_linear(sunrealtype t, const sunrealtype* x_alg,
                    sunrealtype* res, sunrealtype* delta) override {
-    auto& sb = *solver_.alg_state_->sub;
-    sunrealtype* yy_data = NV_DATA(yy_);
-    std::memcpy(yy_data + solver_.len_rhs_, x_alg,
+    std::memcpy(NV_DATA(yy_) + solver_.len_rhs_, x_alg,
                 solver_.len_alg_ * sizeof(sunrealtype));
-
-    funcs_->alg_jac->m_arg[0] = &t;
-    funcs_->alg_jac->m_arg[1] = yy_data;
-    funcs_->alg_jac->m_arg[2] = funcs_->inputs.data();
-    funcs_->alg_jac->m_res[0] = sb.full_jac_buf.data();
-    (*funcs_->alg_jac)();
-
-    if (use_sparse_) {
-      sunrealtype* sub_data = SUNSparseMatrix_Data(sb.J);
-      for (int i = 0; i < sb.nnz; i++)
-        sub_data[i] = sb.full_jac_buf[sb.data_indices[i]];
-    } else {
-      sunrealtype* dense = SUNDenseMatrix_Data(sb.J);
-      int len_alg = solver_.len_alg_;
-      std::memset(dense, 0, len_alg * len_alg * sizeof(sunrealtype));
-      for (int col = 0; col < len_alg; col++) {
-        for (auto k = sb.colptrs[col]; k < sb.colptrs[col + 1]; k++) {
-          int row = sb.rowvals[k];
-          dense[col * len_alg + row] = sb.full_jac_buf[sb.data_indices[k]];
-        }
-      }
-    }
-
-    int flag = SUNLinSolSetup(sb.LS, sb.J);
-    if (flag != 0) return 1;
-
-    sunrealtype* res_data = N_VGetArrayPointer(sb.res_nvec);
-    sunrealtype* delta_data = N_VGetArrayPointer(sb.delta_nvec);
-    std::memcpy(res_data, res, solver_.len_alg_ * sizeof(sunrealtype));
-
-    flag = SUNLinSolSolve(sb.LS, sb.J, sb.delta_nvec,
-                          sb.res_nvec, SUN_RCONST(0.0));
-
-    std::memcpy(delta, delta_data, solver_.len_alg_ * sizeof(sunrealtype));
-    return flag;
+    if (solver_.FactorizeAlgebraicJacobian(t) != 0) return 1;
+    return solver_.SolveAlgebraicJacobian(res, delta);
   }
 
 private:
   ExprSet* funcs_;
   N_Vector yy_;
   IDAKLUSolverOpenMP<ExprSet>& solver_;
-  bool use_sparse_;
 };
+
+// ────────────────────── Algebraic sub-block linear solve ──────────────────────
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::FactorizeAlgebraicJacobian(sunrealtype t) {
+  auto& sb = *alg_state_->sub;
+  Expression* alg_jac = functions->alg_jac;
+  alg_jac->m_arg[0] = &t;
+  alg_jac->m_arg[1] = N_VGetArrayPointer(yy);
+  alg_jac->m_arg[2] = functions->inputs.data();
+  alg_jac->m_res[0] = sb.full_jac_buf.data();
+  (*alg_jac)();
+
+  if (sb.use_sparse) {
+    sunrealtype* sub_data = SUNSparseMatrix_Data(sb.J);
+    for (int i = 0; i < sb.nnz; i++)
+      sub_data[i] = sb.full_jac_buf[sb.data_indices[i]];
+  } else {
+    sunrealtype* dense = SUNDenseMatrix_Data(sb.J);
+    std::memset(dense, 0, len_alg_ * len_alg_ * sizeof(sunrealtype));
+    for (int col = 0; col < len_alg_; col++) {
+      for (auto k = sb.colptrs[col]; k < sb.colptrs[col + 1]; k++) {
+        int row = sb.rowvals[k];
+        dense[col * len_alg_ + row] = sb.full_jac_buf[sb.data_indices[k]];
+      }
+    }
+  }
+  int flag = SUNLinSolSetup(sb.LS, sb.J);
+  if (flag != 0 && sb.use_sparse) {
+    // A failed KLU factorisation can leave none to refactor, so start afresh
+    SUNLinSol_KLUReInit(sb.LS, sb.J, sb.nnz, SUNKLU_REINIT_PARTIAL);
+    flag = SUNLinSolSetup(sb.LS, sb.J);
+  }
+  return flag;
+}
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::SolveAlgebraicJacobian(
+    const sunrealtype* rhs, sunrealtype* solution) {
+  auto& sb = *alg_state_->sub;
+  sunrealtype* res_data = N_VGetArrayPointer(sb.res_nvec);
+  sunrealtype* delta_data = N_VGetArrayPointer(sb.delta_nvec);
+  std::memcpy(res_data, rhs, len_alg_ * sizeof(sunrealtype));
+  int const flag = SUNLinSolSolve(sb.LS, sb.J, sb.delta_nvec, sb.res_nvec, SUN_RCONST(0.0));
+  std::memcpy(solution, delta_data, len_alg_ * sizeof(sunrealtype));
+  return flag;
+}
 
 template <class ExprSet>
 class FullSystem : public NonlinearSystem {
@@ -209,9 +219,9 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
   auto* funcs = functions.get();
   bool has_alg_fns = (funcs->alg_res->nnz_out() > 0 && funcs->alg_jac->nnz_out() > 0);
 
-  // FULL mode drives IDA's linear solver outside IDA, which an iterative one
-  // cannot survive (its ATimes reads IDA's unset ycur); IDACalcIC is used instead
-  if (!has_alg_fns && setup_opts.using_iterative_solver) {
+  // FULL mode is not built for an iterative solver, whose ATimes reads IDA's unset
+  // ycur, nor without calc_ic, where IDACalcIC solves its sensitivities regardless
+  if (!has_alg_fns && (setup_opts.using_iterative_solver || !solver_opts.calc_ic)) {
     return;
   }
 
@@ -239,11 +249,10 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
     // ── SUBBLOCK: solve only algebraic variables with own LS/J ──
     n_solve_vars = len_alg_;
 
-    bool use_sparse = (setup_opts.jacobian == "sparse" &&
-                       setup_opts.linear_solver == "SUNLinSol_KLU");
-
     as.sub = std::make_unique<SubBlockResources>();
     auto& sb = *as.sub;
+    sb.use_sparse = (setup_opts.jacobian == "sparse" &&
+                     setup_opts.linear_solver == "SUNLinSol_KLU");
 
     SUNContext_Create(SUN_COMM_NULL, &sb.sunctx);
     PrecomputeSubBlockSparsity();
@@ -254,8 +263,12 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
 
     sb.res_nvec = N_VNew_Serial(len_alg_, sb.sunctx);
     sb.delta_nvec = N_VNew_Serial(len_alg_, sb.sunctx);
+    if (sensitivity) {
+      sb.sens_res = N_VCloneVectorArray(number_of_parameters, yy);
+      sb.number_of_sens_res = number_of_parameters;
+    }
 
-    if (use_sparse) {
+    if (sb.use_sparse) {
       sb.J = SUNSparseMatrix(len_alg_, len_alg_, sb.nnz, CSC_MAT, sb.sunctx);
       sunindextype* jp = SUNSparseMatrix_IndexPointers(sb.J);
       sunindextype* jr = SUNSparseMatrix_IndexValues(sb.J);
@@ -268,8 +281,7 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
       sb.LS = SUNLinSol_Dense(sb.delta_nvec, sb.J, sb.sunctx);
     }
 
-    as.system = std::make_unique<SubBlockSystem<ExprSet>>(
-      funcs, yy_ptr, *this, use_sparse);
+    as.system = std::make_unique<SubBlockSystem<ExprSet>>(funcs, yy_ptr, *this);
 
   } else {
     // ── FULL: full-system via IDA's linear solve interface ──

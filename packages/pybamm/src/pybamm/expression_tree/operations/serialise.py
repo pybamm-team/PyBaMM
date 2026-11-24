@@ -204,6 +204,12 @@ class Serialise:
             "_solution_observable": model._solution_observable.name,
         }
 
+        if isinstance(model, pybamm.BaseBatteryModel):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                saved_options_format,
+            )
+
+            model_json["options_format"] = saved_options_format(model.options)
         if mesh:
             model_json["mesh"] = encode(mesh)
 
@@ -308,6 +314,8 @@ class Serialise:
 
         recon_model_dict = {
             "name": model_data["name"],
+            "pybamm_version": model_data.get("pybamm_version"),
+            "options_format": model_data.get("options_format"),
             "options": self._convert_options(model_data["options"]),
             "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
             "concatenated_rhs": self._decode_model_node(model_data["concatenated_rhs"]),
@@ -550,6 +558,12 @@ class Serialise:
         discretisation = Serialise._serialise_discretisation(model)
         if discretisation:
             model_content["discretisation"] = discretisation
+        if isinstance(model, pybamm.BaseBatteryModel):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                saved_options_format,
+            )
+
+            model_content["options_format"] = saved_options_format(model.options)
 
         SCHEMA_VERSION = "1.1"
         model_json = {
@@ -880,8 +894,8 @@ class Serialise:
         if not discretisation:
             return
         if "geometry" in discretisation:
-            model._default_geometry = dict(
-                Serialise.load_custom_geometry(discretisation["geometry"])
+            model._default_geometry = Serialise.load_custom_geometry(
+                discretisation["geometry"]
             )
         if "var_pts" in discretisation:
             model._default_var_pts = Serialise.load_var_pts(discretisation["var_pts"])
@@ -1468,7 +1482,18 @@ class Serialise:
         # the setter, so it matches the restored options.
         opts = model_data.get("options", {})
         if opts is not None:
-            model.options = Serialise._convert_options(opts)
+            opts = Serialise._convert_options(opts)
+            if isinstance(model, pybamm.BaseBatteryModel):
+                from pybamm.models.full_battery_models.battery_model_options import (
+                    restore_saved_options,
+                )
+
+                opts = restore_saved_options(
+                    opts,
+                    data.get("pybamm_version"),
+                    model_data.get("options_format"),
+                )
+            model.options = opts
 
         all_variable_keys = (
             [lhs_json for lhs_json, _ in model_data["rhs"]]

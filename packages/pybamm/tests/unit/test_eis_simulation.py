@@ -194,6 +194,116 @@ class TestEISSolution:
 class TestEISSimulationSolve:
     """Tests for EIS frequency-domain solving."""
 
+    def test_solve_with_reordered_and_extra_inputs(self):
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        values = {
+            "Negative electrode double-layer capacity [F.m-2]": 0.1,
+            "Positive electrode double-layer capacity [F.m-2]": 0.4,
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(values)
+        frequencies = np.logspace(-2, 2, 5)
+        reference = (
+            pybamm.EISSimulation(model, parameter_values=parameter_values)
+            .solve(frequencies)
+            .impedance
+        )
+        parameter_values.update({name: "[input]" for name in values})
+        simulation = pybamm.EISSimulation(model, parameter_values=parameter_values)
+        reordered = dict(reversed(list(values.items())))
+        # an inputs dict shared across simulations can hold keys this model does not use
+        with_unused = {"Unused input": 1.0, **values}
+        for inputs in (values, reordered, with_unused):
+            result = simulation.solve(frequencies, inputs=inputs)
+            np.testing.assert_allclose(
+                result.impedance, reference, rtol=1e-10, atol=1e-12
+            )
+
+    def test_solve_without_input_only_used_in_output_variable(self):
+        frequencies = np.logspace(-2, 2, 5)
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        reference = pybamm.EISSimulation(model).solve(frequencies).impedance
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        model.variables["Step capacity [A.h]"] = model.variables[
+            "Discharge capacity [A.h]"
+        ] - pybamm.InputParameter("Start capacity [A.h]")
+        result = pybamm.EISSimulation(model).solve(frequencies)
+        np.testing.assert_allclose(result.impedance, reference, rtol=1e-10, atol=1e-12)
+
+    def test_output_only_inputs_do_not_shift_used_inputs(self):
+        frequencies = np.logspace(-2, 2, 5)
+        capacity = "Negative electrode double-layer capacity [F.m-2]"
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({capacity: 0.2})
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        reference = (
+            pybamm.EISSimulation(model, parameter_values=parameter_values)
+            .solve(frequencies)
+            .impedance
+        )
+        parameter_values.update({capacity: "[input]"})
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        # vector inputs named to sort either side of the capacity
+        for name in ("A diagnostic", "Z diagnostic"):
+            model.variables[name] = pybamm.InputParameter(name, expected_size=2)
+        model.variables["Sample"] = pybamm.InputParameter("Sample (0)")
+        simulation = pybamm.EISSimulation(model, parameter_values=parameter_values)
+        for inputs in (
+            {capacity: 0.2, "A diagnostic": np.array([1.0, 2.0])},
+            {capacity: 0.2, "Z diagnostic": np.array([4.0, 5.0])},
+            {capacity: 0.2, "Sample": [1.0]},
+            pybamm.ParameterValues({capacity: 0.2, "Sample (0)": 1.0}),
+            {capacity: 0.2},
+        ):
+            result = simulation.solve(frequencies, inputs=inputs)
+            np.testing.assert_allclose(
+                result.impedance, reference, rtol=1e-10, atol=1e-12
+            )
+        with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
+            simulation.solve(frequencies)
+        with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
+            simulation.solve(frequencies, inputs={capacity: None})
+
+    @staticmethod
+    def _scale_initial_concentration(model, factor):
+        variable = model.variables[
+            "X-averaged negative particle concentration [mol.m-3]"
+        ]
+        model.initial_conditions[variable] = factor * model.initial_conditions[variable]
+
+    @staticmethod
+    def _add_event(model, cut_off):
+        voltage = model.variables["Voltage [V]"]
+        model.events.append(pybamm.Event("Extra cut-off", voltage - cut_off))
+
+    @staticmethod
+    def _add_voltage_resistance(model, resistance):
+        model.variables["Voltage [V]"] = (
+            model.variables["Voltage [V]"] - resistance * model.variables["Current [A]"]
+        )
+
+    @pytest.mark.parametrize(
+        ("add_symbol", "value"),
+        [
+            (_scale_initial_concentration, 0.9),
+            (_add_event, 2.0),
+            (_add_voltage_resistance, 0.05),
+        ],
+        ids=["initial-condition", "event", "voltage"],
+    )
+    def test_solve_with_input_outside_rhs_and_algebraic(self, add_symbol, value):
+        frequencies = np.logspace(-2, 2, 5)
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        add_symbol(model, pybamm.Scalar(value))
+        reference = pybamm.EISSimulation(model).solve(frequencies).impedance
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        add_symbol(model, pybamm.InputParameter("Extra input"))
+        simulation = pybamm.EISSimulation(model)
+        with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
+            simulation.solve(frequencies)
+        result = simulation.solve(frequencies, inputs={"Extra input": value})
+        np.testing.assert_allclose(result.impedance, reference, rtol=1e-10, atol=1e-12)
+
     def test_impedance_is_independent_of_algebraic_state_order(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
         frequencies = np.logspace(-2, 4, 12)
