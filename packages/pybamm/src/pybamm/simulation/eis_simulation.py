@@ -121,7 +121,7 @@ class EISSimulation(BaseSimulation):
             Forcing vector with unit perturbation on the current variable.
         """
         model = self._built_model
-        inputs_dict = inputs_dict or {}
+        inputs_dict = pybamm.BaseSolver._set_up_model_inputs(model, inputs_dict or {})
 
         # Convert inputs to casadi format for Jacobian evaluation
         if model.convert_to_format == "casadi":
