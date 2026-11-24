@@ -125,26 +125,24 @@ class EISSimulation(BaseSimulation):
             model.get_processed_variable("Voltage [V]"),
             model.get_processed_variable("Current [A]"),
         )
-        # Inputs that only appear in other output variables never reach the
-        # impedance, so give them a placeholder instead of requiring a value
-        used_inputs = {
-            symbol.name
-            for symbol in pybamm.SymbolUnpacker(
-                pybamm.InputParameter
-            ).unpack_list_of_symbols(
-                [
-                    model.concatenated_rhs,
-                    model.concatenated_algebraic,
-                    model.concatenated_initial_conditions,
-                    outputs,
-                ]
-            )
+        # Only the equations and voltage/current reach the impedance, so inputs
+        # used elsewhere (e.g. other output variables) get a placeholder
+        equations = [
+            model.concatenated_rhs,
+            model.concatenated_algebraic,
+            model.concatenated_initial_conditions,
+            outputs,
+        ]
+        unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+        used = {symbol.name for symbol in unpacker.unpack_list_of_symbols(equations)}
+        placeholders = {
+            symbol.name: np.nan
+            for symbol in model.input_parameters
+            if symbol.name not in used
         }
-        inputs_dict = dict(inputs_dict or {})
-        for symbol in model.input_parameters:
-            if symbol.name not in used_inputs:
-                inputs_dict.setdefault(symbol.name, np.nan)
-        inputs_dict = pybamm.BaseSolver.set_up_model_inputs(model, inputs_dict)
+        inputs_dict = pybamm.BaseSolver.set_up_model_inputs(
+            model, placeholders | (inputs_dict or {})
+        )
 
         # Convert inputs to casadi format for Jacobian evaluation
         if model.convert_to_format == "casadi":
