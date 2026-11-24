@@ -4,6 +4,7 @@
 import pytest
 
 import pybamm
+from pybamm.models.full_battery_models import battery_model_options
 from tests import BaseUnitTestLithiumIon
 
 
@@ -32,6 +33,8 @@ class TestSPM(BaseUnitTestLithiumIon):
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
             "x-average side reactions": "true",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -50,7 +53,11 @@ class TestSPM(BaseUnitTestLithiumIon):
         class MySPM(pybamm.lithium_ion.SPM):
             pass
 
-        options = {"particle size": particle_size, "SEI porosity change": "true"}
+        options = {
+            "particle size": particle_size,
+            "SEI porosity change": "true",
+            "surface form": "algebraic",
+        }
         for model_class in [pybamm.lithium_ion.SPM, MySPM]:
             with pytest.raises(pybamm.OptionError, match=r"distributions"):
                 model_class(options)
@@ -61,21 +68,51 @@ class TestSPM(BaseUnitTestLithiumIon):
                 "working electrode": "positive",
                 "particle size": ("distribution", "single"),
                 "SEI porosity change": "true",
+                "surface form": "algebraic",
             }
         )
 
-    def test_dependent_defaults_use_declared_options(self):
+    def test_dependent_defaults_use_declared_options(self, monkeypatch):
+        monkeypatch.setattr(
+            battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", False
+        )
+
         class MySPM(pybamm.lithium_ion.SPM):
             default_options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
 
-        assert MySPM(build=False).options["surface form"] == "algebraic"
+        with pytest.warns(pybamm.OptionDefaultDeprecationWarning):
+            assert MySPM(build=False).options["surface form"] == "algebraic"
         model = MySPM({"surface form": "differential"}, build=False)
         assert model.options["surface form"] == "differential"
         model = pybamm.lithium_ion.MPM(build=False)
         assert model.options["surface form"] == "algebraic"
 
     def test_distribution_options(self):
-        options = {"particle size": "distribution"}
+        options = {"particle size": "distribution", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_asymmetric_butler_volmer(self):
+        # SPM's own model-specific default sets "surface form" to "algebraic"
+        # whenever "intercalation kinetics" is supplied.
+        options = {
+            "intercalation kinetics": "asymmetric Butler-Volmer",
+            "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_linear(self):
+        options = {"intercalation kinetics": "linear", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_marcus(self):
+        options = {"intercalation kinetics": "Marcus", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_mhc(self):
+        options = {
+            "intercalation kinetics": "Marcus-Hush-Chidsey",
+            "surface form": "algebraic",
+        }
         self.check_well_posedness(options)
 
     def test_particle_size_distribution(self):
@@ -83,7 +120,7 @@ class TestSPM(BaseUnitTestLithiumIon):
         self.check_well_posedness(options)
 
     def test_new_model(self):
-        model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
+        model = pybamm.lithium_ion.SPM({"thermal": "x-full", "cell geometry": "pouch"})
         new_model = model.new_copy()
         model_T_eqn = model.rhs[model.variables["Cell temperature [K]"]]
         new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature [K]"]]
@@ -93,7 +130,11 @@ class TestSPM(BaseUnitTestLithiumIon):
         assert new_model.convert_to_format == model.convert_to_format
 
         # with custom submodels
-        options = {"stress-induced diffusion": "false", "thermal": "x-full"}
+        options = {
+            "stress-induced diffusion": "false",
+            "thermal": "x-full",
+            "cell geometry": "pouch",
+        }
         model = pybamm.lithium_ion.SPM(options, build=False)
         particle_n = pybamm.particle.XAveragedPolynomialProfile(
             model.param,

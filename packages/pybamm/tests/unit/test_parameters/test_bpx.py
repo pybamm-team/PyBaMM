@@ -412,7 +412,9 @@ class TestBPX:
                 "Secondary: Initial concentration in positive electrode [mol.m-3]": 19404,
             }
         )
-        model = pybamm.lithium_ion.SPM({"particle phases": ("1", "2")})
+        model = pybamm.lithium_ion.SPM(
+            {"particle phases": ("1", "2"), "surface form": "algebraic"}
+        )
         experiment = pybamm.Experiment(
             [
                 "Discharge at C/5 for 1 hour",

@@ -69,7 +69,9 @@ def _half_cell():
 
 
 def _composite():
-    model = pybamm.lithium_ion.SPM({"particle phases": ("2", "1")})
+    model = pybamm.lithium_ion.SPM(
+        {"particle phases": ("2", "1"), "surface form": "algebraic"}
+    )
     return model, pybamm.ParameterValues("Chen2020_composite")
 
 

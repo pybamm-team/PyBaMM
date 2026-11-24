@@ -9,6 +9,7 @@ from pybamm.models.full_battery_models.battery_model_options import (
     BatteryModelOptions,
     BatteryModelPhaseOptions,
     LegacyOptions,
+    _warn_legacy_defaults,
     iter_option_leaves,
     option_values_match,
     restore_saved_options,
@@ -177,6 +178,9 @@ class BaseBatteryModel(pybamm.BaseModel):
     def _dependent_default_options(self, supplied):
         """Return model defaults that depend on the options the caller gave.
 
+        Relying on these is deprecated, so each one that is used emits a
+        :class:`pybamm.OptionDefaultDeprecationWarning`.
+
         Parameters
         ----------
         supplied : dict
@@ -227,19 +231,24 @@ class BaseBatteryModel(pybamm.BaseModel):
         if extra_options is None or type(extra_options) in (dict, LegacyOptions):
             supplied = dict(extra_options or {})
             self._check_fixed_options(supplied)
+            model_legacy_defaults = self._dependent_default_options(
+                {**self.default_options, **supplied, **self.fixed_options}
+            )
             options = BatteryModelOptions(
                 {
                     **self.default_options,
-                    **self._dependent_default_options(
-                        {**self.default_options, **supplied, **self.fixed_options}
-                    ),
+                    **model_legacy_defaults,
                     **supplied,
                     **self.fixed_options,
                 },
                 legacy=isinstance(extra_options, LegacyOptions),
+                warn_legacy_defaults=False,
             )
+            legacy_defaults = options._legacy_defaults
         else:
             options = extra_options
+            legacy_defaults = {}
+            model_legacy_defaults = {}
             self._check_fixed_options(options)
 
         # Options that are incompatible with models
@@ -297,6 +306,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
+        _warn_legacy_defaults(legacy_defaults)
+        _warn_legacy_defaults(model_legacy_defaults)
         self._options = options
         # rebuild whenever options are (re)assigned.
         # No-op unless the subclass overrides ``_rebuild_param``.

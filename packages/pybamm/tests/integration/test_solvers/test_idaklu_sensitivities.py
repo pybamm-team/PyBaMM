@@ -228,7 +228,9 @@ CASES = {
         {"Contact resistance [Ohm]": 0.0, "Current function [A]": 5.0},
     ),
     "SPMe composite": SensitivityCase(
-        lambda: lithium_ion.SPMe({"particle phases": ("2", "1")}),
+        lambda: lithium_ion.SPMe(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}
+        ),
         _parameter_values("Chen2020_composite"),
         {
             "Primary: Negative particle diffusivity [m2.s-1]": 5.5e-14,
@@ -245,7 +247,13 @@ CASES = {
         },
     ),
     "SPM SEI": SensitivityCase(
-        lambda: lithium_ion.SPM({"SEI": "ec reaction limited"}),
+        lambda: lithium_ion.SPM(
+            {
+                "SEI": "ec reaction limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
+        ),
         _parameter_values("OKane2022"),
         {
             "SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -298,6 +306,7 @@ CASES = {
                 "particle": "MSMR",
                 "intercalation kinetics": "MSMR",
                 "number of MSMR reactions": ("6", "4"),
+                "surface form": "algebraic",
             }
         ),
         _parameter_values("MSMR_Example"),

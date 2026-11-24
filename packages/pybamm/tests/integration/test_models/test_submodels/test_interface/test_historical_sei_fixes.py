@@ -20,7 +20,13 @@ class TestSEIThicknessFixes:
         under certain conditions. The fix applied a Heaviside function to ensure
         only negative contributions affect j_sei.
         """
-        model = pybamm.lithium_ion.DFN({"SEI": sei_option})
+        model = pybamm.lithium_ion.DFN(
+            {
+                "SEI": sei_option,
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
+        )
         param = pybamm.ParameterValues("OKane2022")
         sim = pybamm.Simulation(model, parameter_values=param)
 

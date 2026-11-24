@@ -11,6 +11,7 @@ class Yang2017(DFN):
         "SEI porosity change": "true",
         "lithium plating": ("irreversible", "none"),
         "lithium plating porosity change": "true",
+        "total interfacial current density as a state": "true",
     }
 
     def __init__(self, options=None, name="Yang2017", build=True):

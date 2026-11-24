@@ -14,7 +14,9 @@ def solved_simulations():
     sim = pybamm.Simulation(model)
     sol = sim.solve([0, 3600])
 
-    model_composite = pybamm.lithium_ion.SPM({"particle phases": ("2", "1")})
+    model_composite = pybamm.lithium_ion.SPM(
+        {"particle phases": ("2", "1"), "surface form": "algebraic"}
+    )
     params = pybamm.ParameterValues("Chen2020_composite")
     sim_composite = pybamm.Simulation(model_composite, parameter_values=params)
     sol_composite = sim_composite.solve([0, 3600])

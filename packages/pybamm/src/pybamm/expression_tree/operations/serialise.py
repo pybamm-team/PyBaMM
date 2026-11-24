@@ -1485,11 +1485,14 @@ class Serialise:
                     restore_saved_options,
                 )
 
-                opts = restore_saved_options(
-                    opts,
-                    data.get("pybamm_version"),
-                    model_data.get("options_format"),
-                )
+                version = data.get("pybamm_version")
+                options_format = model_data.get("options_format")
+                if (
+                    options_format is not None
+                    or version is not None
+                    or set(pybamm.BatteryModelOptions({})) <= set(opts)
+                ):
+                    opts = restore_saved_options(opts, version, options_format)
             model.options = opts
 
         all_variable_keys = (

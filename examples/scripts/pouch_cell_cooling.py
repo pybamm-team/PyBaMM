@@ -9,7 +9,12 @@ pybamm.set_logging_level("INFO")
 
 # load model
 model = pybamm.lithium_ion.SPM(
-    {"current collector": "potential pair", "dimensionality": 2, "thermal": "x-lumped"}
+    {
+        "current collector": "potential pair",
+        "dimensionality": 2,
+        "thermal": "x-lumped",
+        "cell geometry": "pouch",
+    }
 )
 
 # update parameter values, to use a spatially-varying ambient temperature and a
