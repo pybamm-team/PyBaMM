@@ -86,6 +86,11 @@ class BinaryOperator(pybamm.Symbol):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Elementwise, with scalars broadcast
+        return sparsity.union(self.children)
+
     def __init__(
         self, name: str, left_child: ChildSymbol, right_child: ChildSymbol
     ) -> None:
@@ -444,6 +449,11 @@ class KroneckerProduct(BinaryOperator):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Not elementwise, unlike the other binary operators
+        return pybamm.Symbol._jacobian_sparsity(self, sparsity)
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -504,6 +514,11 @@ class TensorProduct(BinaryOperator):
     # derived from the children's ranks
     _id_excluded_fields = ("_result_rank",)
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Not elementwise, unlike the other binary operators
+        return pybamm.Symbol._jacobian_sparsity(self, sparsity)
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -558,6 +573,20 @@ class MatrixMultiplication(BinaryOperator):
     """
 
     __slots__ = ()
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        left, right = self.children
+        if not left.is_constant():
+            raise NotImplementedError(
+                "Jacobian sparsity of a matrix product needs a constant left factor"
+            )
+        matrix = csr_matrix(left.evaluate())
+        _, right_pattern = sparsity.size_and_pattern(right)
+        if right_pattern is None:
+            return matrix.shape[0], None
+        matrix.eliminate_zeros()
+        return matrix.shape[0], (matrix.astype(bool) @ right_pattern).astype(bool)
 
     def __init__(
         self,
@@ -748,6 +777,11 @@ class Equality(BinaryOperator):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Piecewise constant, so the derivative is zero wherever it exists
+        return sparsity.independent(self.children)
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -806,6 +840,11 @@ class _Heaviside(BinaryOperator):
     """
 
     __slots__ = ()
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Piecewise constant, so the derivative is zero wherever it exists
+        return sparsity.independent(self.children)
 
     def __init__(
         self,

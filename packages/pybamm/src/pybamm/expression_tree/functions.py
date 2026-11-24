@@ -42,6 +42,11 @@ class Function(pybamm.Symbol):
     # callables are identified by the symbol's name, not by object identity
     _id_excluded_fields = ("differentiated_function", "function")
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # A general function may reduce its arguments, so its size is evaluated
+        return sparsity.union(self.children, int(self.size))
+
     def __init__(
         self,
         function: Callable,
@@ -271,6 +276,10 @@ class SpecificFunction(Function):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children)
+
     def __init__(self, function: Callable, child: pybamm.Symbol):
         super().__init__(function, child)
 
@@ -418,6 +427,10 @@ class Arcsinh2(Function):
 
     # a and b are Symbol operands carried via children (Function base); eps is emitted.
     _serialise_derived_params = frozenset({"a", "b"})
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children)
 
     def __init__(
         self,
@@ -790,6 +803,10 @@ class Max(_ScalarReduction):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children, 1)
+
     def __init__(self, child):
         super().__init__(np.max, child)
 
@@ -817,6 +834,10 @@ class Min(_ScalarReduction):
     """Min function."""
 
     __slots__ = ()
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children, 1)
 
     def __init__(self, child):
         super().__init__(np.min, child)
@@ -973,6 +994,10 @@ class RegPower(Function):
 
     # base, exponent, scale are Symbol operands carried via children; delta is emitted.
     _serialise_derived_params = frozenset({"base", "exponent", "scale"})
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children)
 
     def __init__(
         self,

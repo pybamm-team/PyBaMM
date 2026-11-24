@@ -392,6 +392,11 @@ _hook_codec = HookCodec()
 _KNOWN_BASES = (pybamm.Symbol, pybamm.Event, pybamm.Mesh, pybamm.SubMesh)
 
 
+def _known_bases() -> tuple[type, ...]:
+    # Block solvers load after this module, so they are added on first use
+    return (*_KNOWN_BASES, pybamm.preconditioners.BlockSolver)
+
+
 def _overrides_hooks(cls: type) -> bool:
     # Asymmetric on purpose: to_json is a regular method, so `cls.to_json` is a
     # plain function comparable by identity; _from_json is a classmethod, so
@@ -410,7 +415,7 @@ def _overrides_hooks(cls: type) -> bool:
 
 
 def _lookup_codec(cls: type):
-    if not issubclass(cls, _KNOWN_BASES):
+    if not issubclass(cls, _known_bases()):
         return None
     if _overrides_hooks(cls):
         return _hook_codec
