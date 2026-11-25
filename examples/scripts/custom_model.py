@@ -67,7 +67,7 @@ for domain in ["negative", "positive"]:
     )
     model.submodels[f"{domain} surface potential difference [V]"] = (
         pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
-            model.param, domain, model.options
+            model.param, domain, model.options, inverse_kinetics=True
         )
     )
     model.submodels[f"{domain} particle mechanics"] = (

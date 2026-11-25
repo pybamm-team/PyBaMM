@@ -1443,6 +1443,15 @@ class BaseModel:
                 continue
             pybamm.logger.debug(f"Building {submodel_name} submodel ({self.name})")
             submodel.build()
+            # A placeholder published under its own name would overwrite its owner
+            submodel.variables = {
+                name: variable
+                for name, variable in submodel.variables.items()
+                if not (
+                    isinstance(variable, pybamm.CoupledVariable)
+                    and variable.name == name
+                )
+            }
             self._variables_by_submodel[submodel_name].update(submodel.variables)
             self.update(submodel)
             self.check_no_repeated_keys()

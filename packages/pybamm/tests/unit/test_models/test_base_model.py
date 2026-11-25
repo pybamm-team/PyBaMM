@@ -1703,6 +1703,25 @@ class TestBaseModel:
         assert model.variables["w"].print_name == "w"
         assert model.submodels["submodel 2"].list_coupled_variables() == ["u"]
 
+    def test_build_ignores_placeholder_under_its_own_name(self):
+        class Owner(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update({"u": pybamm.Variable("u")})
+
+        class PassThrough(pybamm.BaseSubModel):
+            def build(self):
+                u = self.coupled_variable("u")
+                self.variables.update({"u": u, "w": 2 * u})
+
+        for order in [["owner", "pass"], ["pass", "owner"]]:
+            submodels = {"owner": Owner(None), "pass": PassThrough(None)}
+            model = pybamm.BaseModel()
+            model.submodels = {name: submodels[name] for name in order}
+            model.build_model()
+            u = model.variables["u"]
+            assert isinstance(u, pybamm.Variable)
+            assert model.variables["w"] == 2 * u
+
     def test_build_legacy_submodels(self):
         class Submodel1(pybamm.BaseSubModel):
             def get_fundamental_variables(self):

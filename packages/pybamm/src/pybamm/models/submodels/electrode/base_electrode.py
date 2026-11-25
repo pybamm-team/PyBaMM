@@ -180,11 +180,12 @@ class BaseElectrode(pybamm.BaseSubModel):
                 delta_phi_contact = I * self.param.R_contact(T_vol_av)
             else:
                 delta_phi_contact = pybamm.Scalar(0)
-            variables.update(
-                self._get_standard_current_collector_potential_variables(
-                    phi_s_cn, phi_s_cp, delta_phi_contact
-                )
+            cc_variables = self._get_standard_current_collector_potential_variables(
+                phi_s_cn, phi_s_cp, delta_phi_contact
             )
+            # The current collector submodel owns the negative potential
+            del cc_variables["Negative current collector potential [V]"]
+            variables.update(cc_variables)
 
         return variables
 
