@@ -21,6 +21,19 @@ class TestSPMe(BaseUnitTestLithiumIon):
         options = {"electrolyte conductivity": "integrated"}
         self.check_well_posedness(options)
 
+    @pytest.mark.parametrize("surface_form", ["algebraic", "differential"])
+    @pytest.mark.parametrize("working_electrode", ["both", "positive"])
+    def test_integrated_conductivity_surface_form_raises(
+        self, surface_form, working_electrode
+    ):
+        options = {
+            "electrolyte conductivity": "integrated",
+            "surface form": surface_form,
+            "working electrode": working_electrode,
+        }
+        with pytest.raises(pybamm.OptionError, match=r"'integrated' is not supported"):
+            pybamm.lithium_ion.SPMe(options)
+
     def test_surface_form_c_e_av_is_variable(self):
         for surf in ["algebraic", "differential"]:
             model = pybamm.lithium_ion.SPMe(

@@ -16,7 +16,7 @@ class TestCompareOutputs:
         ]
         model_combos = [
             ([pybamm.lithium_ion.SPM(opt) for opt in options]),
-            # ([pybamm.lithium_ion.SPMe(opt) for opt in options]), # not implemented
+            ([pybamm.lithium_ion.SPMe(opt) for opt in options]),
             ([pybamm.lithium_ion.DFN(opt) for opt in options]),
         ]
 
@@ -50,7 +50,18 @@ class TestCompareOutputs:
 
             # compare outputs
             comparison = StandardOutputComparison(solutions)
-            comparison.test_all(skip_first_timestep=True)
+            if not isinstance(models[0], pybamm.lithium_ion.SPMe):
+                comparison.test_all(skip_first_timestep=True)
+                continue
+            # SPMe surface forms hold eta uniform instead of j, so local
+            # overpotentials differ at second order; compare everything else
+            comparison.test_averages(skip_first_timestep=True)
+            for var in ["Voltage [V]", "Electrolyte concentration [mol.m-3]"]:
+                expected = solutions[0][var].entries[..., 1:]
+                for solution in solutions[1:]:
+                    np.testing.assert_allclose(
+                        solution[var].entries[..., 1:], expected, rtol=1e-2
+                    )
 
     def test_compare_outputs_thermal(self):
         # load models - for the default params we expect x-full and lumped to

@@ -63,9 +63,20 @@ class BaseKinetics(BaseInterface):
             delta_phi = variables[
                 f"{Domain} electrode surface potential difference [V]"
             ]
+            c_s_surf = variables.get(
+                f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
+            )
             # If delta_phi was broadcast, take only the orphan.
             if isinstance(delta_phi, pybamm.Broadcast):
                 delta_phi = delta_phi.orphans[0]
+            # x-averaged particles take a uniform reaction (SPMe), so use the
+            # x-averaged potential difference rather than the local composite one
+            elif self.reaction == "lithium-ion main" and isinstance(
+                c_s_surf, pybamm.Broadcast
+            ):
+                delta_phi = variables[
+                    f"X-averaged {domain} electrode surface potential difference [V]"
+                ]
         # For "particle-size distribution" models, delta_phi must then be
         # broadcast to "particle size" domain
         domain_options = getattr(self.options, domain)
@@ -153,6 +164,7 @@ class BaseKinetics(BaseInterface):
         eta_r += eta_sei
 
         j0 = self._broadcast_to_eta_r_domain(j0, eta_r)
+        eta_r = self._broadcast_to_eta_r_domain(eta_r, j0)
 
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
@@ -231,11 +243,11 @@ class BaseKinetics(BaseInterface):
 
         return variables
 
-    def _broadcast_to_eta_r_domain(self, symbol, eta_r):
-        """Broadcast an x-averaged symbol onto the electrode if eta_r is not."""
+    def _broadcast_to_eta_r_domain(self, symbol, other):
+        """Broadcast an x-averaged symbol onto the electrode if other is not."""
         if symbol.secondary_domain == [
             "current collector"
-        ] and eta_r.secondary_domain == [f"{self.domain} electrode"]:
+        ] and other.secondary_domain == [f"{self.domain} electrode"]:
             symbol = pybamm.SecondaryBroadcast(symbol, [f"{self.domain} electrode"])
         return symbol
 
