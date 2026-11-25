@@ -100,16 +100,13 @@ class Mesh(dict):
         else:
             self.geometry = geometry
 
-        # Preprocess var_pts
-        var_pts_input = var_pts
-        var_pts = {}
-        for key, value in var_pts_input.items():
+        # Points are matched to spatial variables by name, so a string key that is
+        # not a standard spatial variable names a custom one (e.g. from a saved model)
+        var_name_pts = {}
+        for key, pts in var_pts.items():
             if isinstance(key, str):
-                key = getattr(pybamm.standard_spatial_vars, key)
-            var_pts[key] = value
-
-        # convert var_pts to an id dict
-        var_name_pts = {var.name: pts for var, pts in var_pts.items()}
+                key = getattr(pybamm.standard_spatial_vars, key, key)
+            var_name_pts[key if isinstance(key, str) else key.name] = pts
 
         for domain, generator in submesh_types.items():
             if isinstance(generator, pybamm.ScikitFemGenerator3D):

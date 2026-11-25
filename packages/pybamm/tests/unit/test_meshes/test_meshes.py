@@ -873,6 +873,25 @@ class TestPrebuiltSubMesh:
         ):
             pybamm.Mesh({}, {"negative particle": submesh}, {})
 
+    def test_string_var_pts_key_names_custom_spatial_variable(self):
+        x_custom = pybamm.SpatialVariable("x_custom", domain=["negative electrode"])
+        z_custom = pybamm.SpatialVariable("z_custom", domain=["negative electrode"])
+        geometry = {
+            "negative electrode": {
+                x_custom: {"min": 0.0, "max": 1.0},
+                z_custom: {"min": 0.0, "max": 2.0},
+            }
+        }
+        submesh_types = {"negative electrode": pybamm.UnstructuredMeshGenerator()}
+        by_name = pybamm.Mesh(geometry, submesh_types, {"x_custom": 3, "z_custom": 4})
+        by_variable = pybamm.Mesh(geometry, submesh_types, {x_custom: 3, z_custom: 4})
+
+        assert by_name.submesh_pts == by_variable.submesh_pts
+        np.testing.assert_array_equal(
+            by_name["negative electrode"].vertices,
+            by_variable["negative electrode"].vertices,
+        )
+
     def test_mesh_json_round_trip_recomputes_interfaces(self):
         import json
 
