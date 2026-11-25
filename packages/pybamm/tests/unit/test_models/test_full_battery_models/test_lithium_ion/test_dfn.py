@@ -74,6 +74,17 @@ class TestDFN(BaseUnitTestLithiumIon):
         options = {"particle size": ("single", "distribution")}
         self.check_well_posedness(options)
 
+    def test_mechanics_size_distribution_per_electrode(self):
+        model = pybamm.lithium_ion.DFN(
+            {
+                "particle size": ("single", "distribution"),
+                "particle mechanics": "swelling and cracking",
+                "stress-induced diffusion": "false",
+            }
+        )
+        assert "Positive particle crack length distribution [m]" in model.variables
+        assert "Negative particle crack length distribution [m]" not in model.variables
+
     def test_well_posed_size_distribution_composite(self):
         options = {"particle size": "distribution", "particle phases": "2"}
         self.check_well_posedness(options)

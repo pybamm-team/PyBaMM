@@ -44,6 +44,52 @@ def test_dfn_mesh_cold_solve(benchmark, record_scaling, points):
     record_scaling(size=sim.built_model.len_rhs_and_alg)
 
 
+def _pointwise_model(points, algebraic):
+    """A linear ODE, or DAE, uncoupled across ``points`` cells, so each costs the same."""
+    model = pybamm.BaseModel()
+    x = pybamm.SpatialVariable("x", domain="negative electrode")
+    y = pybamm.Variable("y", domain="negative electrode")
+    rate = pybamm.InputParameter("rate")
+    if algebraic:
+        z = pybamm.Variable("z", domain="negative electrode")
+        model.rhs = {y: -rate * y + 0.1 * z}
+        model.algebraic = {z: z - y}
+        model.initial_conditions = {y: 1, z: 1}
+    else:
+        model.rhs = {y: -rate * y}
+        model.initial_conditions = {y: 1}
+    model.variables = {"y": y}
+    geometry = {"negative electrode": {x: {"min": 0, "max": 1}}}
+    submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
+    mesh = pybamm.Mesh(geometry, submesh_types, {x: points})
+    spatial_methods = {"negative electrode": pybamm.FiniteVolume()}
+    pybamm.Discretisation(mesh, spatial_methods).process_model(model)
+    return model
+
+
+@pytest.mark.parametrize("points", [2_000, 32_000])
+@pytest.mark.parametrize("kind", ["ode", "dae"])
+def test_first_sensitivity_solve(
+    benchmark, record_scaling, record_peak_memory, kind, points
+):
+    # A cost super-linear in the state count hides behind the linear ones at the
+    # battery models' default sizes; 32,000 cells expose it
+    def setup():
+        model = _pointwise_model(points, algebraic=kind == "dae")
+        return (model, pybamm.IDAKLUSolver()), {}
+
+    def solve(model, solver):
+        return solver.solve(
+            model, [0, 1], inputs={"rate": 1.0}, calculate_sensitivities=True
+        )
+
+    solution = benchmark.pedantic(solve, setup=setup, rounds=5)
+    assert solution.termination == "final time"
+    assert "rate" in solution.sensitivities
+    record_scaling(size=points, label=kind)
+    record_peak_memory(solve, setup)
+
+
 @pytest.mark.parametrize("cycles", [25, 200])
 @pytest.mark.parametrize("mode", ["legacy", "unified"])
 def test_experiment_cycles(

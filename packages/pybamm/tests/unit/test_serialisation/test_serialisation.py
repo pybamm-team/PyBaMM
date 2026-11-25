@@ -17,7 +17,6 @@ import pytest
 import pybamm
 import pybamm.expression_tree.operations.serialise_kernel as sk
 from pybamm.expression_tree.operations.serialise import (
-    SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
     Serialise,
     convert_function_to_symbolic_expression,
@@ -249,7 +248,7 @@ class TestSerialise:
         newest_solver = newest_model.default_solver
         newest_solver.solve(newest_model, [0, 3600])
 
-    @pytest.mark.parametrize("convert_to_format", ["python", "jax"])
+    @pytest.mark.parametrize("convert_to_format", ["python", "jax", "rust"])
     def test_discretised_model_round_trips_convert_to_format(self, convert_to_format):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
@@ -268,7 +267,7 @@ class TestSerialise:
         del data["convert_to_format"]
         assert Serialise().load_model(data).convert_to_format == "casadi"
 
-    @pytest.mark.parametrize("convert_to_format", ["python", "jax"])
+    @pytest.mark.parametrize("convert_to_format", ["python", "jax", "rust"])
     def test_custom_model_round_trips_convert_to_format(self, convert_to_format):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
@@ -771,6 +770,12 @@ class TestSerialise:
         assert "positive particle" in loaded.default_geometry
         assert "positive particle" in loaded.default_spatial_methods
 
+    def test_basic_dfn_half_cell_round_trip(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell()
+        payload = Serialise.serialise_custom_model(model)
+        loaded = Serialise.load_custom_model(payload)
+        assert loaded.options == model.options
+
     def test_serialise_records_base_class_mro(self, tmp_path):
         from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
             BaseModel as LiIonBaseModel,
@@ -855,6 +860,60 @@ class TestSerialise:
             loaded = Serialise.load_custom_model(str(file_path))
 
         assert type(loaded) is pybamm.BaseModel
+
+    @pytest.mark.parametrize(
+        ("version", "loads"),
+        [
+            ("26.10.1.1", True),
+            ("24.5rc0", True),
+            (None, True),
+            ("26.11.0.0", False),
+            ("26.11rc0", False),
+        ],
+    )
+    def test_load_model_options_saved_before_per_electrode_checks(
+        self, tmp_path, version, loads
+    ):
+        model = pybamm.lithium_ion.SPM(
+            {"particle mechanics": ("swelling only", "none")}
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues("Ai2020")
+        )
+        sim.build()
+        sim.built_model.save_model(str(tmp_path / "model"))
+        data = json.loads((tmp_path / "model.json").read_text())
+        # 26.9 stored this default for one-electrode mechanics
+        data["options"]["stress-induced diffusion"] = "true"
+        del data["options_format"]
+        data["pybamm_version"] = version
+        if loads:
+            loaded = Serialise().load_model(data)
+            assert loaded.options.positive["stress-induced diffusion"] == "true"
+            assert loaded.options["particle mechanics"] == ("swelling only", "none")
+        else:
+            with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+                Serialise().load_model(data)
+
+    def test_save_model_keeps_legacy_options(self, tmp_path, monkeypatch):
+        options = {
+            "particle mechanics": ("swelling only", "none"),
+            "stress-induced diffusion": "true",
+        }
+        model = pybamm.lithium_ion.SPM(
+            pybamm.models.full_battery_models.battery_model_options.LegacyOptions(
+                options
+            )
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues("Ai2020")
+        )
+        sim.build()
+        monkeypatch.setattr(pybamm, "__version__", "26.11.0")
+        sim.built_model.save_model(str(tmp_path / "model"))
+        loaded = Serialise().load_model(str(tmp_path / "model.json"))
+        assert loaded.options.legacy
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
 
     def test_load_legacy_payload_without_base_class_mro(self, tmp_path):
         model = pybamm.BaseModel(name="DummyModel")
@@ -964,7 +1023,7 @@ class TestSerialise:
             def default_var_pts(self):
                 return {**super().default_var_pts, "r_n": 7}
 
-        model = _HalfRadiusSPM({"x-average side reactions": "true"})
+        model = _HalfRadiusSPM()
         data = Serialise.serialise_custom_model(model)
         _make_base_class_unimportable(data, "user_private_pkg.HalfRadiusSPM")
 
@@ -981,6 +1040,26 @@ class TestSerialise:
         np.testing.assert_allclose(
             sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
         )
+
+    def test_load_restores_default_geometry_as_geometry(self):
+        class _LocalLithiumIonModel(pybamm.lithium_ion.BaseModel):
+            pass
+
+        model = _LocalLithiumIonModel()
+        x = pybamm.Variable("x", domain="positive particle")
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"x": x}
+
+        data = json.loads(
+            json.dumps(Serialise.serialise_custom_model(model), default=str)
+        )
+        with pytest.warns(UserWarning, match=r"Falling back"):
+            loaded = Serialise.load_custom_model(data)
+
+        assert isinstance(model.default_geometry, pybamm.Geometry)
+        assert isinstance(loaded.default_geometry, pybamm.Geometry)
+        assert loaded.default_geometry.keys() == model.default_geometry.keys()
 
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no
@@ -1123,7 +1202,7 @@ class TestSerialise:
 
         with (
             patch(
-                "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
+                "pybamm.expression_tree.operations.serialise_flat.FlatEncoder.encode",
                 side_effect=Exception("conversion failed"),
             ),
             pytest.raises(
@@ -1165,7 +1244,7 @@ class TestSerialise:
         loaded_model = Serialise.load_custom_model(str(file_path))
 
         assert hasattr(loaded_model, "schema_version")
-        assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
+        assert loaded_model.schema_version == "2.0"
 
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"
