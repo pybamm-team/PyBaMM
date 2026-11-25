@@ -189,3 +189,19 @@ class TestConditional:
             np.array(f([4.0], 2.0)).reshape(-1), np.array([12.0])
         )
         np.testing.assert_allclose(np.array(f([4.0], 0.5)).reshape(-1), np.array([0.0]))
+
+    def test_to_casadi_with_inputs_sliced_from_one_vector(self):
+        selector = pybamm.InputParameter("selector")
+        value = pybamm.InputParameter("value")
+        expr = pybamm.Conditional(selector, 2 * value, 3 * value)
+
+        inputs = casadi.MX.sym("p", 2)
+        casadi_expr = expr.to_casadi(
+            casadi.MX.sym("t"),
+            casadi.MX.sym("y", 1),
+            inputs={"selector": inputs[0], "value": inputs[1]},
+        )
+        f = casadi.Function("f", [inputs], [casadi_expr])
+
+        np.testing.assert_allclose(float(f([1.0, 4.0])), 8.0)
+        np.testing.assert_allclose(float(f([2.0, 4.0])), 12.0)

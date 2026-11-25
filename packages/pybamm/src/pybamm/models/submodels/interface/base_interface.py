@@ -108,9 +108,7 @@ class BaseInterface(pybamm.BaseSubModel):
             return self.coupled_variable(f"{Domain} {name}", domains=domains)
         if x_average:
             return self._coupled_electrode_variable(name, x_average=True)
-        # Without SEI, the zero thickness keeps the shape of the SEI concentration
-        size = sei_option == "none" and self.size_distribution
-        return self._coupled_electrode_variable(name, size=size)
+        return self._coupled_electrode_variable(name)
 
     def _get_intercalation_concentrations(self):
         """

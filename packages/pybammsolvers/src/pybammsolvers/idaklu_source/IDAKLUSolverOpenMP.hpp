@@ -79,7 +79,7 @@ public:
   int const number_of_events;
   int number_of_timesteps;
   int precon_type;
-  N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
+  N_Vector yy, yyp, y_cache, yp_cache, avtol;  // y, y', their caches, and absolute tolerance
   N_Vector *yyS;
   N_Vector *yypS;
   N_Vector id;              // rhs_alg_id
@@ -134,8 +134,13 @@ public:
     std::vector<sunindextype> rowvals;
     std::vector<int> data_indices;
     std::vector<sunrealtype> full_jac_buf;
+    bool use_sparse = false;
+    // Sensitivity residuals F_y s + F_p - M s', one per parameter
+    N_Vector* sens_res = nullptr;
+    int number_of_sens_res = 0;
 
     ~SubBlockResources() {
+      if (sens_res) N_VDestroyVectorArray(sens_res, number_of_sens_res);
       if (res_nvec) N_VDestroy(res_nvec);
       if (delta_nvec) N_VDestroy(delta_nvec);
       if (LS) SUNLinSolFree(LS);
@@ -260,6 +265,21 @@ public:
   int Step(sunrealtype tout, sunrealtype &t_val);
 
   /**
+   * @brief Take the first step after a (re)initialization at t_start
+   *
+   * IDA skips events that read yp in this step, whose flag is ignored. With yp
+   * at t_start from it, those events are evaluated at both ends of the step.
+   * One non-positive at t_start returns IDA_ROOT_RETURN there; otherwise, one
+   * at the end makes IDA restart at t_start with that yp and retake the step,
+   * its root search locating the crossing.
+   * @param t_start The time of the (re)initialization
+   * @param tout The time IDASolve integrates towards
+   * @param t_val Set to the time reached
+   * @return The IDASolve return flag
+   */
+  int FirstStep(sunrealtype t_start, sunrealtype tout, sunrealtype &t_val);
+
+  /**
    * @brief Concrete implementation of initialization method
    */
   void Initialize() override;
@@ -323,9 +343,10 @@ public:
   void SaveStats();
 
   /**
-   * @brief Set a consistent initialization for ODEs
+   * @brief Restart IDAS at t_val from yy, yyp, yyS and yypS
+   * @param ism The sensitivity method IDAS uses from here
    */
-  void ReinitializeIntegrator(const sunrealtype& t_val);
+  void ReinitializeIntegrator(const sunrealtype& t_val, int ism = IDA_STAGGERED);
 
   /**
    * @brief Hand IDAS the per-parameter scales held in sens_scales_.
@@ -336,20 +357,25 @@ public:
   void ApplySensitivityScales();
 
   /**
-   * @brief Set a consistent initialization for the system of equations.
+   * @brief Make the states and sensitivities consistent at t_val, then hand
+   * them to IDAS.
+   * @param calc_states If false, only the sensitivities are made consistent
    */
   void ConsistentInitialization(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
-    const int& icopt);
+    const int& icopt,
+    bool calc_states = true);
 
   /**
    * @brief Set a consistent initialization for DAEs.
+   * @param with_sensitivities Whether IDACalcIC also solves the sensitivities
    */
   void ConsistentInitializationDAE(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
-    const int& icopt);
+    const int& icopt,
+    bool with_sensitivities);
 
   /**
    * @brief Use the custom Newton IC solver; returns true on success.
@@ -368,10 +394,47 @@ public:
   void RecoverYp(const sunrealtype& t_val);
 
   /**
+   * @brief Run IDACalcIC from the current yy/yyp and copy its result back,
+   * keeping the current values if it fails.
+   * @param with_sensitivities Whether IDACalcIC also solves for yyS/yypS
+   */
+  void CalcICWithIDAS(
+    const sunrealtype& t_val,
+    const sunrealtype& t_next,
+    int icopt,
+    bool with_sensitivities);
+
+  /**
+   * @brief Make a DAE's sensitivities consistent with the current states.
+   *
+   * Keeps the differential sensitivities, solves the algebraic rows for the
+   * algebraic ones with the algebraic sub-block, and sets yypS = F_y s + F_p,
+   * exact as the sub-block is built only for M = I. Requires the sub-block.
+   * @return False if its solve failed
+   */
+  bool SensitivityConsistentInitialization(const sunrealtype& t_val);
+
+  /**
+   * @brief Evaluate and factorise the algebraic sub-block of the Jacobian at
+   * (t, yy)
+   * @return Zero on success
+   */
+  int FactorizeAlgebraicJacobian(sunrealtype t);
+
+  /**
+   * @brief Solve with the factorised algebraic sub-block
+   * @param rhs The len_alg_ right-hand side
+   * @param solution The len_alg_ solution, which may alias rhs
+   * @return Zero on success
+   */
+  int SolveAlgebraicJacobian(const sunrealtype* rhs, sunrealtype* solution);
+
+  /**
    * @brief Build the algebraic Newton solver for consistent initial conditions.
    * Only built when mass matrix has zeros in algebraic rows (standard-form).
    * Not built for a full-system solve with an iterative linear solver, which
-   * leaves the initial conditions to IDACalcIC.
+   * leaves the initial conditions to IDACalcIC. Without calc_ic, it is built
+   * only for a standard-form DAE's sensitivities.
    */
   void BuildAlgebraicSolver(const sunrealtype* id_val);
 

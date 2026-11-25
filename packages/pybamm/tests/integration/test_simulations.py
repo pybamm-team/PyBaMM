@@ -97,7 +97,7 @@ class TestSimulationConsistentState:
             include_temperature=False,
         )
         cc_solver = sim._get_built_experiment_solver(cc_step)
-        mapper_p = cc_solver._set_up_model_inputs(cc_model, cv_inputs_dict)
+        mapper_p = cc_solver.set_up_model_inputs(cc_model, cv_inputs_dict)
         p_vec = casadi.vertcat(*mapper_p.values())
         y_from = cc_solution.last_state.all_ys[0]
         seed = np.asarray(mapper_func(float(cc_solution.t[-1]), y_from, p_vec)).ravel()

@@ -41,14 +41,16 @@ def test_import(benchmark):
 
 
 @pytest.mark.parametrize("model_class", _MODELS)
-def test_cold_solve(benchmark, model_class):
+def test_cold_solve(benchmark, record_peak_memory, model_class):
     def setup():
         return (_built_simulation(model_class),), {}
 
-    solution = benchmark.pedantic(
-        lambda sim: sim.solve([0, _T_END]), setup=setup, rounds=5
-    )
+    def solve(sim):
+        return sim.solve([0, _T_END])
+
+    solution = benchmark.pedantic(solve, setup=setup, rounds=5)
     assert solution.termination == "final time"
+    record_peak_memory(solve, setup)
 
 
 @pytest.mark.parametrize("model_class", _MODELS)

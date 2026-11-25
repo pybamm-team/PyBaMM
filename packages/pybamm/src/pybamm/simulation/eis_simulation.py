@@ -4,6 +4,7 @@ import numpy as np
 from scipy.sparse import csc_matrix
 
 import pybamm
+from pybamm.solvers.base_solver import stack_inputs
 
 from .base_simulation import BaseSimulation
 
@@ -27,6 +28,14 @@ class EISSimulation(BaseSimulation):
         A dictionary of the types of spatial method to use on each domain.
     skip_surface_form_check : bool, optional
         If True, skip the 'surface form' model option validation. Defaults to False.
+
+    Notes
+    -----
+    If the model has a reference electrode inserted with
+    :meth:`pybamm.lithium_ion.BaseModel.insert_reference_electrode`, the solution
+    additionally carries the impedance of each electrode present, named
+    ``"Positive electrode impedance [Ohm]"`` and
+    ``"Negative electrode impedance [Ohm]"``, alongside ``solution.impedance``.
     """
 
     def __init__(
@@ -43,6 +52,8 @@ class EISSimulation(BaseSimulation):
 
         # Validate required variables and surface form before any processing
         self._validate_model_for_eis(model, skip_surface_form_check)
+
+        self._components = self._find_impedance_components(model)
 
         model_name = model.name
 
@@ -98,6 +109,31 @@ class EISSimulation(BaseSimulation):
                 f'options={{"surface form": "differential"}})'
             )
 
+    @staticmethod
+    def _find_impedance_components(model):
+        """Find which impedance components the model can report.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            Model to inspect. A reference electrode inserted with
+            :meth:`pybamm.lithium_ion.BaseModel.insert_reference_electrode`
+            exposes the three-electrode potentials this looks for.
+
+        Returns
+        -------
+        dict
+            Maps component label to model variable name, cell first.
+        """
+        components = {"Cell": "Voltage [V]"}
+        for label, name in (
+            ("Positive electrode", "Positive electrode 3E potential [V]"),
+            ("Negative electrode", "Negative electrode 3E potential [V]"),
+        ):
+            if name in model.variables:
+                components[label] = name
+        return components
+
     def _build_matrix_problem(self, inputs_dict=None):
         """Build the mass matrix, Jacobian, and forcing vector.
 
@@ -121,15 +157,48 @@ class EISSimulation(BaseSimulation):
             Forcing vector with unit perturbation on the current variable.
         """
         model = self._built_model
-        inputs_dict = inputs_dict or {}
+        potentials = [
+            model.get_processed_variable(name) for name in self._components.values()
+        ]
+        outputs = pybamm.numpy_concatenation(
+            *potentials, model.get_processed_variable("Current [A]")
+        )
+        # Input names, state ordering and matrices are fixed until the model is rebuilt
+        if getattr(self, "_matrix_model", None) is not model:
+            # Compile against only the inputs the compiled functions read, so
+            # inputs used elsewhere (e.g. other output variables) never shift them
+            unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+            symbols = unpacker.unpack_list_of_symbols(
+                [
+                    model.concatenated_rhs,
+                    model.concatenated_algebraic,
+                    model.concatenated_initial_conditions,
+                    outputs,
+                    *(event.expression for event in model.events),
+                ]
+            )
+            self._input_names = sorted({symbol.name for symbol in symbols})
+            indices = {
+                var.name: slices[0].start for var, slices in model.y_slices.items()
+            }
+            self._current_index = indices["Current variable [A]"]
+            self._cached_M = csc_matrix(model.mass_matrix.entries)
+            self._cached_b = np.zeros(model.len_rhs_and_alg)
+            self._cached_b[self._current_index] = -1
+            self._matrix_model = model
+        inputs = pybamm.ParameterValues.check_parameter_values(inputs_dict or {})
+        missing = [name for name in self._input_names if inputs.get(name) is None]
+        if missing:
+            missing_str = ", ".join(f"'{name}'" for name in missing)
+            raise pybamm.SolverError(f"No value provided for input: [{missing_str}].")
+        inputs_dict = {name: inputs[name] for name in self._input_names}
 
-        # Convert inputs to casadi format for Jacobian evaluation
-        if model.convert_to_format == "casadi":
-            from casadi import vertcat
-
-            casadi_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
-        else:
-            casadi_inputs = inputs_dict
+        # Inputs in the format the compiled Jacobian expects
+        eval_inputs = (
+            stack_inputs(inputs_dict, model.convert_to_format)
+            if model.uses_stacked_inputs
+            else inputs_dict
+        )
 
         # Only compile Jacobian/model functions on first call; the compiled
         # functions persist on the model and work with any inputs/y0 values.
@@ -138,10 +207,6 @@ class EISSimulation(BaseSimulation):
             solver.set_up(model, inputs=inputs_dict)
 
         y0 = model.concatenated_initial_conditions.evaluate(0, inputs=inputs_dict)
-        outputs = pybamm.numpy_concatenation(
-            model.get_processed_variable("Voltage [V]"),
-            model.get_processed_variable("Current [A]"),
-        )
         from casadi import MX, Function, jacobian
 
         y = MX.sym("y", y0.size)
@@ -149,19 +214,10 @@ class EISSimulation(BaseSimulation):
         self._output_jacobian = Function(
             "eis_outputs", [y], [jacobian(output_expression, y)]
         )(y0).sparse()
-        J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
-        neg_J = -csc_matrix(J_sparse)
-
-        # State ordering and matrices are fixed until the model is rebuilt.
-        if getattr(self, "_matrix_model", None) is not model:
-            indices = {
-                var.name: slices[0].start for var, slices in model.y_slices.items()
-            }
-            self._current_index = indices["Current variable [A]"]
-            self._cached_M = csc_matrix(model.mass_matrix.entries)
-            self._cached_b = np.zeros(y0.shape[0])
-            self._cached_b[self._current_index] = -1
-            self._matrix_model = model
+        J = model.jac_rhs_algebraic_eval(0, y0, eval_inputs)
+        if model.convert_to_format == "casadi":
+            J = J.sparse()
+        neg_J = -csc_matrix(J)
 
         return self._cached_M, neg_J, self._cached_b
 
@@ -181,15 +237,16 @@ class EISSimulation(BaseSimulation):
 
         Returns
         -------
-        z : complex
-            Complex impedance in Ohms.
+        z : np.ndarray
+            Complex impedance in Ohms, one entry per component of
+            ``self._components``.
         """
         from scipy.sparse.linalg import spsolve
 
         A = (1.0j * 2 * np.pi * frequency) * M + neg_J
         x = spsolve(A, b)
-        voltage, current = self._output_jacobian @ x
-        return -voltage / current
+        *potentials, current = self._output_jacobian @ x
+        return -np.asarray(potentials) / current
 
     # EIS solves in the frequency domain, so it takes frequencies, not t_eval
     # pyrefly: ignore[bad-override]
@@ -222,9 +279,23 @@ class EISSimulation(BaseSimulation):
 
         M, neg_J, b = self._build_matrix_problem(inputs_dict=inputs)
 
-        zs = [self._calculate_impedance(f, M, neg_J, b) for f in frequencies]
-        impedance = np.array(zs)
-        self._solution = pybamm.EISSolution(frequencies, impedance)
+        zs = np.array([self._calculate_impedance(f, M, neg_J, b) for f in frequencies])
+        impedance = zs[:, 0]
+
+        components = {}
+        for index, label in enumerate(self._components):
+            if label == "Cell":
+                continue
+            # The cell voltage is the positive minus the negative 3E potential, so
+            # flipping the negative component makes the two components sum to the cell.
+            sign = -1 if label == "Negative electrode" else 1
+            components[f"{label} impedance [Ohm]"] = sign * zs[:, index]
+
+        self._solution = pybamm.EISSolution(
+            frequencies,
+            impedance,
+            components=components or None,
+        )
         self._solution.set_up_time = self.set_up_time
 
         self.solve_time = timer.time()

@@ -51,7 +51,7 @@ class SEIGrowth(BaseModel):
             self.reaction_loc = "x-average"
         else:
             self.reaction_loc = "full electrode"
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), phase)["SEI"]
         if SEI_option == "ec reaction limited":
             pybamm.citations.register("Yang2017")
         elif SEI_option == "VonKolzenberg2020":
@@ -270,7 +270,7 @@ class SEIGrowth(BaseModel):
         # This is done here by replacing a with a_cr using a *= roughness - 1
         if self.reaction == "SEI on cracks":
             roughness = self._coupled_electrode_variable(
-                "electrode roughness ratio", x_average
+                f"{self.phase_name}electrode roughness ratio", x_average
             )
             a *= roughness - 1  # Replace surface area with crack area
 

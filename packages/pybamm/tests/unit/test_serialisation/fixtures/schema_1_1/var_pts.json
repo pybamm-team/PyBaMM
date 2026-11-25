@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.1",
+  "pybamm_version": "26.10.1.1",
+  "var_pts": {
+    "x_n": 20,
+    "x_s": 20,
+    "x_p": 20,
+    "r_n": 20,
+    "r_p": 20,
+    "r_n_prim": 20,
+    "r_p_prim": 20,
+    "r_n_sec": 20,
+    "r_p_sec": 20,
+    "y": 10,
+    "z": 10,
+    "R_n": 30,
+    "R_p": 30,
+    "R_n_prim": 30,
+    "R_p_prim": 30,
+    "R_n_sec": 30,
+    "R_p_sec": 30
+  }
+}

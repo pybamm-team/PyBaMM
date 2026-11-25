@@ -43,10 +43,10 @@ class ReactionDriven(BaseModel):
         dom = domain.split()[0]
         Domain = dom.capitalize()
         electrode_domains = {"primary": domain, "secondary": "current collector"}
-        SEI_option = getattr(self.options, dom)["SEI"]
         phases_option = getattr(self.options, dom)["particle phases"]
         delta_eps_k = 0
         for phase in self.options.phases[dom]:
+            SEI_option = getattr(getattr(self.options, dom), phase)["SEI"]
             if phases_option == "1" and phase == "primary":
                 phase_name = ""
                 pref = ""

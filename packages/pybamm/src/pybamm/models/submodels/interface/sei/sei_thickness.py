@@ -39,7 +39,7 @@ class SEIThickness(BaseModel):
         domain, Domain = self.domain_Domain
         phase_param = self.phase_param
         reaction_name = self.reaction_name
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
         crack_option = getattr(self.options, domain)["SEI on cracks"]
         if self.options["working electrode"] != "both" and domain == "negative":
             crack_option = "false"  # required if SEI on cracks is used for half-cells
@@ -76,11 +76,11 @@ class SEIThickness(BaseModel):
         # Thickness variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
             # if SEI on cracks is false, skip over roughness to avoid division by zero
-            if crack_option == "false":
+            if crack_option == "false" or SEI_option in ["none", "constant"]:
                 L_sei = c_sei * c_to_L
             else:
                 roughness = self._coupled_electrode_variable(
-                    "electrode roughness ratio"
+                    f"{self.phase_name}electrode roughness ratio"
                 )
                 L_sei = c_sei * c_to_L / (roughness - 1)  # SEI on cracks thickness
             if self.size_distribution:
@@ -106,17 +106,8 @@ class SEIThickness(BaseModel):
         domain, Domain = self.domain_Domain
         name = f"{Domain} {self.reaction_name}concentration"
         sei_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
-        if self.reaction == "SEI on cracks":
-            no_sei = (
-                getattr(self.options, domain)["SEI"] in ["none", "constant"]
-                or getattr(self.options, domain)["SEI on cracks"] == "false"
-            )
-            constant = False
-        else:
-            no_sei = sei_option == "none"
-            constant = sei_option == "constant"
-
-        if constant:
+        # SEI on cracks always has its own concentration variable
+        if sei_option == "constant" and self.reaction != "SEI on cracks":
             # A constant SEI concentration is a scalar
             unit = "[mol.m-2]" if self.reaction_loc == "interface" else "[mol.m-3]"
             return self.coupled_variable(f"{name} {unit}", domains={})
@@ -125,6 +116,5 @@ class SEIThickness(BaseModel):
                 f"{name} [mol.m-2]", domain="current collector"
             )
         return self._coupled_electrode_variable(
-            f"{self.reaction_name}concentration [mol.m-3]",
-            size=no_sei and self.size_distribution,
+            f"{self.reaction_name}concentration [mol.m-3]"
         )

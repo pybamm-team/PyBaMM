@@ -42,8 +42,10 @@ class BaseMechanics(pybamm.BaseSubModel):
         options: dict[str, Any],
         phase: str = "primary",
     ) -> None:
-        self.size_distribution = options["particle size"] == "distribution"
         super().__init__(param, domain, options=options, phase=phase)
+        self.size_distribution = (
+            getattr(self.options, self.domain)["particle size"] == "distribution"
+        )
 
     @property
     def _electrode_domains(self) -> dict[str, str]:

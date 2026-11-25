@@ -62,6 +62,43 @@ class CoupledVariable(pybamm.Symbol):
         perform_simplifications: bool = True,
     ):
         """Creates a new copy of the coupled variable."""
+        return type(self)(self.name, domains=self._domains, on_edges=self._on_edges)
+
+    def _diff(self, variable):
+        # Only reached for time: resolved, like this variable, from model.variables
+        return CoupledVariableDot(self.name + "'", domains=self._domains)
+
+
+class CoupledVariableDot(CoupledVariable):
+    """
+    A node in the expression tree representing the time derivative of a
+    :class:`CoupledVariable`, resolved as the time derivative of the variable it
+    couples to.
+
+    Parameters
+    ----------
+    name : str
+        Name of the coupled variable, followed by a prime (``'``).
+    domain : iterable of str, optional
+        List of domains that this coupled variable is valid over.
+    auxiliary_domains : dict, optional
+        Dictionary of auxiliary domains.
+    domains : dict, optional
+        Dictionary of all domains.
+    on_edges : bool, optional
+        Whether the variable is evaluated on cell edges. Default is False.
+
+    """
+
+    __slots__ = ()
+
+    def get_coupled_variable(self) -> CoupledVariable:
+        """Returns the :class:`CoupledVariable` this is the time derivative of."""
         return CoupledVariable(
-            self.name, domains=self._domains, on_edges=self._on_edges
+            self.name[:-1], domains=self._domains, on_edges=self._on_edges
+        )
+
+    def _diff(self, variable):
+        raise pybamm.ModelError(
+            "cannot take second time derivative of a CoupledVariable"
         )
