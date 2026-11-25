@@ -54,7 +54,7 @@ pybamm.dynamic_plot(
         "Voltage [V]",
         "Bulk temperature [°C]",
         "Surface temperature [°C]",
-        "Surface total cooling [W]",
-        "Environment total cooling [W]",
+        "Core to surface heat flux [W]",
+        "Surface to environment heat flux [W]",
     ],
 )

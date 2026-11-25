@@ -56,7 +56,7 @@ def plot_thermal_components(
     volume = solution["Cell thermal volume [m3]"].entries
 
     heating_sources = [
-        "Surface total cooling",
+        "Core to surface heat flux",
         "Ohmic heating",
         "Irreversible electrochemical heating",
         "Reversible heating",
@@ -69,6 +69,8 @@ def plot_thermal_components(
         raise NotImplementedError(
             "plot_thermal_components is only implemented for lumped models"
         ) from err
+    # Heat leaving the core is a sink in the core energy balance
+    heats["Core to surface heat flux"] = -heats["Core to surface heat flux"]
 
     cumul_heats = {
         name: cumulative_trapezoid(heat, time_s, initial=0)
@@ -78,9 +80,9 @@ def plot_thermal_components(
     # Plot
     # Initialise
     total_heat = 0
-    bottom_heat = heats["Surface total cooling"]
+    bottom_heat = heats["Core to surface heat flux"]
     total_cumul_heat = 0
-    bottom_cumul_heat = cumul_heats["Surface total cooling"]
+    bottom_cumul_heat = cumul_heats["Core to surface heat flux"]
     # Plot components
     for name in heating_sources:
         top_heat = bottom_heat + abs(heats[name])

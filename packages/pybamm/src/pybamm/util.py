@@ -52,6 +52,17 @@ class FuzzyDict(dict):
                     f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
                 ) from error
+            renamed_heat_flows = {
+                "Surface total cooling [W]": "Core to surface heat flux [W]",
+                "Surface total cooling [W.m-3]": "Core to surface heat flux [W.m-3]",
+                "Environment total cooling [W]": "Surface to environment heat flux [W]",
+            }
+            if key in renamed_heat_flows:
+                raise KeyError(
+                    f"Variable '{key}' has been renamed to "
+                    f"'{renamed_heat_flows[key]}', which is positive in the direction "
+                    "it names (the opposite sign to the old cooling variable)"
+                ) from error
             if "Measured open circuit voltage" in key:
                 raise KeyError(
                     "The variable that used to be called "

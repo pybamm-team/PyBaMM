@@ -9,9 +9,9 @@ from .base_thermal import BaseThermal
 class Lumped(BaseThermal):
     """
     Class for lumped thermal submodel. For more information see :footcite:t:`Timms2021`
-    and :footcite:t:`Marquis2020`. The "Surface total cooling" variables are Newton
-    cooling to the ambient with an ambient surface temperature, and conduction from
-    the core to the casing with a lumped surface temperature.
+    and :footcite:t:`Marquis2020`. "Core to surface heat flux" is Newton cooling to
+    the ambient with an ambient surface temperature, and conduction from the core to
+    the casing with a lumped surface temperature; it is positive out of the core.
 
     Parameters
     ----------
@@ -54,14 +54,14 @@ class Lumped(BaseThermal):
         T_surf_av = self._yz_average(T_surf)
         V = variables["Cell thermal volume [m3]"]
         if self.options["surface temperature"] == "lumped":
-            # Conduction from the core to the casing, not cooling to the ambient
-            Q_cool_W = -(T_vol_av - T_surf_av) / self.param.R_core_surface
+            # Conduction from the core to the casing
+            Q_core_surface_W = (T_vol_av - T_surf_av) / self.param.R_core_surface
         else:
             # Newton cooling straight to the ambient
-            Q_cool_W = (
-                -self.param.h_total * self.param.A_cooling * (T_vol_av - T_surf_av)
+            Q_core_surface_W = (
+                self.param.h_total * self.param.A_cooling * (T_vol_av - T_surf_av)
             )
-        Q_cool_vol_av = Q_cool_W / V
+        Q_core_surface_vol_av = Q_core_surface_W / V
 
         # Contact resistance heating Q_cr
         if self.options["contact resistance"] == "true":
@@ -76,25 +76,27 @@ class Lumped(BaseThermal):
 
         variables.update(
             {
-                # Lumped cooling
-                "Surface total cooling [W.m-3]": Q_cool_vol_av,
-                "Surface total cooling [W]": Q_cool_W,
+                "Core to surface heat flux [W.m-3]": Q_core_surface_vol_av,
+                "Core to surface heat flux [W]": Q_core_surface_W,
                 # Contact resistance
                 "Lumped contact resistance heating [W.m-3]": Q_cr_vol_av,
                 "Lumped contact resistance heating [W]": Q_cr_W,
             }
         )
+        if self.options["surface temperature"] == "ambient":
+            # The surface is at ambient, so heat reaching it leaves the cell
+            variables["Surface to environment heat flux [W]"] = Q_core_surface_W
         return variables
 
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
-        Q_cool_vol_av = variables["Surface total cooling [W.m-3]"]
+        Q_core_surface_vol_av = variables["Core to surface heat flux [W.m-3]"]
         rho_c_p_eff_av = variables[
             "Volume-averaged effective heat capacity [J.K-1.m-3]"
         ]
 
-        self.rhs = {T_vol_av: (Q_vol_av + Q_cool_vol_av) / rho_c_p_eff_av}
+        self.rhs = {T_vol_av: (Q_vol_av - Q_core_surface_vol_av) / rho_c_p_eff_av}
 
     def set_initial_conditions(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
