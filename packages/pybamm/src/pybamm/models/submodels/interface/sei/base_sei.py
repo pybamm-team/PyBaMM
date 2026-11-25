@@ -27,33 +27,13 @@ class BaseModel(BaseInterface):
             reaction = "SEI"
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
-    def get_coupled_variables(self, variables):
-        # Update some common variables
-        domain, Domain = self.domain_Domain
-
-        if self.reaction_loc != "interface":
-            j_sei_av = variables[
-                f"X-averaged {domain} electrode {self.reaction_name}interfacial"
-                " current density [A.m-2]"
-            ]
-            j_sei = variables[
-                f"{Domain} electrode {self.reaction_name}interfacial current"
-                " density [A.m-2]"
-            ]
-            variables.update(
-                {
-                    f"X-averaged {domain} electrode {self.reaction_name}interfacial "
-                    "current density [A.m-2]": j_sei_av,
-                    f"{Domain} electrode {self.reaction_name}interfacial current "
-                    "density [A.m-2]": j_sei,
-                }
-            )
-
-        variables.update(
-            self._get_standard_volumetric_current_density_variables(variables)
-        )
-
-        return variables
+    def _get_standard_volumetric_sei_variables(self, variables):
+        """Volumetric current density variables of the SEI reaction in ``variables``."""
+        Domain = self.domain.capitalize()
+        j_sei = variables[
+            f"{Domain} electrode {self.reaction_name}interfacial current density [A.m-2]"
+        ]
+        return self._get_standard_volumetric_current_density_variables(j_sei)
 
     def _get_standard_concentration_variables(self, c_sei):
         """

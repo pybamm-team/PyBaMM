@@ -11,6 +11,7 @@ from warnings import catch_warnings, filterwarnings, warn
 import numpy as np
 
 import pybamm
+from pybamm.models.base_model import _CoupledVariableResolver
 
 from .controls import CURRENT_CONTROL, upsampling_variable_name
 from .step_termination import _read_termination
@@ -618,20 +619,51 @@ class BaseStepImplicit(BaseStep):
 
     @staticmethod
     def add_control_submodel(new_model, submodel, new_parameter_values=None):
+        """
+        Build an external circuit submodel and add it to an already-built model.
+
+        The submodel's coupled variables are replaced by the model's variables of
+        the same name, and its variables replace those of the model.
+
+        Parameters
+        ----------
+        new_model : :class:`pybamm.BaseModel`
+            The built model, which is modified in place.
+        submodel : :class:`pybamm.external_circuit.BaseModel`
+            The external circuit submodel that controls the current.
+        new_parameter_values : :class:`pybamm.ParameterValues`, optional
+            If given, its "Current function [A]" is set to the submodel's current.
+
+        Returns
+        -------
+        new_model : :class:`pybamm.BaseModel`
+            The model with the submodel added.
+        variables : dict
+            The model's variables.
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If the submodel needs a variable the model does not have, or one whose
+            domains differ.
+        """
+        submodel.build()
         variables = new_model.variables
-        submodel.variables = submodel.get_fundamental_variables()
-        variables.update(submodel.variables)
-        submodel.variables.update(submodel.get_coupled_variables(variables))
-        variables.update(submodel.variables)
-        submodel.set_rhs(variables)
-        submodel.set_algebraic(variables)
-        submodel.set_initial_conditions(variables)
-        new_model.rhs.update(submodel.rhs)
-        new_model.algebraic.update(submodel.algebraic)
-        new_model.initial_conditions.update(submodel.initial_conditions)
+        resolver = _CoupledVariableResolver(
+            variables, dict.fromkeys(submodel.coupled_variables, "external circuit")
+        )
+
+        def resolve(equations):
+            return {key: resolver.resolve(symbol) for key, symbol in equations.items()}
+
+        submodel_variables = resolve(submodel.variables)
+        new_model.rhs.update(resolve(submodel.rhs))
+        new_model.algebraic.update(resolve(submodel.algebraic))
+        new_model.initial_conditions.update(resolve(submodel.initial_conditions))
+        variables.update(submodel_variables)
 
         if new_parameter_values is not None:
-            new_parameter_values[CURRENT_CONTROL] = submodel.variables["Current [A]"]
+            new_parameter_values[CURRENT_CONTROL] = submodel_variables["Current [A]"]
 
         return new_model, variables
 

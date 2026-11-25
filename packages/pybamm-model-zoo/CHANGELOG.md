@@ -5,6 +5,10 @@ PyBaMM's.
 
 ## [Unreleased]
 
+### Changed
+
+- Require `pybamm>=26.11.1`: `dual_continuum` and `linearised_spm` submodels are built with `build()` and `coupled_variable` ([#6082](https://github.com/pybamm-team/PyBaMM/pull/6082))
+
 ## [0.2.0] - 2026-11-25
 
 ### Added

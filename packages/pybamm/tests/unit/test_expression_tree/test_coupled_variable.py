@@ -72,6 +72,34 @@ class TestCoupledVariable:
         # Takes the base class's arguments, as tree rebuilds pass them
         assert a.create_copy(new_children=None, perform_simplifications=False) == a
 
+    def test_auxiliary_domains(self):
+        a = pybamm.CoupledVariable(
+            "a",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        assert a.domains["secondary"] == ["current collector"]
+        b = pybamm.CoupledVariable("a", domains=dict(a.domains))
+        assert a == b
+        assert a.create_copy().domains == a.domains
+        assert not a.evaluates_on_edges("primary")
+        flux = pybamm.CoupledVariable("N", domain="negative electrode", on_edges=True)
+        assert flux.evaluates_on_edges("primary")
+        assert flux.create_copy().evaluates_on_edges("primary")
+        assert flux != pybamm.CoupledVariable("N", domain="negative electrode")
+        variable = pybamm.Variable("a", domains=dict(a.domains))
+        assert a.evaluate_for_shape().shape == variable.evaluate_for_shape().shape
+
+    def test_infer_domains(self):
+        a = pybamm.CoupledVariable("a", infer_domains=True)
+        assert a.infer_domains
+        assert not pybamm.CoupledVariable("a").infer_domains
+        assert a != pybamm.CoupledVariable("a")
+        assert a.create_copy().infer_domains
+        a_dot = a.diff(pybamm.t)
+        assert a_dot.infer_domains
+        assert a_dot.get_coupled_variable() == a
+
     def test_diff_time(self):
         a = pybamm.CoupledVariable("a", domain="negative electrode")
         a_dot = a.diff(pybamm.t)

@@ -295,64 +295,35 @@ class TestBaseModel:
         submodel = pybamm.lithium_ion.SPM().submodels["electrolyte diffusion"]
 
         class SubModel1(pybamm.BaseSubModel):
-            def get_fundamental_variables(self):
+            def build(self):
                 u = pybamm.Variable("u")
-
-                variables = {"u": u}
-                return variables
-
-            def get_coupled_variables(self, variables):
                 x = pybamm.Parameter("x")
                 w = pybamm.InputParameter("w")
                 f = pybamm.InputParameter("f", "test")
-                variables.update({"w": w, "x": x, "f": f})
-                return variables
-
-            def set_rhs(self, variables):
-                a = pybamm.InputParameter("a")
-                u = variables["u"]
-                self.rhs = {u: -u * a}
-
-            def set_boundary_conditions(self, variables):
-                g = pybamm.Parameter("g")
-                u = variables["u"]
+                self.variables.update({"u": u, "w": w, "x": x, "f": f})
+                self.rhs = {u: -u * pybamm.InputParameter("a")}
                 self.boundary_conditions = {
-                    u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+                    u: {
+                        "left": (pybamm.Parameter("g"), "Dirichlet"),
+                        "right": (0, "Neumann"),
+                    },
                 }
-
-            def set_initial_conditions(self, variables):
-                c = pybamm.FunctionParameter("c", {})
-                u = variables["u"]
-                self.initial_conditions = {u: c}
-
-            def add_events_from(self, variables):
-                e = pybamm.InputParameter("e")
-                u = variables["u"]
-                self.events = [pybamm.Event("u=e", u - e)]
+                self.initial_conditions = {u: pybamm.FunctionParameter("c", {})}
+                self.events = [pybamm.Event("u=e", u - pybamm.InputParameter("e"))]
 
         class SubModel2(pybamm.BaseSubModel):
-            def get_fundamental_variables(self):
+            def build(self):
                 v = pybamm.Variable("v")
                 i = pybamm.FunctionParameter("i", {})
-                variables = {"v": v, "i": i}
-                return variables
-
-            def set_rhs(self, variables):
-                b = pybamm.InputParameter("b", "test")
-                v = variables["v"]
-                self.rhs = {v: v - b}
-
-            def set_boundary_conditions(self, variables):
-                h = pybamm.Parameter("h")
-                v = variables["v"]
+                self.variables.update({"v": v, "i": i})
+                self.rhs = {v: v - pybamm.InputParameter("b", "test")}
                 self.boundary_conditions = {
-                    v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+                    v: {
+                        "left": (0, "Dirichlet"),
+                        "right": (pybamm.Parameter("h"), "Neumann"),
+                    },
                 }
-
-            def set_initial_conditions(self, variables):
-                d = pybamm.FunctionParameter("d", {})
-                v = variables["v"]
-                self.initial_conditions = {v: d}
+                self.initial_conditions = {v: pybamm.FunctionParameter("d", {})}
 
         sub1 = SubModel1(None)
         sub2 = SubModel2(None)
@@ -1697,53 +1668,28 @@ class TestBaseModel:
 
     def test_build_submodels(self):
         class Submodel1(pybamm.BaseSubModel):
-            def __init__(self, param, domain, options=None):
-                super().__init__(param, domain, options=options)
-
-            def get_fundamental_variables(self):
+            def build(self):
                 u = pybamm.Variable("u")
                 v = pybamm.Variable("v")
-                return {"u": u, "v": v}
-
-            def get_coupled_variables(self, variables):
-                return variables
-
-            def set_rhs(self, variables):
-                u = variables["u"]
+                self.variables.update({"u": u, "v": v})
                 self.rhs = {u: 2}
-
-            def set_algebraic(self, variables):
-                v = variables["v"]
                 self.algebraic = {v: v - 1}
-
-            def set_initial_conditions(self, variables):
-                u = variables["u"]
-                v = variables["v"]
                 self.initial_conditions = {u: 0, v: 0}
-
-            def add_events_from(self, variables):
-                u = variables["u"]
                 self.events.append(
-                    pybamm.Event(
-                        "Large u",
-                        u - 200,
-                        pybamm.EventType.TERMINATION,
-                    )
+                    pybamm.Event("Large u", u - 200, pybamm.EventType.TERMINATION)
                 )
 
         class Submodel2(pybamm.BaseSubModel):
-            def __init__(self, param, domain, options=None):
-                super().__init__(param, domain, options=options)
-
-            def get_coupled_variables(self, variables):
-                u = variables["u"]
-                variables.update({"w": 2 * u})
-                return variables
+            def build(self):
+                w = 2 * self.coupled_variable("u")
+                w.print_name = "w"
+                self.variables.update({"w": w})
 
         model = pybamm.BaseModel()
+        # submodel 2 needs a variable from submodel 1, so build order must not matter
         model.submodels = {
-            "submodel 1": Submodel1(None, "negative"),
             "submodel 2": Submodel2(None, "negative"),
+            "submodel 1": Submodel1(None, "negative"),
         }
         assert not model._built
         model.build_model()
@@ -1753,6 +1699,143 @@ class TestBaseModel:
         v = model.variables["v"]
         assert model.rhs[u].value == 2
         assert model.algebraic[v] == -1.0 + v
+        assert model.variables["w"] == 2 * u
+        assert model.variables["w"].print_name == "w"
+        assert model.submodels["submodel 2"].list_coupled_variables() == ["u"]
+
+    def test_build_ignores_placeholder_under_its_own_name(self):
+        class Owner(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update({"u": pybamm.Variable("u")})
+
+        class PassThrough(pybamm.BaseSubModel):
+            def build(self):
+                u = self.coupled_variable("u")
+                self.variables.update({"u": u, "w": 2 * u})
+
+        for order in [["owner", "pass"], ["pass", "owner"]]:
+            submodels = {"owner": Owner(None), "pass": PassThrough(None)}
+            model = pybamm.BaseModel()
+            model.submodels = {name: submodels[name] for name in order}
+            model.build_model()
+            u = model.variables["u"]
+            assert isinstance(u, pybamm.Variable)
+            assert model.variables["w"] == 2 * u
+
+    def test_build_resolves_time_derivative_and_inferred_domains(self):
+        class Owner(pybamm.BaseSubModel):
+            def build(self):
+                u = pybamm.Variable("u", domain="negative electrode")
+                self.variables.update({"u": u})
+                self.rhs = {u: 2 * u}
+                self.initial_conditions = {u: 1}
+
+        class User(pybamm.BaseSubModel):
+            def build(self):
+                u_dot = self.coupled_variable("u", domain="negative electrode").diff(
+                    pybamm.t
+                )
+                self.variables.update(
+                    {
+                        "u_dot": u_dot,
+                        "inferred": 3 * self.coupled_variable("u", infer_domains=True),
+                    }
+                )
+
+        model = pybamm.BaseModel()
+        model.submodels = {"user": User(None), "owner": Owner(None)}
+        model.build_model()
+        u = model.variables["u"]
+        assert model.variables["u_dot"] == u.diff(pybamm.t)
+        assert model.variables["inferred"] == 3 * u
+        assert model.variables["inferred"].domain == ["negative electrode"]
+
+    def test_build_fundamental_on_its_own(self):
+        model = pybamm.lithium_ion.SPM(build=False)
+        model.build_fundamental()
+        model.build_coupled_variables()
+        assert set(model._variables_by_submodel) == set(model.submodels)
+
+    def test_build_legacy_submodels(self):
+        class Submodel1(pybamm.BaseSubModel):
+            def get_fundamental_variables(self):
+                return {"u": pybamm.Variable("u")}
+
+            def set_rhs(self, variables):
+                self.rhs = {variables["u"]: 2}
+
+            def set_initial_conditions(self, variables):
+                self.initial_conditions = {variables["u"]: 0}
+
+        class Submodel2(pybamm.BaseSubModel):
+            def get_coupled_variables(self, variables):
+                variables.update({"w": 2 * variables["u"]})
+                return variables
+
+        class Submodel3(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update({"z": 3 * self.coupled_variable("w")})
+
+        model = pybamm.BaseModel()
+        model.submodels = {
+            "submodel 1": Submodel1(None),
+            "submodel 2": Submodel2(None),
+            "submodel 3": Submodel3(None),
+        }
+        with pytest.warns(DeprecationWarning, match=r"\['submodel 1', 'submodel 2'\]"):
+            model.build_model()
+        u = model.variables["u"]
+        assert model.rhs[u].value == 2
+        assert model.variables["z"] == 3 * (2 * u)
+
+    def test_build_submodels_errors(self):
+        class Owner(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update(
+                    {"u": pybamm.Variable("u", domain="negative electrode")}
+                )
+
+        class Missing(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update({"w": self.coupled_variable("not there")})
+
+        class WrongDomain(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update({"w": self.coupled_variable("u")})
+
+        class Cycle(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update(
+                    {
+                        "a": self.coupled_variable("b"),
+                        "b": self.coupled_variable("a"),
+                    }
+                )
+
+        cases = [
+            (Missing, r"Missing variable for submodel 'test': 'not there'"),
+            (WrongDomain, r"Coupled variable 'u' has domains"),
+            (Cycle, r"Circular dependency between variables: a -> b -> a"),
+        ]
+        for submodel_class, message in cases:
+            model = pybamm.BaseModel()
+            model.submodels = {"owner": Owner(None), "test": submodel_class(None)}
+            with pytest.raises(pybamm.ModelError, match=message):
+                model.build_model()
+
+    def test_build_rejects_legacy_override_of_build_submodel(self):
+        class Parent(pybamm.BaseSubModel):
+            def build(self):
+                self.variables.update({"u": pybamm.Scalar(1)})
+
+        class Child(Parent):
+            def get_coupled_variables(self, variables):
+                return variables  # pragma: no cover
+
+        model = pybamm.BaseModel()
+        model.submodels = {"child": Child(None)}
+        with pytest.raises(pybamm.ModelError, match=r"Child overrides deprecated"):
+            model.build_model()
 
     def test_timescale_lengthscale_get_set_not_implemented(self):
         model = pybamm.BaseModel()

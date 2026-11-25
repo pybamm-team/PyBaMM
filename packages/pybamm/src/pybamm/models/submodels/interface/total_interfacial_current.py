@@ -23,42 +23,36 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
         super().__init__(param, options=options)
         self.chemistry = chemistry
 
-    def get_coupled_variables(self, variables):
+    def build(self):
         """
         Get variables associated with interfacial current over the whole cell domain
         This function also creates the "total source term" variables by summing all
         the reactions.
         """
+        variables = {}
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
-                variables.update(
-                    self._get_coupled_variables_by_domain(variables, domain.split()[0])
-                )
+                variables.update(self._get_variables_by_domain(domain.split()[0]))
+        variables.update(self._get_whole_cell_variables(variables))
+        self.variables.update(variables)
 
-        variables.update(self._get_whole_cell_coupled_variables(variables))
-
-        return variables
-
-    def _get_coupled_variables_by_domain(self, variables, domain):
+    def _get_variables_by_domain(self, domain):
         phase_names = [""]
-
         num_phases = int(getattr(self.options, domain)["particle phases"])
         if num_phases > 1:
             phase_names += ["primary ", "secondary "]
 
+        variables = {}
         for phase_name in phase_names:
             variables.update(
-                self._get_coupled_variables_by_phase_and_domain(
-                    variables, domain, phase_name
-                )
+                self._get_variables_by_phase_and_domain(domain, phase_name)
             )
-
         return variables
 
-    def _get_coupled_variables_by_phase_and_domain(self, variables, domain, phase_name):
-        Domain = domain.capitalize()
-
+    def _get_reactions(self, domain, phase_name):
+        """Names of the reactions and their electrolyte source coefficients."""
         if self.chemistry == "lithium-ion":
+            # All reactions contribute fully to the electrolyte reaction current
             reaction_names = [""]
             if phase_name == "":
                 reaction_names += ["SEI "]
@@ -67,71 +61,50 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                     # since plating is the main reaction otherwise.
                     # Likewise, SEI on cracks only in a porous electrode
                     reaction_names.extend(["lithium plating ", "SEI on cracks "])
-        elif self.chemistry == "lead-acid":
-            reaction_names = ["", "oxygen "]
-
-        # Create separate 'new_variables' so that variables only get updated once
-        # everything is computed
-        new_variables = variables.copy()
-
-        # Initialize "total reaction" variables
-        # These will get populated by each reaction, and then used
-        # later by "set_rhs" or "set_algebraic", which ensures that we always have
-        # added all the necessary variables by the time the sum is used
-        new_variables.update(
-            {
-                f"Sum of {domain} electrode {phase_name}"
-                "electrolyte reaction source terms [A.m-3]": 0,
-                f"Sum of x-averaged {domain} electrode {phase_name}"
-                "electrolyte reaction source terms [A.m-3]": 0,
-                f"Sum of {domain} electrode {phase_name}"
-                "volumetric interfacial current densities [A.m-3]": 0,
-                f"Sum of x-averaged {domain} electrode {phase_name}"
-                "volumetric interfacial current densities [A.m-3]": 0,
+            return {reaction_name: 1 for reaction_name in reaction_names}
+        else:  # "lead-acid"
+            return {
+                "": self.param.domain_params[domain].prim.s_plus_S,
+                "oxygen ": self.param.s_plus_Ox,
             }
-        )
-        for reaction_name in reaction_names:
-            # Sum variables
-            a_j_k = new_variables[
+
+    def _get_variables_by_phase_and_domain(self, domain, phase_name):
+        Domain = domain.capitalize()
+        electrode_domains = {
+            "primary": f"{domain} electrode",
+            "secondary": "current collector",
+        }
+
+        source_terms = 0
+        source_terms_av = 0
+        a_j_sum = 0
+        a_j_sum_av = 0
+        for reaction_name, s_k in self._get_reactions(domain, phase_name).items():
+            a_j_k = self.coupled_variable(
                 f"{Domain} electrode {reaction_name}{phase_name}volumetric "
-                "interfacial current density [A.m-3]"
-            ]
+                "interfacial current density [A.m-3]",
+                domains=electrode_domains,
+            )
+            source_terms += s_k * a_j_k
+            source_terms_av += pybamm.x_average(s_k * a_j_k)
+            a_j_sum += a_j_k
+            a_j_sum_av += pybamm.x_average(a_j_k)
 
-            if self.chemistry == "lithium-ion":
-                # Both the main reaction current contribute to the electrolyte reaction
-                # current
-                s_k = 1
-            elif self.chemistry == "lead-acid":
-                if reaction_name == "":  # main reaction
-                    s_k = self.param.domain_params[domain].prim.s_plus_S
-                elif reaction_name == "oxygen ":
-                    s_k = self.param.s_plus_Ox
+        return {
+            f"Sum of {domain} electrode {phase_name}"
+            "electrolyte reaction source terms [A.m-3]": source_terms,
+            f"Sum of x-averaged {domain} electrode {phase_name}"
+            "electrolyte reaction source terms [A.m-3]": source_terms_av,
+            f"Sum of {domain} electrode {phase_name}"
+            "volumetric interfacial current densities [A.m-3]": a_j_sum,
+            f"Sum of x-averaged {domain} electrode {phase_name}"
+            "volumetric interfacial current densities [A.m-3]": a_j_sum_av,
+        }
 
-            new_variables[
-                f"Sum of {domain} electrode {phase_name}"
-                "electrolyte reaction source terms [A.m-3]"
-            ] += s_k * a_j_k
-            new_variables[
-                f"Sum of x-averaged {domain} electrode {phase_name}"
-                "electrolyte reaction source terms [A.m-3]"
-            ] += pybamm.x_average(s_k * a_j_k)
-
-            new_variables[
-                f"Sum of {domain} electrode {phase_name}volumetric "
-                "interfacial current densities [A.m-3]"
-            ] += a_j_k
-            new_variables[
-                f"Sum of x-averaged {domain} electrode {phase_name}"
-                "volumetric interfacial current densities [A.m-3]"
-            ] += pybamm.x_average(a_j_k)
-
-        variables.update(new_variables)
-
-        return variables
-
-    def _get_whole_cell_coupled_variables(self, variables):
+    def _get_whole_cell_variables(self, variables):
         # Interfacial current density and exchange-current density for the main reaction
         zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
+        whole_cell_variables = {}
 
         if (
             self.options.negative["particle phases"] == "1"
@@ -146,14 +119,15 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                     if domain == "separator":
                         var_dict[domain] = zero_s
                     else:
-                        Domain = domain.capitalize()
-                        var_dict[domain] = variables[
-                            variable_template.format(Domain + " ")
-                        ]
+                        var_dict[domain] = self.coupled_variable(
+                            variable_template.format(domain.capitalize() + " "),
+                            domain=domain,
+                            auxiliary_domains={"secondary": "current collector"},
+                        )
                 var = pybamm.concatenation(*var_dict.values())
                 var_name = variable_template.format("")
                 var_name = var_name[0].upper() + var_name[1:]  # capitalise first letter
-                variables.update({var_name: var})
+                whole_cell_variables[var_name] = var
 
         # Sum variables
         for variable_template in [
@@ -165,9 +139,8 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 if domain == "separator":
                     var_dict[domain] = zero_s
                 else:
-                    var = variables[variable_template.format(domain + " ")]
-                    var_dict[domain] = var
+                    var_dict[domain] = variables[variable_template.format(domain + " ")]
             var = pybamm.concatenation(*var_dict.values())
-            variables.update({variable_template.format(""): var})
+            whole_cell_variables[variable_template.format("")] = var
 
-        return variables
+        return whole_cell_variables

@@ -47,6 +47,10 @@ class BaseMechanics(pybamm.BaseSubModel):
             getattr(self.options, self.domain)["particle size"] == "distribution"
         )
 
+    @property
+    def _electrode_domains(self) -> dict[str, str]:
+        return {"primary": f"{self.domain} electrode", "secondary": "current collector"}
+
     def _build_var_name(
         self, quantity: str, unit: str = "", averaged: bool = False
     ) -> str:
@@ -68,12 +72,9 @@ class BaseMechanics(pybamm.BaseSubModel):
             The formatted variable name
         """
         domain, Domain = self.domain_Domain
-        phase_name = self.phase_param.phase_name
-
         prefix = f"X-averaged {domain}" if averaged else Domain
         unit_str = f" {unit}" if unit else ""
-
-        return f"{prefix} {phase_name}{quantity}{unit_str}"
+        return f"{prefix} {self.phase_name}{quantity}{unit_str}"
 
     def _get_standard_variables(self, l_cr: pybamm.Symbol) -> dict[str, pybamm.Symbol]:
         """Generate standard crack length variables."""
@@ -99,353 +100,36 @@ class BaseMechanics(pybamm.BaseSubModel):
             ): l_cr_av_dist,
         }
 
-    def _get_mechanical_size_distribution_results(
-        self, variables: dict[str, pybamm.Symbol]
-    ) -> dict[str, pybamm.Symbol]:
-        """
-        Calculate mechanical results for particle size distributions.
-
-        Computes stress and displacement for particle size distributions,
-        following the models in Ai2019 and Deshpande2012.
-        """
+    def _get_zero_cracking_variables(self) -> dict[str, pybamm.Symbol]:
+        """Crack length and cracking rate variables for particles that do not crack."""
         domain, Domain = self.domain_Domain
-        phase_name = self.phase_param.phase_name
-        phase_param = self.phase_param
-
-        # Extract concentration variables
-        c_s_rav = variables[
-            f"R-averaged {domain} {phase_name}"
-            "particle concentration distribution [mol.m-3]"
-        ]
-        c_s_surf = variables[
-            f"{Domain} {phase_name}"
-            "particle surface concentration distribution [mol.m-3]"
-        ]
-        sto = variables[f"{Domain} {phase_name}particle concentration distribution"]
-
-        # Broadcast temperature to particle size and particle domains
-        T = self._broadcast_temperature_to_particle_size(variables)
-
-        # Compute material properties (tangential approximation for Omega)
-        Omega = pybamm.r_average(phase_param.Omega(sto, T))
-        E = pybamm.r_average(phase_param.E(sto, T))
-
-        # Calculate stress and displacement (Ai2019 equations)
-        stress_disp = self._compute_distribution_stress_displacement(
-            c_s_rav, c_s_surf, Omega, E, phase_param
+        zero = pybamm.FullBroadcast(
+            pybamm.Scalar(0),
+            f"{domain} electrode",
+            {"secondary": "current collector"},
         )
-
-        # Add results to variables dictionary
-        self._add_distribution_mechanics_variables(variables, stress_disp)
-
-        return variables
-
-    def _broadcast_temperature_to_particle_size(
-        self, variables: dict[str, pybamm.Symbol]
-    ) -> pybamm.Symbol:
-        """Broadcast electrode temperature to particle size and particle domains."""
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_param.phase_name
-
-        T = pybamm.PrimaryBroadcast(
-            variables[f"{Domain} electrode temperature [K]"],
-            [f"{domain} {phase_name}particle size"],
-        )
-        return pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
-
-    def _compute_distribution_stress_displacement(
-        self,
-        c_s_rav: pybamm.Symbol,
-        c_s_surf: pybamm.Symbol,
-        Omega: pybamm.Symbol,
-        E: pybamm.Symbol,
-        phase_param: Any,
-    ) -> dict[str, pybamm.Symbol]:
-        """
-        Compute stress and displacement for size distributions.
-
-        Based on Ai2019 equations:
-        - Eq [7]: Radial stress at surface (r=R) is zero
-        - Eq [8]: Tangential stress from concentration gradient
-        - Eq [10]: Surface displacement from volume change
-        """
-        c_0 = phase_param.c_0
-        R0 = phase_param.R
-        nu = phase_param.nu
-
-        # Surface displacement (Ai2019 eq [10])
-        # c_0 is reference concentration for no deformation
-        disp_surf = Omega * R0 * (c_s_rav - c_0) / self.DISPLACEMENT_GEOMETRIC_FACTOR
-
-        # Surface stresses (Ai2019 eqs [7-8])
-        # Radial stress at particle surface is zero (eq [7] with r=R)
-        stress_r_surf = pybamm.Scalar(0)
-
-        # Tangential stress (eq [8] with r=R)
-        # Note: c_s_rav is already multiplied by 3/R^3 inside r_average
-        stress_t_surf = (
-            Omega * E * (c_s_rav - c_s_surf) / self.STRESS_GEOMETRIC_FACTOR / (1.0 - nu)
-        )
-
-        return {
-            "stress_r_surf": stress_r_surf,
-            "stress_t_surf": stress_t_surf,
-            "disp_surf": disp_surf,
-            "stress_r_surf_av": pybamm.x_average(stress_r_surf),
-            "stress_t_surf_av": pybamm.x_average(stress_t_surf),
-            "disp_surf_av": pybamm.x_average(disp_surf),
-        }
-
-    def _add_distribution_mechanics_variables(
-        self, variables: dict[str, pybamm.Symbol], stress_disp: dict[str, pybamm.Symbol]
-    ) -> None:
-        """Add distribution mechanics variables to the variables dictionary."""
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_param.phase_name
-
+        variables = self._get_standard_variables(zero)
         variables.update(
             {
-                f"{Domain} {phase_name}"
-                "particle surface radial stress distribution [Pa]": stress_disp[
-                    "stress_r_surf"
-                ],
-                f"{Domain} {phase_name}"
-                "particle surface tangential stress distribution [Pa]": stress_disp[
-                    "stress_t_surf"
-                ],
-                f"{Domain} {phase_name}"
-                "particle surface displacement distribution [m]": stress_disp[
-                    "disp_surf"
-                ],
-                f"X-averaged {domain} {phase_name}"
-                "particle surface radial stress distribution [Pa]": stress_disp[
-                    "stress_r_surf_av"
-                ],
-                f"X-averaged {domain} {phase_name}"
-                "particle surface tangential stress distribution [Pa]": stress_disp[
-                    "stress_t_surf_av"
-                ],
-                f"X-averaged {domain} {phase_name}"
-                "particle surface displacement distribution [m]": stress_disp[
-                    "disp_surf_av"
-                ],
+                f"{Domain} particle cracking rate [m.s-1]": zero,
+                f"X-averaged {domain} particle cracking rate [m.s-1]": pybamm.x_average(
+                    zero
+                ),
             }
         )
-
-    def _get_mechanical_results(
-        self, variables: dict[str, pybamm.Symbol]
-    ) -> dict[str, pybamm.Symbol]:
-        """
-        Calculate mechanical results including stress, displacement, and thickness changes.
-
-        This method computes particle surface stress and displacement based on
-        concentration gradients, following the mechanical models in Ai2019 and
-        Deshpande2012.
-        """
-        # Extract required variables and compute particle mechanics
-        mech_vars = self._extract_mechanical_variables(variables)
-        stress_disp = self._compute_stress_and_displacement(mech_vars)
-
-        # Update variables with computed results
-        self._add_particle_mechanics_variables(variables, stress_disp)
-
-        # Aggregate thickness changes at electrode and cell level
-        self._aggregate_thickness_changes(variables, mech_vars)
-
         return variables
-
-    def _extract_mechanical_variables(
-        self, variables: dict[str, pybamm.Symbol]
-    ) -> dict[str, Any]:
-        """Extract and compute intermediate variables needed for mechanics calculations."""
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-        phase_param = self.phase_param
-
-        c_s_rav = variables[
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
-        sto_rav = variables[f"R-averaged {domain} {phase_name}particle concentration"]
-        c_s_surf = variables[
-            f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-        ]
-        T_xav = variables["X-averaged cell temperature [K]"]
-
-        # Broadcast temperature to particle domain
-        T = pybamm.PrimaryBroadcast(
-            variables[f"{Domain} electrode temperature [K]"],
-            [f"{domain} {phase_name}particle"],
-        )
-        eps_s = variables[
-            f"{Domain} electrode {phase_name}active material volume fraction"
-        ]
-        sto = variables[f"{Domain} {phase_name}particle concentration"]
-
-        # Compute material properties (tangential approximation for Omega)
-        Omega = pybamm.r_average(phase_param.Omega(sto, T))
-        E = pybamm.r_average(phase_param.E(sto, T))
-        sto_init = pybamm.r_average(phase_param.c_init / phase_param.c_max)
-
-        # Compute volume change for thickness calculation
-        v_change = pybamm.x_average(
-            eps_s * phase_param.t_change(sto_rav)
-        ) - pybamm.x_average(eps_s * phase_param.t_change(sto_init))
-
-        electrode_thickness_change = (
-            self.param.n_electrodes_parallel * v_change * self.domain_param.L
-        )
-
-        return {
-            "c_s_rav": c_s_rav,
-            "c_s_surf": c_s_surf,
-            "c_0": phase_param.c_0,
-            "R": phase_param.R,
-            "Omega": Omega,
-            "E": E,
-            "nu": phase_param.nu,
-            "T_xav": T_xav,
-            "electrode_thickness_change": electrode_thickness_change,
-        }
-
-    def _compute_stress_and_displacement(
-        self, mech_vars: dict[str, Any]
-    ) -> dict[str, pybamm.Symbol]:
-        """
-        Compute particle surface stress and displacement.
-
-        Based on Ai2019 equations:
-        - Eq [7]: Radial stress at surface (r=R) is zero
-        - Eq [8]: Tangential stress from concentration gradient
-        - Eq [10]: Surface displacement from volume change
-        """
-        # Surface displacement (Ai2019 eq [10])
-        # Reference concentration c_0 gives zero deformation
-        disp_surf = (
-            mech_vars["Omega"]
-            * mech_vars["R"]
-            * (mech_vars["c_s_rav"] - mech_vars["c_0"])
-            / self.DISPLACEMENT_GEOMETRIC_FACTOR
-        )
-
-        # Surface stresses (Ai2019 eqs [7-8])
-        # Radial stress at particle surface is zero (eq [7] with r=R)
-        stress_r_surf = pybamm.Scalar(0)
-
-        # Tangential stress from concentration gradient (eq [8] with r=R)
-        # Note: c_s_rav is already multiplied by 3/R^3 inside r_average
-        stress_t_surf = (
-            mech_vars["Omega"]
-            * mech_vars["E"]
-            * (mech_vars["c_s_rav"] - mech_vars["c_s_surf"])
-            / self.STRESS_GEOMETRIC_FACTOR
-            / (1.0 - mech_vars["nu"])
-        )
-
-        return {
-            "stress_r_surf": stress_r_surf,
-            "stress_t_surf": stress_t_surf,
-            "disp_surf": disp_surf,
-            "stress_r_surf_av": pybamm.x_average(stress_r_surf),
-            "stress_t_surf_av": pybamm.x_average(stress_t_surf),
-            "disp_surf_av": pybamm.x_average(disp_surf),
-            "electrode_thickness_change": mech_vars["electrode_thickness_change"],
-        }
-
-    def _add_particle_mechanics_variables(
-        self,
-        variables: dict[str, pybamm.Symbol],
-        stress_disp: dict[str, pybamm.Symbol],
-    ) -> None:
-        """Add computed stress and displacement variables to the variables dictionary."""
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        variables.update(
-            {
-                # Spatial distributions
-                f"{Domain} {phase_name}particle surface radial stress [Pa]": stress_disp[
-                    "stress_r_surf"
-                ],
-                f"{Domain} {phase_name}particle surface tangential stress [Pa]": stress_disp[
-                    "stress_t_surf"
-                ],
-                f"{Domain} {phase_name}particle surface displacement [m]": stress_disp[
-                    "disp_surf"
-                ],
-                # X-averaged quantities
-                f"X-averaged {domain} {phase_name}particle surface radial stress [Pa]": stress_disp[
-                    "stress_r_surf_av"
-                ],
-                f"X-averaged {domain} {phase_name}particle surface tangential stress [Pa]": stress_disp[
-                    "stress_t_surf_av"
-                ],
-                f"X-averaged {domain} {phase_name}particle surface displacement [m]": stress_disp[
-                    "disp_surf_av"
-                ],
-                # Thickness change
-                f"{Domain} electrode {phase_name}thickness change [m]": stress_disp[
-                    "electrode_thickness_change"
-                ],
-            }
-        )
-
-    def _aggregate_thickness_changes(
-        self, variables: dict[str, pybamm.Symbol], mech_vars: dict[str, Any]
-    ) -> None:
-        """
-        Aggregate thickness changes from phases to electrode level and from
-        electrodes to cell level.
-        """
-        _domain, Domain = self.domain_Domain
-
-        # Aggregate primary and secondary phase thickness changes
-        self._aggregate_phase_thickness_changes(variables, Domain)
-
-        # Aggregate negative and positive electrode thickness changes to cell level
-        self._aggregate_cell_thickness_change(variables, mech_vars["T_xav"])
-
-    def _aggregate_phase_thickness_changes(
-        self, variables: dict[str, pybamm.Symbol], Domain: str
-    ) -> None:
-        """Combine primary and secondary phase thickness changes for an electrode."""
-        primary_key = f"{Domain} electrode primary thickness change [m]"
-        secondary_key = f"{Domain} electrode secondary thickness change [m]"
-        combined_key = f"{Domain} electrode thickness change [m]"
-
-        if primary_key in variables and secondary_key in variables:
-            variables[combined_key] = variables[primary_key] + variables[secondary_key]
-
-    def _aggregate_cell_thickness_change(
-        self, variables: dict[str, pybamm.Symbol], T_xav: pybamm.Symbol
-    ) -> None:
-        """
-        Calculate total cell thickness change from electrode changes and thermal expansion.
-
-        Based on Ai2019 eq [13] for thermal expansion contribution.
-        """
-        neg_key = "Negative electrode thickness change [m]"
-        pos_key = "Positive electrode thickness change [m]"
-
-        if neg_key in variables and pos_key in variables:
-            # Thermal expansion contribution (Ai2019 eq [13])
-            thermal_expansion = self.param.alpha_T_cell * (T_xav - self.param.T_ref)
-
-            # Total cell thickness change
-            variables["Cell thickness change [m]"] = (
-                variables[neg_key] + variables[pos_key] + thermal_expansion
-            )
 
     def _get_standard_surface_variables(
-        self, variables: dict[str, pybamm.Symbol]
+        self, l_cr: pybamm.Symbol
     ) -> dict[str, pybamm.Symbol]:
         """Calculate crack surface variables including roughness and surface area ratio."""
         domain, Domain = self.domain_Domain
-        phase_name = self.phase_param.phase_name
+        phase_name = self.phase_name
 
-        l_cr = variables[f"{Domain} {phase_name}particle crack length [m]"]
-        a = variables[
-            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
-        ]
+        a = self.coupled_variable(
+            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]",
+            domains=self._electrode_domains,
+        )
         rho_cr = self.phase_param.rho_cr
         w_cr = self.phase_param.w_cr
 
@@ -460,3 +144,258 @@ class BaseMechanics(pybamm.BaseSubModel):
             f"{Domain} {phase_name}electrode roughness ratio": roughness,
             f"X-averaged {domain} {phase_name}electrode roughness ratio": roughness_xavg,
         }
+
+    def _get_mechanical_results(self) -> dict[str, pybamm.Symbol]:
+        """
+        Calculate particle surface stress and displacement and the electrode and cell
+        thickness changes, following :footcite:t:`Ai2019`.
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        phase_param = self.phase_param
+        electrode_domains = self._electrode_domains
+
+        c_s_rav = self.coupled_variable(
+            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]",
+            domains=electrode_domains,
+        )
+        sto_rav = self.coupled_variable(
+            f"R-averaged {domain} {phase_name}particle concentration",
+            domains=electrode_domains,
+        )
+        c_s_surf = self.coupled_variable(
+            f"{Domain} {phase_name}particle surface concentration [mol.m-3]",
+            domains=electrode_domains,
+        )
+        sto = self.coupled_variable(
+            f"{Domain} {phase_name}particle concentration",
+            domains={
+                "primary": f"{domain} {phase_name}particle",
+                "secondary": f"{domain} electrode",
+                "tertiary": "current collector",
+            },
+        )
+        eps_s = self.coupled_variable(
+            f"{Domain} electrode {phase_name}active material volume fraction",
+            domains=electrode_domains,
+        )
+        T = pybamm.PrimaryBroadcast(
+            self._electrode_temperature(), [f"{domain} {phase_name}particle"]
+        )
+
+        # Material properties (tangential approximation for Omega)
+        Omega = pybamm.r_average(phase_param.Omega(sto, T))
+        E = pybamm.r_average(phase_param.E(sto, T))
+        stress_disp = self._compute_stress_and_displacement(c_s_rav, c_s_surf, Omega, E)
+
+        # Volume change for the thickness calculation
+        sto_init = pybamm.r_average(phase_param.c_init / phase_param.c_max)
+        v_change = pybamm.x_average(
+            eps_s * phase_param.t_change(sto_rav)
+        ) - pybamm.x_average(eps_s * phase_param.t_change(sto_init))
+        electrode_thickness_change = (
+            self.param.n_electrodes_parallel * v_change * self.domain_param.L
+        )
+
+        variables = {
+            f"{Domain} {phase_name}particle surface radial stress [Pa]": stress_disp[
+                "stress_r_surf"
+            ],
+            f"{Domain} {phase_name}particle surface tangential stress [Pa]": stress_disp[
+                "stress_t_surf"
+            ],
+            f"{Domain} {phase_name}particle surface displacement [m]": stress_disp[
+                "disp_surf"
+            ],
+            f"X-averaged {domain} {phase_name}particle surface radial stress [Pa]": stress_disp[
+                "stress_r_surf_av"
+            ],
+            f"X-averaged {domain} {phase_name}particle surface tangential stress [Pa]": stress_disp[
+                "stress_t_surf_av"
+            ],
+            f"X-averaged {domain} {phase_name}particle surface displacement [m]": stress_disp[
+                "disp_surf_av"
+            ],
+        }
+        variables.update(
+            self._get_thickness_change_variables(electrode_thickness_change)
+        )
+        return variables
+
+    def _get_mechanical_size_distribution_results(self) -> dict[str, pybamm.Symbol]:
+        """
+        Calculate particle surface stress and displacement for particle size
+        distributions, following :footcite:t:`Ai2019`.
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        phase_param = self.phase_param
+        size_domains = {
+            "primary": f"{domain} {phase_name}particle size",
+            "secondary": f"{domain} electrode",
+            "tertiary": "current collector",
+        }
+
+        c_s_rav = self.coupled_variable(
+            f"R-averaged {domain} {phase_name}"
+            "particle concentration distribution [mol.m-3]",
+            domains=size_domains,
+        )
+        c_s_surf = self.coupled_variable(
+            f"{Domain} {phase_name}"
+            "particle surface concentration distribution [mol.m-3]",
+            domains=size_domains,
+        )
+        sto = self.coupled_variable(
+            f"{Domain} {phase_name}particle concentration distribution",
+            domains={
+                "primary": f"{domain} {phase_name}particle",
+                "secondary": f"{domain} {phase_name}particle size",
+                "tertiary": f"{domain} electrode",
+                "quaternary": "current collector",
+            },
+        )
+        # Broadcast temperature to particle size and particle domains
+        T = pybamm.PrimaryBroadcast(
+            self._electrode_temperature(), [f"{domain} {phase_name}particle size"]
+        )
+        T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
+
+        # Material properties (tangential approximation for Omega)
+        Omega = pybamm.r_average(phase_param.Omega(sto, T))
+        E = pybamm.r_average(phase_param.E(sto, T))
+        stress_disp = self._compute_stress_and_displacement(c_s_rav, c_s_surf, Omega, E)
+
+        return {
+            f"{Domain} {phase_name}"
+            "particle surface radial stress distribution [Pa]": stress_disp[
+                "stress_r_surf"
+            ],
+            f"{Domain} {phase_name}"
+            "particle surface tangential stress distribution [Pa]": stress_disp[
+                "stress_t_surf"
+            ],
+            f"{Domain} {phase_name}"
+            "particle surface displacement distribution [m]": stress_disp["disp_surf"],
+            f"X-averaged {domain} {phase_name}"
+            "particle surface radial stress distribution [Pa]": stress_disp[
+                "stress_r_surf_av"
+            ],
+            f"X-averaged {domain} {phase_name}"
+            "particle surface tangential stress distribution [Pa]": stress_disp[
+                "stress_t_surf_av"
+            ],
+            f"X-averaged {domain} {phase_name}"
+            "particle surface displacement distribution [m]": stress_disp[
+                "disp_surf_av"
+            ],
+        }
+
+    def _electrode_temperature(self) -> pybamm.CoupledVariable:
+        return self.coupled_variable(
+            f"{self.domain.capitalize()} electrode temperature [K]",
+            domains=self._electrode_domains,
+        )
+
+    def _compute_stress_and_displacement(
+        self,
+        c_s_rav: pybamm.Symbol,
+        c_s_surf: pybamm.Symbol,
+        Omega: pybamm.Symbol,
+        E: pybamm.Symbol,
+    ) -> dict[str, pybamm.Symbol]:
+        """
+        Compute particle surface stress and displacement.
+
+        Based on Ai2019 equations:
+        - Eq [7]: Radial stress at surface (r=R) is zero
+        - Eq [8]: Tangential stress from concentration gradient
+        - Eq [10]: Surface displacement from volume change
+        """
+        phase_param = self.phase_param
+
+        # Surface displacement (Ai2019 eq [10])
+        # Reference concentration c_0 gives zero deformation
+        disp_surf = (
+            Omega
+            * phase_param.R
+            * (c_s_rav - phase_param.c_0)
+            / self.DISPLACEMENT_GEOMETRIC_FACTOR
+        )
+
+        # Surface stresses (Ai2019 eqs [7-8])
+        # Radial stress at particle surface is zero (eq [7] with r=R)
+        stress_r_surf = pybamm.Scalar(0)
+
+        # Tangential stress from concentration gradient (eq [8] with r=R)
+        # Note: c_s_rav is already multiplied by 3/R^3 inside r_average
+        stress_t_surf = (
+            Omega
+            * E
+            * (c_s_rav - c_s_surf)
+            / self.STRESS_GEOMETRIC_FACTOR
+            / (1.0 - phase_param.nu)
+        )
+
+        return {
+            "stress_r_surf": stress_r_surf,
+            "stress_t_surf": stress_t_surf,
+            "disp_surf": disp_surf,
+            "stress_r_surf_av": pybamm.x_average(stress_r_surf),
+            "stress_t_surf_av": pybamm.x_average(stress_t_surf),
+            "disp_surf_av": pybamm.x_average(disp_surf),
+        }
+
+    def _electrode_swells(self, domain: str) -> bool:
+        """Whether every particle phase of a porous electrode swells."""
+        if self.options.electrode_types[domain] != "porous":
+            return False
+        domain_options = getattr(self.options, domain)
+        return all(
+            getattr(domain_options, phase)["particle mechanics"] != "none"
+            for phase in self.options.phases[domain]
+        )
+
+    def _get_thickness_change_variables(
+        self, electrode_thickness_change: pybamm.Symbol
+    ) -> dict[str, pybamm.Symbol]:
+        """
+        Thickness change of this phase and, from the last phase of an electrode, the
+        total thickness change of the electrode and of the cell.
+        """
+        domain, Domain = self.domain_Domain
+        variables = {
+            f"{Domain} electrode {self.phase_name}thickness change [m]": (
+                electrode_thickness_change
+            )
+        }
+        phases = self.options.phases[domain]
+        if self.phase != phases[-1] or not self._electrode_swells(domain):
+            return variables
+
+        total_thickness_change = electrode_thickness_change
+        if len(phases) > 1:
+            primary_thickness_change = self.coupled_variable(
+                f"{Domain} electrode primary thickness change [m]",
+                domain="current collector",
+            )
+            total_thickness_change = (
+                primary_thickness_change + electrode_thickness_change
+            )
+            variables[f"{Domain} electrode thickness change [m]"] = (
+                total_thickness_change
+            )
+
+        if domain == "positive" and self._electrode_swells("negative"):
+            negative_thickness_change = self.coupled_variable(
+                "Negative electrode thickness change [m]", domain="current collector"
+            )
+            T_xav = self.coupled_variable(
+                "X-averaged cell temperature [K]", domain="current collector"
+            )
+            # Thermal expansion contribution (Ai2019 eq [13])
+            thermal_expansion = self.param.alpha_T_cell * (T_xav - self.param.T_ref)
+            variables["Cell thickness change [m]"] = (
+                negative_thickness_change + total_thickness_change + thermal_expansion
+            )
+        return variables

@@ -40,6 +40,16 @@ class BaseBatteryModel(pybamm.BaseModel):
         The name of the model. The default is "Unnamed battery model".
     """
 
+    # Whether the electrolyte concentration and the surface potential difference
+    # are uniform in x; models that x-average them pass this to the reactions
+    x_average_electrolyte = False
+    x_average_surface_potential = False
+
+    @property
+    def x_average_particles(self):
+        """Whether the particle concentrations are uniform in x."""
+        return getattr(self, "x_average", False)
+
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
@@ -322,33 +332,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["dimensionality"] == 2:
             self.variables.update({"y [m]": var.y, "z [m]": var.z})
 
-    def build_model_equations(self):
-        # Set model equations
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.verbose(
-                f"Setting rhs for {submodel_name} submodel ({self.name})"
-            )
-
-            submodel.set_rhs(self.variables)
-            pybamm.logger.verbose(
-                f"Setting algebraic for {submodel_name} submodel ({self.name})"
-            )
-
-            submodel.set_algebraic(self.variables)
-            pybamm.logger.verbose(
-                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
-            )
-
-            submodel.set_boundary_conditions(self.variables)
-            pybamm.logger.verbose(
-                f"Setting initial conditions for {submodel_name} submodel ({self.name})"
-            )
-            submodel.set_initial_conditions(self.variables)
-            submodel.add_events_from(self.variables)
-            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
-            self.update(submodel)
-            self.check_no_repeated_keys()
-
     def _build_model(self):
         if self._built:
             raise pybamm.ModelError(
@@ -358,22 +341,16 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         pybamm.logger.info(f"Start building {self.name}")
 
-        if self._built_fundamental is False:
-            self.build_fundamental()
-
-        # Register the voltage state Variable before coupled variables,
-        # so submodels that need V in get_coupled_variables can find it.
         if self.options["voltage as a state"] == "true":
             self._register_voltage_variable()
 
-        self.build_coupled_variables()
+        self._configure_thermal_submodel()
+        self.build_submodels()
 
-        # Now that the expression is available, add the algebraic constraint
-        # before equations are built.
         if self.options["voltage as a state"] == "true":
             self._constrain_voltage_to_expression()
 
-        self.build_model_equations()
+        self.resolve_coupled_variables()
 
     def build_model(self):
         # Build model variables and equations
@@ -586,6 +563,25 @@ class BaseBatteryModel(pybamm.BaseModel):
         x_average = getattr(self, "x_average", False)
         self.submodels["thermal"] = thermal_submodel(
             self.param, self.options, x_average
+        )
+
+    def _configure_thermal_submodel(self):
+        """
+        Tell the thermal submodel whether the electrolyte conductivity is full, from
+        the submodels chosen when the model is built.
+        """
+        thermal = self.submodels.get("thermal")
+        if not isinstance(thermal, pybamm.thermal.BaseThermal):
+            return
+        conductivity = pybamm.electrolyte_conductivity
+        full_conductivity = (
+            conductivity.Full,
+            conductivity.surface_potential_form.FullAlgebraic,
+            conductivity.surface_potential_form.FullDifferential,
+        )
+        thermal.full_electrolyte_conductivity = any(
+            isinstance(submodel, full_conductivity)
+            for submodel in self.submodels.values()
         )
 
     def set_surface_temperature_submodel(self):

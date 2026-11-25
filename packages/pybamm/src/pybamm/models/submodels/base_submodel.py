@@ -3,11 +3,10 @@ import pybamm
 
 class BaseSubModel(pybamm.BaseModel):
     """
-    The base class for all submodels. All submodels inherit from this class and must
-    only provide public methods which overwrite those in this base class. Any methods
-    added to a submodel that do not overwrite those in this bass class are made
-    private with the prefix '_', providing a consistent public interface for all
-    submodels.
+    The base class for all submodels. A submodel overrides :meth:`build` to set its
+    variables, equations and events, using :meth:`coupled_variable` for variables
+    owned by other submodels. Any other methods added to a submodel are private
+    (prefixed with '_'), providing a consistent public interface for all submodels.
 
     Parameters
     ----------
@@ -140,8 +139,116 @@ class BaseSubModel(pybamm.BaseModel):
             "Please use it on the full model."
         )
 
+    _legacy_methods = (
+        "get_fundamental_variables",
+        "get_coupled_variables",
+        "set_rhs",
+        "set_algebraic",
+        "set_boundary_conditions",
+        "set_initial_conditions",
+        "add_events_from",
+    )
+
+    @property
+    def overrides_deprecated_methods(self):
+        """Whether the submodel's class overrides any deprecated build method."""
+        return any(
+            getattr(type(self), name) is not getattr(BaseSubModel, name)
+            for name in self._legacy_methods
+        )
+
+    @property
+    def defines_build(self):
+        """
+        Whether the submodel defines its equations through :meth:`build`.
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If a class overrides the deprecated methods of a parent that defines
+            :meth:`build`, since those overrides would be ignored.
+        """
+        legacy_class = None
+        for cls in type(self).__mro__:
+            if cls is BaseSubModel:
+                return False
+            if "build" in vars(cls):
+                if legacy_class is None:
+                    return True
+                raise pybamm.ModelError(
+                    f"{legacy_class.__name__} overrides deprecated submodel methods "
+                    f"but inherits `build` from {cls.__name__}, so the overrides "
+                    "would be ignored. Define `build` instead."
+                )
+            if legacy_class is None and any(
+                name in vars(cls) for name in self._legacy_methods
+            ):
+                legacy_class = cls
+        return False
+
+    def build(self):
+        """
+        Set the submodel's variables, equations and events.
+
+        Variables owned by other submodels are referred to with
+        :meth:`coupled_variable`, so submodels can be built in any order. Results
+        are stored in ``self.variables``, ``self.rhs``, ``self.algebraic``,
+        ``self.boundary_conditions``, ``self.initial_conditions`` and
+        ``self.events``.
+        """
+        raise NotImplementedError
+
+    def coupled_variable(
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        on_edges=False,
+        infer_domains=False,
+    ):
+        """
+        Return a placeholder for a variable owned by another submodel.
+
+        The placeholder is replaced by the variable of the same name when the
+        model is built, which checks that the domains match.
+
+        Parameters
+        ----------
+        name : str
+            Name of the variable in the model's variables.
+        domain : str or list of str, optional
+            Primary domain of the variable.
+        auxiliary_domains : dict, optional
+            Auxiliary domains of the variable.
+        domains : dict, optional
+            All domains of the variable, as an alternative to ``domain`` and
+            ``auxiliary_domains``.
+        on_edges : bool, optional
+            Whether the variable is evaluated on cell edges, as a flux is.
+        infer_domains : bool, optional
+            Whether to take the domains of the variable instead of checking them,
+            for variables whose domains the submodel cannot know.
+
+        Returns
+        -------
+        :class:`pybamm.CoupledVariable`
+        """
+        variable = pybamm.CoupledVariable(
+            name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
+            on_edges=on_edges,
+            infer_domains=infer_domains,
+        )
+        self.coupled_variables[name] = variable
+        return variable
+
     def get_fundamental_variables(self):
         """
+        Deprecated: override :meth:`build` instead.
+
         A public method that creates and returns the variables in a submodel which can
         be created independent of other submodels. For example, the electrolyte
         concentration variables can be created independent of whether any other
@@ -159,6 +266,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def get_coupled_variables(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A public method that creates and returns the variables in a submodel which
         require variables in other submodels to be set first. For example, the
         exchange current density requires the concentration in the electrolyte to
@@ -181,6 +290,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_rhs(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the right hand side of the differential equations which contain
         a time derivative. Note: this method modifies the state of self.rhs. Unless
         overwritten by a submodel, the default behaviour of 'pass' is used as
@@ -194,6 +305,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_algebraic(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the differential equations which do not contain a time
         derivative. Note: this method modifies the state of self.algebraic. Unless
         overwritten by a submodel, the default behaviour of 'pass' is used as
@@ -207,6 +320,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_boundary_conditions(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the boundary conditions for the submodel. Note: this method
         modifies the state of self.boundary_conditions. Unless overwritten by a
         submodel, the default behaviour of 'pass' is used as implemented in
@@ -220,6 +335,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def set_initial_conditions(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set the initial conditions for the submodel. Note: this method
         modifies the state of self.initial_conditions. Unless overwritten by a
         submodel, the default behaviour of 'pass' is used as implemented in
@@ -234,6 +351,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     def add_events_from(self, variables):
         """
+        Deprecated: override :meth:`build` instead.
+
         A method to set events related to the state of submodel variable. Note: this
         method modifies the state of self.events. Unless overwritten by a submodel, the
         default behaviour of 'pass' is used as implemented in

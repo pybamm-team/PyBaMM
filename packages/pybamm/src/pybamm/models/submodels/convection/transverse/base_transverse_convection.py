@@ -58,3 +58,16 @@ class BaseTransverseModel(BaseModel):
         variables.update({f"Transverse volume-averaged {typ}": var})
 
         return variables
+
+    def _get_separator_acceleration(self):
+        """
+        Transverse acceleration in the separator, set by the difference between
+        the negative and positive electrode velocities at the separator.
+        """
+        i_boundary_cc = self.coupled_variable(
+            "Current collector current density [A.m-2]", domain="current collector"
+        )
+        v_box_n_right = -self.param.n.DeltaV * i_boundary_cc / self.param.F
+        v_box_p_left = -self.param.p.DeltaV * i_boundary_cc / self.param.F
+        d_vbox_s_dx = (v_box_p_left - v_box_n_right) / self.param.s.L
+        return -d_vbox_s_dx

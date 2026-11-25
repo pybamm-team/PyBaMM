@@ -8,6 +8,18 @@ import pybamm
 from tests import get_discretisation_for_testing
 
 
+def substitute_coupled_variables(symbol, values):
+    """Replace the coupled variables in ``symbol`` by the values in ``values``."""
+
+    def replace(node, new_leaves):
+        if isinstance(node, pybamm.CoupledVariable):
+            value = values[node.name]
+            return value if isinstance(value, pybamm.Symbol) else pybamm.Scalar(value)
+        return pybamm.rebuild(node, new_leaves)
+
+    return pybamm.tree_map(replace, symbol)
+
+
 class TestExchangeCurrentDensity:
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -43,12 +55,16 @@ class TestExchangeCurrentDensity:
             param, "negative", "lithium-ion main", {}
         )
         model_n.options = self.options
-        j0_n = model_n._get_exchange_current_density(self.variables)
+        j0_n = substitute_coupled_variables(
+            model_n._get_exchange_current_density(), self.variables
+        )
         model_p = pybamm.interface.BaseInterface(
             param, "positive", "lithium-ion main", {}
         )
         model_p.options = self.options
-        j0_p = model_p._get_exchange_current_density(self.variables)
+        j0_p = substitute_coupled_variables(
+            model_p._get_exchange_current_density(), self.variables
+        )
         assert j0_n.domain == ["negative electrode"]
         assert j0_p.domain == ["positive electrode"]
 
@@ -58,12 +74,16 @@ class TestExchangeCurrentDensity:
             param, "negative", "lithium-ion main", {}
         )
         model_n.options = self.options
-        j0_n = model_n._get_exchange_current_density(self.variables)
+        j0_n = substitute_coupled_variables(
+            model_n._get_exchange_current_density(), self.variables
+        )
         model_p = pybamm.interface.BaseInterface(
             param, "positive", "lithium-ion main", {}
         )
         model_p.options = self.options
-        j0_p = model_p._get_exchange_current_density(self.variables)
+        j0_p = substitute_coupled_variables(
+            model_p._get_exchange_current_density(), self.variables
+        )
         # Process parameters
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
         j0_n = parameter_values.process_symbol(j0_n)
@@ -80,12 +100,16 @@ class TestExchangeCurrentDensity:
             param, "negative", "lithium-ion main", {}
         )
         model_n.options = self.options
-        j0_n = model_n._get_exchange_current_density(self.variables)
+        j0_n = substitute_coupled_variables(
+            model_n._get_exchange_current_density(), self.variables
+        )
         model_p = pybamm.interface.BaseInterface(
             param, "positive", "lithium-ion main", {}
         )
         model_p.options = self.options
-        j0_p = model_p._get_exchange_current_density(self.variables)
+        j0_p = substitute_coupled_variables(
+            model_p._get_exchange_current_density(), self.variables
+        )
         # Process parameters and discretise
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
         disc = get_discretisation_for_testing()

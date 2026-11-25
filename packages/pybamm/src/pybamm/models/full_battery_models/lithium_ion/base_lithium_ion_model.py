@@ -298,8 +298,19 @@ class BaseModel(pybamm.BaseBatteryModel):
                 elif ocp_option == "MSMR":
                     ocp_model = ocp_submodels.MSMROpenCircuitPotential
                 self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
-                    self.param, domain, reaction, self.options, phase, self.x_average
+                    self.param,
+                    domain,
+                    reaction,
+                    self.options,
+                    phase,
+                    self.x_average,
+                    x_average_particles=self.x_average_particles,
                 )
+
+    @property
+    def _uses_inverse_kinetics(self):
+        """Whether the porous electrodes use inverse intercalation kinetics."""
+        return False
 
     def set_sei_submodel(self):
         for domain in ["negative", "positive"]:
@@ -319,6 +330,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                         self.options,
                         phase,
                         cracks=False,
+                        inverse_kinetics=self._uses_inverse_kinetics,
                     )
                 self.submodels[f"{domain} {phase} sei"] = submodel
                 self.submodels[f"{domain} {phase} sei thickness"] = (
@@ -355,6 +367,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                             self.options,
                             phase,
                             cracks=True,
+                            inverse_kinetics=self._uses_inverse_kinetics,
                         )
                     self.submodels[f"{domain} {phase} sei on cracks"] = submodel
                     self.submodels[f"{domain} {phase} sei on cracks thickness"] = (

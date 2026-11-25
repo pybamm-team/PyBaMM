@@ -23,11 +23,11 @@ class OneDimensionalX(BaseThermal):
 
     """
 
-    def __init__(self, param, options=None, x_average=False):
-        super().__init__(param, options=options, x_average=x_average)
+    def __init__(self, param, options=None, x_average=False, **kwargs):
+        super().__init__(param, options=options, x_average=x_average, **kwargs)
         pybamm.citations.register("Timms2021")
 
-    def get_fundamental_variables(self):
+    def build(self):
         T_dict = {}
         for domain in ["negative electrode", "separator", "positive electrode"]:
             Domain = domain.capitalize()
@@ -61,24 +61,16 @@ class OneDimensionalX(BaseThermal):
             }
         )
 
-        variables = self._get_standard_fundamental_variables(T_dict)
-        return variables
+        self.variables.update(self._get_standard_fundamental_variables(T_dict))
+        self.variables.update(self._get_heat_source_variables(T_dict))
 
-    def get_coupled_variables(self, variables):
-        variables.update(self._get_standard_coupled_variables(variables))
-        return variables
-
-    def set_rhs(self, variables):
-        T = variables["Cell temperature [K]"]
-        T_cn = variables["Negative current collector temperature [K]"]
-        T_n = variables["Negative electrode temperature [K]"]
-        T_s = variables["Separator temperature [K]"]
-        T_p = variables["Positive electrode temperature [K]"]
-        T_cp = variables["Positive current collector temperature [K]"]
-        Q = variables["Total heating [W.m-3]"]
-        Q_cn = variables["Negative current collector Ohmic heating [W.m-3]"]
-        Q_cp = variables["Positive current collector Ohmic heating [W.m-3]"]
-        T_surf = variables["Surface temperature [K]"]
+        T_n = T_dict["negative electrode"]
+        T_s = T_dict["separator"]
+        T_p = T_dict["positive electrode"]
+        Q = self.variables["Total heating [W.m-3]"]
+        Q_cn = self.variables["Negative current collector Ohmic heating [W.m-3]"]
+        Q_cp = self.variables["Positive current collector Ohmic heating [W.m-3]"]
+        T_surf = self._coupled_surface_temperature()
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
@@ -134,53 +126,49 @@ class OneDimensionalX(BaseThermal):
             positive_tab_cooling_coefficient + edge_cooling_coefficient_cp
         )
 
-        self.rhs = {
-            T_cn: (
-                (
-                    pybamm.boundary_value(lambda_n, "left")
-                    * pybamm.boundary_gradient(T_n, "left")
-                    - h_cn * (T_cn - T_surf)
+        self.rhs.update(
+            {
+                T_cn: (
+                    (
+                        pybamm.boundary_value(lambda_n, "left")
+                        * pybamm.boundary_gradient(T_n, "left")
+                        - h_cn * (T_cn - T_surf)
+                    )
+                    / L_cn
+                    + Q_cn
+                    + cooling_coefficient_cn * (T_cn - T_surf)
                 )
-                / L_cn
-                + Q_cn
-                + cooling_coefficient_cn * (T_cn - T_surf)
-            )
-            / self.param.n.rho_c_p_cc(T_cn),
-            T: (
-                pybamm.div(lambda_ * pybamm.grad(T))
-                + Q
-                + cooling_coefficient * (T - T_surf)
-            )
-            / rho_c_p,
-            T_cp: (
-                (
-                    -pybamm.boundary_value(lambda_p, "right")
-                    * pybamm.boundary_gradient(T_p, "right")
-                    - h_cp * (T_cp - T_surf)
+                / self.param.n.rho_c_p_cc(T_cn),
+                T: (
+                    pybamm.div(lambda_ * pybamm.grad(T))
+                    + Q
+                    + cooling_coefficient * (T - T_surf)
                 )
-                / L_cp
-                + Q_cp
-                + cooling_coefficient_cp * (T_cp - T_surf)
-            )
-            / self.param.p.rho_c_p_cc(T_cp),
+                / rho_c_p,
+                T_cp: (
+                    (
+                        -pybamm.boundary_value(lambda_p, "right")
+                        * pybamm.boundary_gradient(T_p, "right")
+                        - h_cp * (T_cp - T_surf)
+                    )
+                    / L_cp
+                    + Q_cp
+                    + cooling_coefficient_cp * (T_cp - T_surf)
+                )
+                / self.param.p.rho_c_p_cc(T_cp),
+            }
+        )
+
+        self.boundary_conditions[T] = {
+            "left": (T_cn, "Dirichlet"),
+            "right": (T_cp, "Dirichlet"),
         }
 
-    def set_boundary_conditions(self, variables):
-        T = variables["Cell temperature [K]"]
-        T_cn = variables["Negative current collector temperature [K]"]
-        T_cp = variables["Positive current collector temperature [K]"]
-
-        self.boundary_conditions = {
-            T: {"left": (T_cn, "Dirichlet"), "right": (T_cp, "Dirichlet")}
-        }
-
-    def set_initial_conditions(self, variables):
-        T = variables["Cell temperature [K]"]
-        T_cn = variables["Negative current collector temperature [K]"]
-        T_cp = variables["Positive current collector temperature [K]"]
         T_init = self.param.T_init
-        self.initial_conditions = {
-            T_cn: pybamm.boundary_value(T_init, "left"),
-            T: T_init,
-            T_cp: pybamm.boundary_value(T_init, "right"),
-        }
+        self.initial_conditions.update(
+            {
+                T_cn: pybamm.boundary_value(T_init, "left"),
+                T: T_init,
+                T_cp: pybamm.boundary_value(T_init, "right"),
+            }
+        )

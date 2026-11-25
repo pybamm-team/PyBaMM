@@ -125,7 +125,15 @@ class Discretisation:
 
     @bcs.setter
     def bcs(self, value):
-        self._bcs = value
+        # convert legacy tab conditions using the variable they are applied to
+        self._bcs = {
+            key: (
+                self.check_tab_conditions(key, dict(bcs))
+                if LEGACY_TAB_SIDES & set(bcs)
+                else bcs
+            )
+            for key, bcs in value.items()
+        }
         # reset discretised_symbols
         self._discretised_symbols = {}
 
@@ -1014,11 +1022,6 @@ class Discretisation:
     def _discretise_node(self, symbol, new_leaves):
         """Discretise one node given its discretised children; the callback for
         :func:`pybamm.tree_map`."""
-        if symbol._domains["primary"] and self.bcs:
-            # If boundary conditions are provided, need to check for BCs on tabs
-            key_id = next(iter(self.bcs.keys()))
-            if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
-                self.bcs[key_id] = self.check_tab_conditions(symbol, self.bcs[key_id])
         handler = self._handler_for(type(symbol))
         discretised_symbol = handler(self, symbol, new_leaves[: len(symbol._children)])
         discretised_symbol.test_shape()

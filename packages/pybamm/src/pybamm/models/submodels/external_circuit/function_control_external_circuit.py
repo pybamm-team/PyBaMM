@@ -6,6 +6,29 @@ import pybamm
 from .base_external_circuit import BaseModel
 
 
+class _ControlVariables:
+    """
+    The variables available to the function of an external circuit submodel.
+
+    Variables the submodel defines (e.g. "Current [A]") are returned as they are.
+    Any other name returns a :class:`pybamm.CoupledVariable` that is replaced by
+    the model variable of that name, taking its domains, when the model is built.
+
+    Parameters
+    ----------
+    submodel : :class:`pybamm.external_circuit.BaseModel`
+        The external circuit submodel calling the function.
+    """
+
+    def __init__(self, submodel):
+        self._submodel = submodel
+
+    def __getitem__(self, name):
+        if name in self._submodel.variables:
+            return self._submodel.variables[name]
+        return self._submodel.coupled_variable(name, infer_domains=True)
+
+
 class FunctionControl(BaseModel):
     """
     External circuit with an arbitrary function, implemented as a control on the current
@@ -16,7 +39,10 @@ class FunctionControl(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     external_circuit_function : callable
-        The function that controls the current
+        The function that controls the current. It is called with a mapping from
+        variable names to symbols. Variables from other submodels are placeholders
+        until the model is built, so the function should combine them with
+        arithmetic and functions only, not spatial operators such as averages.
     options : dict
         Dictionary of options to use for the submodel
     control : str, optional
@@ -29,49 +55,28 @@ class FunctionControl(BaseModel):
         self.external_circuit_function = external_circuit_function
         self.control = control
 
-    def get_fundamental_variables(self):
-        # Current is a variable
+    def build(self):
         i_var = pybamm.Variable("Current variable [A]", scale=self.param.Q)
         if self.control in ["algebraic", "differential"]:
             I = i_var
-        elif self.control == "differential with max":
+        else:  # "differential with max"
             i_input = pybamm.FunctionParameter(
                 "CCCV current function [A]", {"Time [s]": pybamm.t}
             )
             I = pybamm.maximum(i_var, i_input)
-
-        # Update derived variables
-        i_cell = I / self.param.A_cc
-
-        variables = {
-            "Current variable [A]": i_var,
-            "Total current density [A.m-2]": i_cell,
-            "Current [A]": I,
-            "C-rate": I / self.param.Q,
-        }
-
-        return variables
-
-    def set_initial_conditions(self, variables):
+        self.variables.update(
+            {"Current variable [A]": i_var, **self._get_current_variables(I)}
+        )
         # Initial condition as a guess for consistent initial conditions
-        i_cell = variables["Current variable [A]"]
-        self.initial_conditions[i_cell] = self.param.Q
+        self.initial_conditions[i_var] = self.param.Q
 
-    def set_rhs(self, variables):
-        # External circuit submodels are always equations on the current
-        # The external circuit function should provide an update law for the current
-        # based on current/voltage/power/etc.
-        if "differential" in self.control:
-            i_cell = variables["Current variable [A]"]
-            self.rhs[i_cell] = self.external_circuit_function(variables)
-
-    def set_algebraic(self, variables):
-        # External circuit submodels are always equations on the current
-        # The external circuit function should fix either the current, or the voltage,
-        # or a combination (e.g. I*V for power control)
+        # The function gives either an update law for the current (differential) or
+        # a residual fixing the current, voltage, power, etc. (algebraic)
+        residual = self.external_circuit_function(_ControlVariables(self))
         if self.control == "algebraic":
-            i_cell = variables["Current variable [A]"]
-            self.algebraic[i_cell] = self.external_circuit_function(variables)
+            self.algebraic[i_var] = residual
+        else:
+            self.rhs[i_var] = residual
 
 
 class VoltageFunctionControl(FunctionControl):

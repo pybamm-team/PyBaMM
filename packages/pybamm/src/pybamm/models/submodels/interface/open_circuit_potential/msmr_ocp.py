@@ -15,59 +15,59 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
     """
 
     def __init__(
-        self, param, domain, reaction, options, phase="primary", x_average=False
+        self,
+        param,
+        domain,
+        reaction,
+        options,
+        phase="primary",
+        x_average=False,
+        x_average_particles=None,
     ):
         super().__init__(
-            param, domain, reaction, options=options, phase=phase, x_average=x_average
+            param, domain, reaction, options, phase, x_average, x_average_particles
         )
         pybamm.citations.register("Baker2018")
 
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
+    def build(self):
+        domain = self.domain
         phase_name = self.phase_name
+        x_average = self._x_average_inputs
 
-        if self.reaction == "lithium-ion main":
-            T = variables[f"{Domain} electrode temperature [K]"]
-            # For "particle-size distribution" models, take distribution version
-            # of c_s_surf that depends on particle size.
-            domain_options = getattr(self.options, domain)
-            if domain_options["particle size"] == "distribution":
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry distribution"
-                ]
-                ocp_surf = variables[
-                    f"{Domain} {phase_name}particle surface potential distribution [V]"
-                ]
-                # If variable was broadcast, take only the orphan
-                if (
-                    isinstance(sto_surf, pybamm.Broadcast)
-                    and isinstance(ocp_surf, pybamm.Broadcast)
-                    and isinstance(T, pybamm.Broadcast)
-                ):
-                    sto_surf = sto_surf.orphans[0]
-                    ocp_surf = ocp_surf.orphans[0]
-                    T = T.orphans[0]
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
-            else:
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry"
-                ]
-                ocp_surf = variables[
-                    f"{Domain} {phase_name}particle surface potential [V]"
-                ]
-                # If variable was broadcast, take only the orphan
-                if (
-                    isinstance(sto_surf, pybamm.Broadcast)
-                    and isinstance(ocp_surf, pybamm.Broadcast)
-                    and isinstance(T, pybamm.Broadcast)
-                ):
-                    sto_surf = sto_surf.orphans[0]
-                    ocp_surf = ocp_surf.orphans[0]
-                    T = T.orphans[0]
+        # MSMR open-circuit potentials only exist for the main reaction
+        if self.reaction != "lithium-ion main":
+            raise pybamm.OptionError(
+                f"MSMR open-circuit potential is not defined for {self.reaction!r}"
+            )
+        T = self._coupled_electrode_variable("electrode temperature [K]", x_average)
+        # For "particle-size distribution" models, take distribution version
+        # of the surface stoichiometry and potential.
+        if self.size_distribution:
+            sto_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface stoichiometry distribution",
+                x_average,
+                size=True,
+            )
+            ocp_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface potential distribution [V]",
+                x_average,
+                size=True,
+            )
+            T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
+        else:
+            sto_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface stoichiometry", x_average
+            )
+            ocp_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface potential [V]", x_average
+            )
 
-            ocp_bulk = variables[f"Average {domain} {phase_name}particle potential [V]"]
-            dUdT = self.phase_param.dUdT(sto_surf)
+        ocp_bulk = self.coupled_variable(
+            f"Average {domain} {phase_name}particle potential [V]",
+            domain="current collector",
+        )
+        dUdT = self.phase_param.dUdT(sto_surf)
 
-        variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
+        variables = self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT)
         self._alias_ocp_as_equilibrium(variables)
-        return variables
+        self.variables.update(variables)

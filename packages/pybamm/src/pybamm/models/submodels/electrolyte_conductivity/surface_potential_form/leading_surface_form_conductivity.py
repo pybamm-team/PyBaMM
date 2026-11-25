@@ -25,46 +25,25 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def get_fundamental_variables(self):
+    def build(self):
+        domain = self.domain
         delta_phi_av = pybamm.Variable(
-            f"X-averaged {self.domain} electrode surface potential difference [V]",
+            f"X-averaged {domain} electrode surface potential difference [V]",
             domain="current collector",
             reference=self.domain_param.prim.U_init,
         )
-
-        variables = self._get_standard_average_surface_potential_difference_variables(
-            delta_phi_av
+        self.variables.update(
+            self._get_standard_average_surface_potential_difference_variables(
+                delta_phi_av
+            )
         )
-        variables.update(
+        self.variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi_av)
         )
-        return variables
-
-    def get_coupled_variables(self, variables):
-        # Only update coupled variables once
-        if self.domain == "negative":
-            return super().get_coupled_variables(variables)
-        else:
-            return variables
-
-    def set_initial_conditions(self, variables):
-        domain = self.domain
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
-        delta_phi_init = self.domain_param.prim.U_init
-
-        self.initial_conditions = {delta_phi: delta_phi_init}
-
-    def set_boundary_conditions(self, variables):
-        if self.domain == "negative":
-            phi_e = variables["Electrolyte potential [V]"]
-            self.boundary_conditions = {
-                phi_e: {
-                    "left": (pybamm.Scalar(0), "Neumann"),
-                    "right": (pybamm.Scalar(0), "Neumann"),
-                }
-            }
+        # The negative electrode submodel also sets the electrolyte potential
+        if domain == "negative":
+            self._build_leading_order(delta_phi_av)
+        self.initial_conditions[delta_phi_av] = self.domain_param.prim.U_init
 
 
 class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
@@ -83,28 +62,12 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_rhs(self, variables):
-        domain = self.domain
-        T = variables[f"X-averaged {domain} electrode temperature [K]"]
-        C_dl = self.domain_param.C_dl(T)
-
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
-
-        sum_a_j = variables[
-            f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
-        sum_a_j_av = variables[
-            f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
-        a = variables[
-            f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
-        ]
-
-        self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j)
+    def build(self):
+        super().build()
+        delta_phi_av, current_imbalance = self._get_x_averaged_current_imbalance()
+        self.rhs[delta_phi_av] = self._get_x_averaged_double_layer_rhs(
+            current_imbalance
+        )
 
 
 class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
@@ -123,20 +86,8 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_algebraic(self, variables):
-        domain = self.domain
-        sum_a_j = variables[
-            f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
-
-        sum_a_j_av = variables[
-            f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
-
+    def build(self):
+        super().build()
+        delta_phi_av, current_imbalance = self._get_x_averaged_current_imbalance()
         # multiply by Lx**2 to improve conditioning
-        self.algebraic[delta_phi] = (sum_a_j_av - sum_a_j) * self.param.L_x**2
+        self.algebraic[delta_phi_av] = current_imbalance * self.param.L_x**2

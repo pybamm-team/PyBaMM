@@ -21,39 +21,27 @@ class CurrentCollector2D(BaseThermal):
 
     """
 
-    def __init__(self, param, options=None, x_average=True):
-        super().__init__(param, options=options, x_average=x_average)
+    def __init__(self, param, options=None, x_average=True, **kwargs):
+        super().__init__(param, options=options, x_average=x_average, **kwargs)
         pybamm.citations.register("Timms2021")
 
-    def get_fundamental_variables(self):
-        T_x_av = pybamm.Variable(
+    def build(self):
+        T_av = pybamm.Variable(
             "X-averaged cell temperature [K]",
             domain="current collector",
             scale=self.param.T_ref,
         )
-        T_vol_av = self._yz_average(T_x_av)
+        T_dict = self._get_x_uniform_temperatures(T_av, self._yz_average(T_av))
+        self.variables.update(self._get_standard_fundamental_variables(T_dict))
+        self.variables.update(self._get_heat_source_variables(T_dict))
 
-        T_dict = {
-            "negative current collector": T_x_av,
-            "positive current collector": T_x_av,
-            "x-averaged cell": T_x_av,
-            "volume-averaged cell": T_vol_av,
-        }
-        for domain in ["negative electrode", "separator", "positive electrode"]:
-            T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
+        Q_av = self.variables["X-averaged total heating [W.m-3]"]
+        T_surf = self._coupled_surface_temperature()
+        self._set_rhs(T_av, Q_av, T_surf)
+        self._set_boundary_conditions(T_av, T_surf)
+        self.initial_conditions[T_av] = self.param.T_init
 
-        variables = self._get_standard_fundamental_variables(T_dict)
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        variables.update(self._get_standard_coupled_variables(variables))
-        return variables
-
-    def set_rhs(self, variables):
-        T_av = variables["X-averaged cell temperature [K]"]
-        Q_av = variables["X-averaged total heating [W.m-3]"]
-        T_surf = variables["Surface temperature [K]"]
+    def _set_rhs(self, T_av, Q_av, T_surf):
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
@@ -85,19 +73,14 @@ class CurrentCollector2D(BaseThermal):
         # source term appears in.
         # Note: not correct if lambda_eff is a function of T_av - need to implement div
         # in 2D rather than doing laplacian directly
-        self.rhs = {
-            T_av: (
-                self.param.lambda_eff(T_av) * pybamm.laplacian(T_av)
-                + pybamm.source(Q_av, T_av)
-                + Q_yz_surface
-                + Q_edge
-            )
-            / self.param.rho_c_p_eff(T_av)
-        }
+        self.rhs[T_av] = (
+            self.param.lambda_eff(T_av) * pybamm.laplacian(T_av)
+            + pybamm.source(Q_av, T_av)
+            + Q_yz_surface
+            + Q_edge
+        ) / self.param.rho_c_p_eff(T_av)
 
-    def set_boundary_conditions(self, variables):
-        T_av = variables["X-averaged cell temperature [K]"]
-        T_surf = variables["Surface temperature [K]"]
+    def _set_boundary_conditions(self, T_av, T_surf):
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
@@ -118,13 +101,7 @@ class CurrentCollector2D(BaseThermal):
             (q_tab_p - q_edge) / self.param.p.lambda_cc(T_av), "positive tab"
         )
 
-        self.boundary_conditions = {
-            T_av: {
-                "negative tab": (negative_tab_bc, "Neumann"),
-                "positive tab": (positive_tab_bc, "Neumann"),
-            }
+        self.boundary_conditions[T_av] = {
+            "negative tab": (negative_tab_bc, "Neumann"),
+            "positive tab": (positive_tab_bc, "Neumann"),
         }
-
-    def set_initial_conditions(self, variables):
-        T_av = variables["X-averaged cell temperature [K]"]
-        self.initial_conditions = {T_av: self.param.T_init}

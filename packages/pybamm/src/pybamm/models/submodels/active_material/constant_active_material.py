@@ -21,24 +21,18 @@ class Constant(BaseModel):
         Phase of the particle (default is "primary")
     """
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain = self.domain
-        phase = self.phase_name
         eps_solid = self.phase_param.epsilon_s
         deps_solid_dt = pybamm.FullBroadcast(
             0, f"{domain} electrode", "current collector"
         )
 
-        variables = self._get_standard_active_material_variables(eps_solid)
-        variables.update(
+        self.variables.update(self._get_standard_active_material_variables(eps_solid))
+        self.variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )
-
-        variables.update(
-            {
-                f"Loss of lithium due to loss of {phase}active material "
-                f"in {domain} electrode [mol]": pybamm.Scalar(0)
-            }
-        )
-
-        return variables
+        self.variables[
+            f"Loss of lithium due to loss of {self.phase_name}active material "
+            f"in {domain} electrode [mol]"
+        ] = pybamm.Scalar(0)
