@@ -197,16 +197,15 @@ IDAKLUSolverGroup *create_casadi_solver_group(
     );
   }
 
-  // No owner: CasADi's expression sets hold their own functions.
   return new IDAKLUSolverGroup(
-    std::move(solvers), number_of_states, number_of_parameters, inputs_length, py::none());
+    std::move(solvers), number_of_states, number_of_parameters, inputs_length);
 }
 
 // One IDAKLU solver per Rust evaluator, each over the Rust model's own tapes and Jacobian.
 // An int leads: without pybind11 headers, CodeQL parses a leading `py::object` as a variable initialiser
 IDAKLUSolverGroup *create_rust_solver_group(
     int number_of_states,
-    py::object rust_evaluators,
+    py::sequence rust_evaluators,
     int number_of_inputs,
     int number_of_sens_params,
     int number_of_events,
@@ -229,14 +228,11 @@ IDAKLUSolverGroup *create_rust_solver_group(
     auto setup_opts = SetupOptions(py_opts);
     auto solver_opts = SolverOptions(py_opts);
 
-    // Resolve before any parallel region: a throwing static initialiser is retried per thread.
-    rust_ffi();
-
     const int num_solvers = setup_opts.num_solvers;
-    const int pool_size = static_cast<int>(py::len(rust_evaluators));
-    if (pool_size != num_solvers) {
+    const int n_evaluators = static_cast<int>(py::len(rust_evaluators));
+    if (n_evaluators != num_solvers) {
         throw std::invalid_argument(
-            "rust_evaluators holds " + std::to_string(pool_size) +
+            "rust_evaluators holds " + std::to_string(n_evaluators) +
             " evaluator(s) but num_solvers is " + std::to_string(num_solvers) +
             "; each solver needs its own evaluator.");
     }
@@ -275,13 +271,11 @@ IDAKLUSolverGroup *create_rust_solver_group(
     solvers.reserve(num_solvers);
     for (int i = 0; i < num_solvers; i++) {
         // One evaluator per solver: they share the compiled tape but not their scratch.
-        void* model_ptr = pybamm_rust_detail::model_from_address(
-            rust_evaluators.attr("as_ptr")(i).cast<uintptr_t>());
-
         auto functions = std::make_unique<RustFunctions>(
-            model_ptr, number_of_states, number_of_inputs, number_of_sens_params,
-            number_of_algebraic_states, number_of_events, jac_nnz, colptrs, rowvals,
-            alg_jac_nnz, alg_rowvals, alg_colvals, output_lens, setup_opts, events_read_yp
+            pybamm_rust_detail::claim_evaluator(rust_evaluators[i]), number_of_states,
+            number_of_inputs, number_of_sens_params, number_of_algebraic_states,
+            number_of_events, jac_nnz, colptrs, rowvals, alg_jac_nnz, alg_rowvals,
+            alg_colvals, output_lens, setup_opts, events_read_yp
         );
 
         solvers.emplace_back(
@@ -301,8 +295,7 @@ IDAKLUSolverGroup *create_rust_solver_group(
     }
 
     return new IDAKLUSolverGroup(
-        std::move(solvers), number_of_states, number_of_sens_params, number_of_inputs,
-        std::move(rust_evaluators));
+        std::move(solvers), number_of_states, number_of_sens_params, number_of_inputs);
 }
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
@@ -427,6 +420,8 @@ PYBIND11_MODULE(idaklu, m)
 #else
   m.attr("shares_python_casadi") = false;
 #endif
+  // The Rust evaluator ABI version this build reads, for diagnosing a refused evaluator.
+  m.attr("rust_abi_version") = PYBAMM_RUST_ABI_VERSION;
 
   m.def("sundials_error_message", &sundials_error_message,
     "Get a human-readable message for a SUNDIALS error code",
@@ -496,7 +491,7 @@ PYBIND11_MODULE(idaklu, m)
                   std::vector<expr_int>, std::vector<expr_int>,
                   std::vector<sunrealtype>, sunrealtype, sunrealtype,
                   int, int, sunrealtype, bool, sunrealtype>(),
-         py::arg("rust_evaluators"), py::arg("n_rhs"), py::arg("n_alg"),
+         py::arg("rust_evaluator"), py::arg("n_rhs"), py::arg("n_alg"),
          py::arg("jac_rows"), py::arg("jac_cols"),
          py::arg("atol"), py::arg("rtol"), py::arg("step_tol"),
          py::arg("max_iter"), py::arg("max_backtracks"),
