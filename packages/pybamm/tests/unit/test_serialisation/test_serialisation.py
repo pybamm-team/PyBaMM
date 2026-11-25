@@ -1042,6 +1042,26 @@ class TestSerialise:
             sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
         )
 
+    def test_load_restores_default_geometry_as_geometry(self):
+        class _LocalLithiumIonModel(pybamm.lithium_ion.BaseModel):
+            pass
+
+        model = _LocalLithiumIonModel()
+        x = pybamm.Variable("x", domain="positive particle")
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"x": x}
+
+        data = json.loads(
+            json.dumps(Serialise.serialise_custom_model(model), default=str)
+        )
+        with pytest.warns(UserWarning, match=r"Falling back"):
+            loaded = Serialise.load_custom_model(data)
+
+        assert isinstance(model.default_geometry, pybamm.Geometry)
+        assert isinstance(loaded.default_geometry, pybamm.Geometry)
+        assert loaded.default_geometry.keys() == model.default_geometry.keys()
+
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no
         ``discretisation`` section, so existing payloads are unaffected."""

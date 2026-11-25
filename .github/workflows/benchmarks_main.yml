@@ -106,7 +106,7 @@ jobs:
       SUITE: ${{ matrix.suite }}
 
     steps:
-      - uses: bencherdev/bencher@7de3c69a85380826613050826b4bce062be2f07d # v0.6.16
+      - uses: bencherdev/bencher@b2484bc6734c8e6da4fad141bd13527a11da3988 # v0.6.17
 
       # Fewer rounds keep each sweep inside Bencher's 5 minute job limit
       - name: Track main branch benchmarks with Bencher
@@ -140,6 +140,10 @@ jobs:
             --threshold-measure import-modules \
             --threshold-test percentage \
             --threshold-upper-boundary 0.02 \
+            --threshold-max-sample-size 50 \
+            --threshold-measure peak-memory \
+            --threshold-test percentage \
+            --threshold-upper-boundary 0.05 \
             --threshold-max-sample-size 50 \
             --thresholds-reset \
             --error-on-alert \
