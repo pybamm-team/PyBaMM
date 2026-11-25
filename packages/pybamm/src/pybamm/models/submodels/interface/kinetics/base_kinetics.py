@@ -22,6 +22,9 @@ class BaseKinetics(BaseInterface):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool, optional
+        Whether the reaction sees x-averaged potentials, concentrations and
+        temperature, so that it is uniform in x. Default is False.
     """
 
     def get_fundamental_variables(self):
@@ -60,23 +63,12 @@ class BaseKinetics(BaseInterface):
                 "Lithium metal interface surface potential difference [V]"
             ]
         else:
-            delta_phi = variables[
-                f"{Domain} electrode surface potential difference [V]"
-            ]
-            c_s_surf = variables.get(
-                f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
+            delta_phi = self._local_or_x_averaged(
+                variables, f"{Domain} electrode surface potential difference [V]"
             )
             # If delta_phi was broadcast, take only the orphan.
             if isinstance(delta_phi, pybamm.Broadcast):
                 delta_phi = delta_phi.orphans[0]
-            # x-averaged particles take a uniform reaction (SPMe), so use the
-            # x-averaged potential difference rather than the local composite one
-            elif self.reaction == "lithium-ion main" and isinstance(
-                c_s_surf, pybamm.Broadcast
-            ):
-                delta_phi = variables[
-                    f"X-averaged {domain} electrode surface potential difference [V]"
-                ]
         # For "particle-size distribution" models, delta_phi must then be
         # broadcast to "particle size" domain
         domain_options = getattr(self.options, domain)
@@ -110,14 +102,16 @@ class BaseKinetics(BaseInterface):
             domain_options["particle size"] == "distribution"
             and self.options.electrode_types[domain] == "porous"
         ):
-            ocp = variables[
+            ocp = self._local_or_x_averaged(
+                variables,
                 f"{Domain} electrode {reaction_name}"
-                "open-circuit potential distribution [V]"
-            ]
+                "open-circuit potential distribution [V]",
+            )
         else:
-            ocp = variables[
-                f"{Domain} electrode {reaction_name}open-circuit potential [V]"
-            ]
+            ocp = self._local_or_x_averaged(
+                variables,
+                f"{Domain} electrode {reaction_name}open-circuit potential [V]",
+            )
         # If ocp was broadcast, and the reaction is lithium metal plating OR
         # delta_phi's secondary domain is "current collector", then take only the
         # orphan.
@@ -155,16 +149,15 @@ class BaseKinetics(BaseInterface):
             j_tot.print_name = "j_tot"
 
             eta_sei = -j_tot * L_sei * R_sei
-            if self.size_distribution and eta_r.domains["secondary"] != [
-                f"{domain} electrode"
-            ]:
+            if (self.size_distribution or self.x_average) and eta_r.domains[
+                "secondary"
+            ] != [f"{domain} electrode"]:
                 eta_sei = pybamm.x_average(eta_sei)
         else:
             eta_sei = pybamm.Scalar(0)
         eta_r += eta_sei
 
         j0 = self._broadcast_to_eta_r_domain(j0, eta_r)
-        eta_r = self._broadcast_to_eta_r_domain(eta_r, j0)
 
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
@@ -243,11 +236,11 @@ class BaseKinetics(BaseInterface):
 
         return variables
 
-    def _broadcast_to_eta_r_domain(self, symbol, other):
-        """Broadcast an x-averaged symbol onto the electrode if other is not."""
+    def _broadcast_to_eta_r_domain(self, symbol, eta_r):
+        """Broadcast an x-averaged symbol onto the electrode if eta_r is not."""
         if symbol.secondary_domain == [
             "current collector"
-        ] and other.secondary_domain == [f"{self.domain} electrode"]:
+        ] and eta_r.secondary_domain == [f"{self.domain} electrode"]:
             symbol = pybamm.SecondaryBroadcast(symbol, [f"{self.domain} electrode"])
         return symbol
 

@@ -54,15 +54,16 @@ class SPMe(SPM):
     def set_electrolyte_potential_submodel(self):
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        # The surface-form submodels are composite only, so "integrated" would be lost
-        if (
-            self.options["electrolyte conductivity"] == "integrated"
-            and self.options["surface form"] != "false"
+        # The surface-form submodels are composite only, and the integrated submodel
+        # needs a porous negative electrode
+        if self.options["electrolyte conductivity"] == "integrated" and (
+            self.options["surface form"] != "false"
+            or self.options.electrode_types["negative"] == "planar"
         ):
             raise pybamm.OptionError(
-                "electrolyte conductivity 'integrated' is not supported for SPMe "
-                "with a surface form; use surface form 'false' or electrolyte "
-                "conductivity 'composite'"
+                "electrolyte conductivity 'integrated' is only supported for SPMe "
+                "with surface form 'false' and a porous negative electrode; use "
+                "electrolyte conductivity 'composite'"
             )
 
         if (
