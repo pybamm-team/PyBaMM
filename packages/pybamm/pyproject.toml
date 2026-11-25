@@ -54,7 +54,7 @@ Changelog = "https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # For example notebooks and scripts, which read data with pandas
-examples = ["jupyter", "pandas>=1.5.0"]
+examples = ["jupyter", "pandas>=3.1.1"]
 plot = [
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
     # on systems without an attached display, it should never be imported
