@@ -94,20 +94,19 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             sgn = 1 if domain == "negative" else -1
             j_xav_explicit = sgn * i_boundary_cc / (a_av * self.domain_param.L)
 
-        # Set surface concentration based on polynomial order
-        if self.name == "uniform profile":
-            # The concentration is uniform so the surface value is equal to
-            # the average
+            # Set surface concentration based on polynomial order
+            if self.name == "quadratic profile":
+                # D should be evaluated at the surface concentration, but using the
+                # average keeps the SPM(e) a system of ODEs rather than DAEs
+                c_s_surf_xav = c_s_av - (j_xav_explicit * R / 5 / F / D_eff_av)
+            else:  # "quartic profile"
+                # eq 31 of Subramanian2005 (see the notes for the quadratic profile)
+                c_s_surf_xav = c_s_av + R / 35 * (
+                    8 * q_s_av - (j_xav_explicit / F / D_eff_av)
+                )
+        else:
+            # The concentration is uniform so the surface value is the average
             c_s_surf_xav = c_s_av
-        elif self.name == "quadratic profile":
-            # D should be evaluated at the surface concentration, but using the
-            # average keeps the SPM(e) a system of ODEs rather than DAEs
-            c_s_surf_xav = c_s_av - (j_xav_explicit * R / 5 / F / D_eff_av)
-        elif self.name == "quartic profile":
-            # eq 31 of Subramanian2005 (see the notes for the quadratic profile)
-            c_s_surf_xav = c_s_av + R / 35 * (
-                8 * q_s_av - (j_xav_explicit / F / D_eff_av)
-            )
 
         # Set concentration depending on polynomial order. The spatial variable r
         # has no "electrode" domain since c_s_xav doesn't depend on x
@@ -127,7 +126,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             A = 5 / 2 * c_s_av - 3 / 2 * c_s_surf_xav
             B = (5 / 2) * (c_s_surf_xav - c_s_av)
             C = zero
-        elif self.name == "quartic profile":
+        else:  # "quartic profile"
             # The concentration is given by c = A + B*r**2 + C*r**4
             # eqs 24-26 in Subramanian2005
             A = 39 / 4 * c_s_surf_xav - 3 * q_s_av * R - 35 / 4 * c_s_av
@@ -141,6 +140,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         c_s_surf = pybamm.PrimaryBroadcast(c_s_surf_xav, [f"{domain} electrode"])
 
         # Set flux based on polynomial order
+        gradient_rhs = {}
         if self.name == "uniform profile":
             # The flux is zero since there is no concentration gradient
             N_s_xav = pybamm.FullBroadcastToEdges(
@@ -151,15 +151,22 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav, current)
             D_eff = pybamm.SecondaryBroadcast(D_eff_xav, [f"{domain} electrode"])
             variables.update(self._get_standard_diffusivity_variables(D_eff))
-        if self.name == "quadratic profile":
             # The flux may be computed directly from the polynomial for c
-            N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r / R**2
-        elif self.name == "quartic profile":
-            # The flux may be computed directly from the polynomial for c
-            N_s_xav = -D_eff_xav * (
-                (-70 * c_s_surf_xav + 20 * q_s_av * R + 70 * c_s_av) * r / R**2
-                + (105 * c_s_surf_xav - 28 * q_s_av * R - 105 * c_s_av) * (r**3 / R**4)
-            )
+            if self.name == "quadratic profile":
+                N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r / R**2
+            else:  # "quartic profile"
+                N_s_xav = -D_eff_xav * (
+                    (-70 * c_s_surf_xav + 20 * q_s_av * R + 70 * c_s_av) * r / R**2
+                    + (105 * c_s_surf_xav - 28 * q_s_av * R - 105 * c_s_av)
+                    * (r**3 / R**4)
+                )
+                # eq 30 of Subramanian2005: an extra ODE for the average particle
+                # concentration gradient
+                dqdt = (
+                    -30 * pybamm.surf(D_eff_xav) * q_s_av / R**2
+                    - 45 / 2 * j_xav / F / R**2
+                )
+                gradient_rhs[q_s_av] = pybamm.source(dqdt, q_s_av)
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])
 
         variables.update(
@@ -187,11 +194,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             self.rhs = {c_s_av: pybamm.source(-3 * j_xav / F / R, c_s_av)}
             self.initial_conditions = {c_s_av: c_init}
 
+        self.rhs.update(gradient_rhs)
         if self.name == "quartic profile":
-            # eq 30 of Subramanian2005: an extra ODE for the average particle
-            # concentration gradient
-            dqdt = (
-                -30 * pybamm.surf(D_eff_xav) * q_s_av / R**2 - 45 / 2 * j_xav / F / R**2
-            )
-            self.rhs[q_s_av] = pybamm.source(dqdt, q_s_av)
             self.initial_conditions[q_s_av] = 0

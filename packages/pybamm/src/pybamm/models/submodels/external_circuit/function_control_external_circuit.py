@@ -59,7 +59,7 @@ class FunctionControl(BaseModel):
         i_var = pybamm.Variable("Current variable [A]", scale=self.param.Q)
         if self.control in ["algebraic", "differential"]:
             I = i_var
-        elif self.control == "differential with max":
+        else:  # "differential with max"
             i_input = pybamm.FunctionParameter(
                 "CCCV current function [A]", {"Time [s]": pybamm.t}
             )

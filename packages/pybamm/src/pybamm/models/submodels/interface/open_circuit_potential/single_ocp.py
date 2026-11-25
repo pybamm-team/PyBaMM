@@ -34,7 +34,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             )
             ocp_bulk = self.phase_param.U(c_e_av, self.param.T_init)
 
-        elif self.reaction == "lead-acid oxygen":
+        else:  # "lead-acid oxygen"
             ocp_surf = self.param.U_Ox
             ocp_bulk = self.param.U_Ox
             dUdT = pybamm.Scalar(0)

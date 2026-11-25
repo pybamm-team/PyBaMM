@@ -62,7 +62,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                     # Likewise, SEI on cracks only in a porous electrode
                     reaction_names.extend(["lithium plating ", "SEI on cracks "])
             return {reaction_name: 1 for reaction_name in reaction_names}
-        elif self.chemistry == "lead-acid":
+        else:  # "lead-acid"
             return {
                 "": self.param.domain_params[domain].prim.s_plus_S,
                 "oxygen ": self.param.s_plus_Ox,

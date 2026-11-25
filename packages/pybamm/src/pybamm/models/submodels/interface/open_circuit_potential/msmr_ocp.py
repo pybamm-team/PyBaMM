@@ -34,35 +34,39 @@ class MSMROpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
         x_average = self._x_average_inputs
 
-        if self.reaction == "lithium-ion main":
-            T = self._coupled_electrode_variable("electrode temperature [K]", x_average)
-            # For "particle-size distribution" models, take distribution version
-            # of the surface stoichiometry and potential.
-            if self.size_distribution:
-                sto_surf = self._coupled_electrode_variable(
-                    f"{phase_name}particle surface stoichiometry distribution",
-                    x_average,
-                    size=True,
-                )
-                ocp_surf = self._coupled_electrode_variable(
-                    f"{phase_name}particle surface potential distribution [V]",
-                    x_average,
-                    size=True,
-                )
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
-            else:
-                sto_surf = self._coupled_electrode_variable(
-                    f"{phase_name}particle surface stoichiometry", x_average
-                )
-                ocp_surf = self._coupled_electrode_variable(
-                    f"{phase_name}particle surface potential [V]", x_average
-                )
-
-            ocp_bulk = self.coupled_variable(
-                f"Average {domain} {phase_name}particle potential [V]",
-                domain="current collector",
+        # MSMR open-circuit potentials only exist for the main reaction
+        if self.reaction != "lithium-ion main":
+            raise pybamm.OptionError(
+                f"MSMR open-circuit potential is not defined for {self.reaction!r}"
             )
-            dUdT = self.phase_param.dUdT(sto_surf)
+        T = self._coupled_electrode_variable("electrode temperature [K]", x_average)
+        # For "particle-size distribution" models, take distribution version
+        # of the surface stoichiometry and potential.
+        if self.size_distribution:
+            sto_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface stoichiometry distribution",
+                x_average,
+                size=True,
+            )
+            ocp_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface potential distribution [V]",
+                x_average,
+                size=True,
+            )
+            T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
+        else:
+            sto_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface stoichiometry", x_average
+            )
+            ocp_surf = self._coupled_electrode_variable(
+                f"{phase_name}particle surface potential [V]", x_average
+            )
+
+        ocp_bulk = self.coupled_variable(
+            f"Average {domain} {phase_name}particle potential [V]",
+            domain="current collector",
+        )
+        dUdT = self.phase_param.dUdT(sto_surf)
 
         variables = self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT)
         self._alias_ocp_as_equilibrium(variables)

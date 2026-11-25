@@ -113,7 +113,7 @@ class Plating(BasePlating):
             # In the irreversible plating model, all plated lithium is dead lithium
             dc_plated_Li = pybamm.Scalar(0)
             dc_dead_Li = -a_j_stripping / self.param.F
-        elif lithium_plating_option == "partially reversible":
+        else:  # "partially reversible"
             # In the partially reversible plating model, the coupling term turns
             # reversible lithium into dead lithium over time.
             L_sei = self._get_coupled_sei_thickness(x_average=self.x_average)

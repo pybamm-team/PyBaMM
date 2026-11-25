@@ -86,7 +86,7 @@ class SEIGrowth(BaseModel):
                 scale=scale,
             )
             c_sei_state = c_sei
-        elif self.reaction_loc == "interface":
+        else:  # "interface"
             # c_sei is an interfacial quantity [mol.m-2]
             scale = L_sei_0 / V_bar_sei
             c_sei = pybamm.Variable(

@@ -130,7 +130,7 @@ class PolynomialProfile(BaseParticle):
             A = 5 / 2 * c_s_rav - 3 / 2 * c_s_surf
             B = 5 / 2 * (c_s_surf - c_s_rav)
             C = zero
-        elif self.name == "quartic profile":
+        else:  # "quartic profile"
             # The concentration is given by c = A + B*r**2 + C*r**4
             # eqs 24-26 in Subramanian2005
             A = 39 / 4 * c_s_surf - 3 * q_s_rav * R_param - 35 / 4 * c_s_rav
