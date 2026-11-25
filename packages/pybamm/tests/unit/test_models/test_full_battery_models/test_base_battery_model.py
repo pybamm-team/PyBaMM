@@ -650,9 +650,11 @@ class TestThermalElectrolyteConductivity:
         )
         model.build_model()
         assert model.submodels["thermal"].full_electrolyte_conductivity
-        assert not pybamm.lithium_ion.SPMe({"thermal": "lumped"}).submodels[
-            "thermal"
-        ].full_electrolyte_conductivity
+        assert (
+            not pybamm.lithium_ion.SPMe({"thermal": "lumped"})
+            .submodels["thermal"]
+            .full_electrolyte_conductivity
+        )
 
 
 class TestLegacyDependentDefaults:
