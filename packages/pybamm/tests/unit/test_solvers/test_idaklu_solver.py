@@ -2002,10 +2002,12 @@ class TestIDAKLUSolver:
         solution = pybamm.Simulation(model).solve([0, 3600])
         assert solution.termination == "event: dV/dt > -1e-4 V/s"
 
-        reference = pybamm.Simulation(model_class()).solve(np.linspace(0, 3600, 36001))[
-            "Voltage [V]"
-        ]
         t = solution.t[-1]
+        # tight tolerances decouple the reference from the event solve's errors;
+        # stopping either side of t avoids interpolating between solver steps
+        reference = pybamm.Simulation(
+            model_class(), solver=pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-11)
+        ).solve(np.array([0, t - 0.05, t + 0.05, 3600]))["Voltage [V]"]
         slope = (reference(t + 0.05) - reference(t - 0.05)) / 0.1
         np.testing.assert_allclose(slope, -1e-4, rtol=1e-2)
 

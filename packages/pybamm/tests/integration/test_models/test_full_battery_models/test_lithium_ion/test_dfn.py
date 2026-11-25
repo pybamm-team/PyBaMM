@@ -185,6 +185,10 @@ class TestDFNWithSizeDistribution:
             "R_n_sec": 3,
             "R_p_prim": 3,
             "R_p_sec": 3,
+            "r_n_prim": 5,
+            "r_n_sec": 5,
+            "r_p_prim": 5,
+            "r_p_sec": 5,
         }
 
     def test_basic_processing(self):
@@ -195,7 +199,8 @@ class TestDFNWithSizeDistribution:
         )
         modeltest.test_all()
 
-    def test_composite(self):
+    @staticmethod
+    def _composite_model_and_parameters():
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
@@ -216,9 +221,33 @@ class TestDFNWithSizeDistribution:
             R_max_n_sec=1.1,
         )
         # self.run_basic_processing_test(options, parameter_values=parameter_values)
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        return pybamm.lithium_ion.DFN(options), parameter_values
+
+    def test_composite(self):
+        model, parameter_values = self._composite_model_and_parameters()
+        # Coarse particle and size meshes keep the model small, but electrolyte
+        # conservation needs the default x mesh to stay within tolerance
+        particle_pts = {
+            key: value
+            for key, value in self.var_pts.items()
+            if key.startswith(("r_", "R_"))
+        }
+        modeltest = tests.StandardModelTest(
+            model,
+            parameter_values=parameter_values,
+            var_pts={**model.default_var_pts, **particle_pts},
+        )
         modeltest.test_all()
+
+    def test_composite_default_mesh(self):
+        # Solves and checks the outputs at full resolution, for regressions the
+        # coarse mesh above could hide; serialisation is mesh-independent, so skipped
+        model, parameter_values = self._composite_model_and_parameters()
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_processing_parameters()
+        modeltest.test_processing_disc()
+        modeltest.test_solving()
+        modeltest.test_outputs()
 
     def test_basic_processing_tuple(self):
         options = {"particle size": ("single", "distribution")}

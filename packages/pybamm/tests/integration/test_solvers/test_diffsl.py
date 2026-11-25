@@ -55,14 +55,15 @@ class TestDiffSLExport:
         )
 
     @pytest.mark.skipif(not has_pydiffsol, reason="pydiffsol is not installed")
+    # Slowest first, so xdist does not finish on a lone DFN compile
     @pytest.mark.parametrize(
         "model",
         [
-            pybamm.lithium_ion.SPM(),
-            pybamm.lithium_ion.SPMe(),
             pybamm.lithium_ion.DFN(),
+            pybamm.lithium_ion.SPMe(),
+            pybamm.lithium_ion.SPM(),
         ],
-        ids=["SPM", "SPMe", "DFN"],
+        ids=["DFN", "SPMe", "SPM"],
     )
     @pytest.mark.parametrize(
         "inputs",
@@ -156,14 +157,15 @@ class TestDiffSLExport:
         np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=2e-3)
 
     @pytest.mark.skipif(not has_pydiffsol, reason="pydiffsol is not installed")
+    # Slowest first, so xdist does not finish on a lone DFN compile
     @pytest.mark.parametrize(
         "model",
         [
-            pybamm.lithium_ion.SPM(),
-            pybamm.lithium_ion.SPMe(),
             pybamm.lithium_ion.DFN(),
+            pybamm.lithium_ion.SPMe(),
+            pybamm.lithium_ion.SPM(),
         ],
-        ids=["SPM", "SPMe", "DFN"],
+        ids=["DFN", "SPMe", "SPM"],
     )
     @pytest.mark.parametrize(
         "inputs",
@@ -173,8 +175,8 @@ class TestDiffSLExport:
     @pytest.mark.parametrize(
         "experiment",
         [
-            None,
             pytest.param("simple", id="with_experiment"),
+            None,
         ],
     )
     def test_simulations(self, model, inputs, experiment, request, timing_results):

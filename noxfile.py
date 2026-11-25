@@ -270,7 +270,18 @@ def _run_example_notebooks(session: nox.Session, *paths: Path) -> None:
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, extras=["all", "jax"], groups=["dev"])
     defaults = [] if selected else [str(path) for path in paths]
-    session.run("pytest", "--nbmake", *session.posargs, *defaults, external=True)
+    # The repo-root pytest config has no -nauto, so ask for workers here; -v keeps
+    # a line per notebook in the log, which xdist's progress dots would drop
+    session.run(
+        "pytest",
+        "--nbmake",
+        "-n",
+        "auto",
+        "-v",
+        *session.posargs,
+        *defaults,
+        external=True,
+    )
 
 
 @nox.session(name="scripts", default=False)
