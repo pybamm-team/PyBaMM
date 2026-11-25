@@ -5,6 +5,8 @@ PyBaMM's.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
 ### Added
 
 - `dual_continuum`: the dual-continuum model of Paten et al. (2026), a DFN with a homogenised active-material balance (DC0, DC1, transient DC1t or Yang closures), closure fitting, and the `Paten2026_DC`, `Paten2026_DFN` and `Paten2026_3D_NMC` parameter sets ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
