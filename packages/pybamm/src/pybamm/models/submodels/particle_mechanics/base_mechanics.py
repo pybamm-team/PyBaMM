@@ -104,7 +104,9 @@ class BaseMechanics(pybamm.BaseSubModel):
         """Crack length and cracking rate variables for particles that do not crack."""
         domain, Domain = self.domain_Domain
         zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), f"{domain} electrode", "current collector"
+            pybamm.Scalar(0),
+            f"{domain} electrode",
+            {"secondary": "current collector"},
         )
         variables = self._get_standard_variables(zero)
         variables.update(
