@@ -423,6 +423,51 @@ class TestEISSimulationSolve:
         z_v = eis_sim.solve(frequencies, inputs={"vf_solid": 0.94}, initial_soc="0.5 V")
         assert z_v.impedance.shape == (5,)
 
+    def test_eis_rust_backend_matches_casadi(self):
+        def impedance(fmt):
+            model = pybamm.lithium_ion.SPM(
+                options={"surface form": "differential"}, name="SPM"
+            )
+            model.convert_to_format = fmt
+            eis_sim = pybamm.EISSimulation(model)
+            frequencies = np.logspace(-2, 2, 10)
+            return eis_sim.solve(frequencies).impedance
+
+        np.testing.assert_allclose(impedance("rust"), impedance("casadi"), rtol=1e-6)
+
+    def test_eis_inputs_match_across_backends_and_orders(self):
+        frequencies = np.logspace(-2, 2, 10)
+        inputs = {"R_contact": 0.01, "C_dl_n": 0.3}
+        reordered = dict(reversed(inputs.items()))
+
+        def impedances(fmt):
+            model = pybamm.lithium_ion.SPM(
+                options={"surface form": "differential", "contact resistance": "true"},
+                name="SPM",
+            )
+            model.convert_to_format = fmt
+            parameter_values = model.default_parameter_values
+            parameter_values.update(
+                {
+                    "Contact resistance [Ohm]": pybamm.InputParameter("R_contact"),
+                    "Negative electrode double-layer capacity [F.m-2]": (
+                        pybamm.InputParameter("C_dl_n")
+                    ),
+                }
+            )
+            eis_sim = pybamm.EISSimulation(model, parameter_values=parameter_values)
+            return [
+                eis_sim.solve(frequencies, inputs=given).impedance
+                for given in (inputs, reordered)
+            ]
+
+        casadi_z, casadi_z_reordered = impedances("casadi")
+        rust_z, rust_z_reordered = impedances("rust")
+        # Stacking follows the model's input order, not the caller's dict order
+        np.testing.assert_allclose(casadi_z_reordered, casadi_z, rtol=1e-12)
+        np.testing.assert_allclose(rust_z_reordered, rust_z, rtol=1e-12)
+        np.testing.assert_allclose(rust_z, casadi_z, rtol=1e-6)
+
     def test_high_freq_intercept_matches_contact_resistance(self):
         model = pybamm.lithium_ion.SPM(
             options={"surface form": "differential", "contact resistance": "true"}

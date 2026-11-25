@@ -392,7 +392,7 @@ class StateVector(StateVectorBase):
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         if y is None:
-            raise ValueError("Must provide a 'y' for converting state vectors")
+            raise pybamm.ModelError("Must provide a 'y' for converting state vectors")
         return casadi.vertcat(*[y[y_slice] for y_slice in self.y_slices])
 
     def _to_rust(
@@ -485,7 +485,7 @@ class StateVectorDot(StateVectorBase):
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         if y_dot is None:
-            raise ValueError(
+            raise pybamm.ModelError(
                 "Must provide a 'y_dot' for converting state vectors differentiated "
                 "in time, e.g. by `symbol.diff(pybamm.t)`"
             )

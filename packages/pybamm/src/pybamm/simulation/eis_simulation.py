@@ -4,6 +4,7 @@ import numpy as np
 from scipy.sparse import csc_matrix
 
 import pybamm
+from pybamm.solvers.base_solver import stack_inputs
 
 from .base_simulation import BaseSimulation
 
@@ -192,13 +193,12 @@ class EISSimulation(BaseSimulation):
             raise pybamm.SolverError(f"No value provided for input: [{missing_str}].")
         inputs_dict = {name: inputs[name] for name in self._input_names}
 
-        # Convert inputs to casadi format for Jacobian evaluation
-        if model.convert_to_format == "casadi":
-            from casadi import vertcat
-
-            casadi_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
-        else:
-            casadi_inputs = inputs_dict
+        # Inputs in the format the compiled Jacobian expects
+        eval_inputs = (
+            stack_inputs(inputs_dict, model.convert_to_format)
+            if model.uses_stacked_inputs
+            else inputs_dict
+        )
 
         # Only compile Jacobian/model functions on first call; the compiled
         # functions persist on the model and work with any inputs/y0 values.
@@ -214,8 +214,10 @@ class EISSimulation(BaseSimulation):
         self._output_jacobian = Function(
             "eis_outputs", [y], [jacobian(output_expression, y)]
         )(y0).sparse()
-        J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
-        neg_J = -csc_matrix(J_sparse)
+        J = model.jac_rhs_algebraic_eval(0, y0, eval_inputs)
+        if model.convert_to_format == "casadi":
+            J = J.sparse()
+        neg_J = -csc_matrix(J)
 
         return self._cached_M, neg_J, self._cached_b
 
