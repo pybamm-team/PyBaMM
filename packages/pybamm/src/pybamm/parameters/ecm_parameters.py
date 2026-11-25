@@ -39,6 +39,7 @@ class EcmParameters:
 
     def _set_initial_condition_parameters(self):
         self.initial_soc = pybamm.Parameter("Initial SoC")
+        self.initial_h = pybamm.Parameter("Initial hysteresis state")
         self.initial_T_cell = pybamm.Parameter("Initial temperature [K]") - 273.15
         self.initial_T_jig = pybamm.Parameter("Initial temperature [K]") - 273.15
 
@@ -48,8 +49,29 @@ class EcmParameters:
         )
         return ambient_temperature_K - 273.15
 
-    def ocv(self, soc):
-        return pybamm.FunctionParameter("Open-circuit voltage [V]", {"SoC": soc})
+    def ocv(self, T_cell, soc, mode=None):
+        if mode is None:
+            mode = ""
+        else:
+            mode = " " + mode
+
+        inputs = {"Cell temperature [degC]": T_cell, "SoC": soc}
+
+        return pybamm.FunctionParameter(f"Open-circuit voltage{mode} [V]", inputs)
+
+    def hysteresis_decay(self, T_cell, current, soc, mode=None):
+        """
+        Rate at which the open-circuit potential approaches the charge
+        or discharge branch when it exhibits hysteresis.
+        """
+        if mode is None:
+            mode = ""
+        else:
+            mode = " " + mode
+
+        inputs = {"Cell temperature [degC]": T_cell, "Current [A]": current, "SoC": soc}
+
+        return pybamm.FunctionParameter(f"Hysteresis decay rate{mode}", inputs)
 
     def rcr_element(self, name, T_cell, current, soc):
         inputs = {"Cell temperature [degC]": T_cell, "Current [A]": current, "SoC": soc}
@@ -59,6 +81,6 @@ class EcmParameters:
     def initial_rc_overpotential(self, element_number):
         return pybamm.Parameter(f"Element-{element_number} initial overpotential [V]")
 
-    def dUdT(self, ocv, T_cell):
-        inputs = {"Open-circuit voltage [V]": ocv, "Cell temperature [degC]": T_cell}
+    def dUdT(self, T_cell, soc):
+        inputs = {"Cell temperature [degC]": T_cell, "SoC": soc}
         return pybamm.FunctionParameter("Entropic change [V/K]", inputs)

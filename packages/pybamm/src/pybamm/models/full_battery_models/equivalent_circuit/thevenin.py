@@ -23,6 +23,10 @@ class Thevenin(pybamm.BaseModel):
         A dictionary of options to be passed to the model. The default is None.
         Possible options are:
 
+            * "open-circuit voltage" : str
+                Whether to use a single ocv curve or a ocv curve constructed from
+                charge and discharge branches using a hysteresis model. The default is
+                a single ocv curve.
             * "number of rc elements" : str
                 The number of RC elements to be added to the model. The default is 1.
             * "calculate discharge energy": str
@@ -75,6 +79,7 @@ class Thevenin(pybamm.BaseModel):
 
     def set_options(self, extra_options=None):
         possible_options = {
+            "open-circuit voltage": ["single", "one-state hysteresis"],
             "calculate discharge energy": ["false", "true"],
             "diffusion element": ["false", "true"],
             "operating mode": OperatingModes("current"),
@@ -148,9 +153,17 @@ class Thevenin(pybamm.BaseModel):
         self.submodels["external circuit"] = model
 
     def set_ocv_submodel(self):
-        self.submodels["Open-circuit voltage"] = (
-            pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
-        )
+        if self.options["open-circuit voltage"] == "single":
+            self.submodels["Open-circuit voltage"] = (
+                pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
+            )
+        elif self.options["open-circuit voltage"] == "one-state hysteresis":
+            pybamm.citations.register("Plett2004")
+            self.submodels["Open-circuit voltage"] = (
+                pybamm.equivalent_circuit_elements.OCVHysteresisElement(
+                    self.param, self.options
+                )
+            )
 
     def set_resistor_submodel(self):
         name = "Element-0 (Resistor)"
