@@ -1491,54 +1491,14 @@ class BaseModel:
             for submodel_name, submodel in self.submodels.items()
             for name in submodel.coupled_variables
         }
-        unresolved = self._variables
-        resolved = {}
-        in_progress = []
-        cache = {}
-
-        def resolve_name(name):
-            if name in resolved:
-                return resolved[name]
-            if name in in_progress:
-                cycle = " -> ".join([*in_progress[in_progress.index(name) :], name])
-                raise pybamm.ModelError(
-                    f"Circular dependency between variables: {cycle}"
-                )
-            if name not in unresolved:
-                owner = owners.get(name)
-                prefix = f" for submodel '{owner}'" if owner else ""
-                raise pybamm.ModelError(
-                    f"Missing variable{prefix}: '{name}'.\nCheck the selected "
-                    "submodels provide all of the required variables."
-                )
-            in_progress.append(name)
-            resolved[name] = resolve(unresolved[name])
-            in_progress.pop()
-            return resolved[name]
-
-        def replace(node, new_leaves):
-            if not isinstance(node, pybamm.CoupledVariable):
-                new_node = pybamm.rebuild(node, new_leaves)
-                # rebuilding drops display labels, which are not part of identity
-                if node.print_name is not None and new_node.print_name is None:
-                    new_node.print_name = node._raw_print_name
-                return new_node
-            target = resolve_name(node.name)
-            if dict(node.domains) != dict(target.domains):
-                raise pybamm.ModelError(
-                    f"Coupled variable '{node.name}' has domains {dict(node.domains)} "
-                    f"but the variable it names has domains {dict(target.domains)}"
-                )
-            return target
-
-        def resolve(symbol):
-            return pybamm.tree_map(replace, symbol, cache=cache)
+        resolver = _CoupledVariableResolver(self._variables, owners)
+        resolve = resolver.resolve
 
         def resolve_equations(equations):
             return {resolve(var): resolve(eqn) for var, eqn in equations.items()}
 
         self.variables = pybamm.FuzzyDict(
-            {name: resolve_name(name) for name in unresolved}
+            {name: resolver.resolve_name(name) for name in self._variables}
         )
         self.rhs = resolve_equations(self.rhs)
         self.algebraic = resolve_equations(self.algebraic)
@@ -2886,3 +2846,73 @@ class BoundaryConditionsDict(dict):
                     )
 
         return boundary_conditions
+
+
+class _CoupledVariableResolver:
+    """
+    Replaces coupled variables with the variables they name.
+
+    Parameters
+    ----------
+    variables : dict
+        The variables that coupled variables are resolved against. They may
+        themselves contain coupled variables.
+    owners : dict, optional
+        The submodel that requested each coupled variable, for error messages.
+    """
+
+    def __init__(self, variables, owners=None):
+        self._unresolved = variables
+        self._owners = owners or {}
+        self._resolved = {}
+        self._in_progress = []
+        self._cache = {}
+
+    def resolve_name(self, name):
+        """
+        Return the variable ``name`` with its coupled variables resolved.
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If the variable is missing or depends on itself.
+        """
+        if name in self._resolved:
+            return self._resolved[name]
+        if name in self._in_progress:
+            cycle = self._in_progress[self._in_progress.index(name) :]
+            raise pybamm.ModelError(
+                f"Circular dependency between variables: {' -> '.join([*cycle, name])}"
+            )
+        if name not in self._unresolved:
+            owner = self._owners.get(name)
+            prefix = f" for submodel '{owner}'" if owner else ""
+            raise pybamm.ModelError(
+                f"Missing variable{prefix}: '{name}'.\nCheck the selected "
+                "submodels provide all of the required variables."
+            )
+        self._in_progress.append(name)
+        self._resolved[name] = self.resolve(self._unresolved[name])
+        self._in_progress.pop()
+        return self._resolved[name]
+
+    def resolve(self, symbol):
+        """Return ``symbol`` with its coupled variables resolved."""
+        return pybamm.tree_map(self._replace, symbol, cache=self._cache)
+
+    def _replace(self, node, new_leaves):
+        if not isinstance(node, pybamm.CoupledVariable):
+            new_node = pybamm.rebuild(node, new_leaves)
+            # rebuilding drops display labels, which are not part of identity
+            if node.print_name is not None and new_node.print_name is None:
+                new_node.print_name = node._raw_print_name
+            return new_node
+        is_derivative = isinstance(node, pybamm.CoupledVariableDot)
+        name = node.get_coupled_variable().name if is_derivative else node.name
+        target = self.resolve_name(name)
+        if not node.infer_domains and dict(node.domains) != dict(target.domains):
+            raise pybamm.ModelError(
+                f"Coupled variable '{name}' has domains {dict(node.domains)} "
+                f"but the variable it names has domains {dict(target.domains)}"
+            )
+        return target.diff(pybamm.t) if is_derivative else target

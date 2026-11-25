@@ -1722,6 +1722,34 @@ class TestBaseModel:
             assert isinstance(u, pybamm.Variable)
             assert model.variables["w"] == 2 * u
 
+    def test_build_resolves_time_derivative_and_inferred_domains(self):
+        class Owner(pybamm.BaseSubModel):
+            def build(self):
+                u = pybamm.Variable("u", domain="negative electrode")
+                self.variables.update({"u": u})
+                self.rhs = {u: 2 * u}
+                self.initial_conditions = {u: 1}
+
+        class User(pybamm.BaseSubModel):
+            def build(self):
+                u_dot = self.coupled_variable("u", domain="negative electrode").diff(
+                    pybamm.t
+                )
+                self.variables.update(
+                    {
+                        "u_dot": u_dot,
+                        "inferred": 3 * self.coupled_variable("u", infer_domains=True),
+                    }
+                )
+
+        model = pybamm.BaseModel()
+        model.submodels = {"user": User(None), "owner": Owner(None)}
+        model.build_model()
+        u = model.variables["u"]
+        assert model.variables["u_dot"] == u.diff(pybamm.t)
+        assert model.variables["inferred"] == 3 * u
+        assert model.variables["inferred"].domain == ["negative electrode"]
+
     def test_build_legacy_submodels(self):
         class Submodel1(pybamm.BaseSubModel):
             def get_fundamental_variables(self):

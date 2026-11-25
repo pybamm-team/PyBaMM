@@ -89,6 +89,16 @@ class TestCoupledVariable:
         assert flux != pybamm.CoupledVariable("N", domain="negative electrode")
         variable = pybamm.Variable("a", domains=dict(a.domains))
         assert a.evaluate_for_shape().shape == variable.evaluate_for_shape().shape
+    def test_infer_domains(self):
+        a = pybamm.CoupledVariable("a", infer_domains=True)
+        assert a.infer_domains
+        assert not pybamm.CoupledVariable("a").infer_domains
+        assert a != pybamm.CoupledVariable("a")
+        assert a.create_copy().infer_domains
+        a_dot = a.diff(pybamm.t)
+        assert a_dot.infer_domains
+        assert a_dot.get_coupled_variable() == a
+
     def test_diff_time(self):
         a = pybamm.CoupledVariable("a", domain="negative electrode")
         a_dot = a.diff(pybamm.t)

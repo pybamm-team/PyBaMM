@@ -199,7 +199,13 @@ class BaseSubModel(pybamm.BaseModel):
         raise NotImplementedError
 
     def coupled_variable(
-        self, name, domain=None, auxiliary_domains=None, domains=None, on_edges=False
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        on_edges=False,
+        infer_domains=False,
     ):
         """
         Return a placeholder for a variable owned by another submodel.
@@ -220,6 +226,9 @@ class BaseSubModel(pybamm.BaseModel):
             ``auxiliary_domains``.
         on_edges : bool, optional
             Whether the variable is evaluated on cell edges, as a flux is.
+        infer_domains : bool, optional
+            Whether to take the domains of the variable instead of checking them,
+            for variables whose domains the submodel cannot know.
 
         Returns
         -------
@@ -231,6 +240,7 @@ class BaseSubModel(pybamm.BaseModel):
             auxiliary_domains=auxiliary_domains,
             domains=domains,
             on_edges=on_edges,
+            infer_domains=infer_domains,
         )
         self.coupled_variables[name] = variable
         return variable

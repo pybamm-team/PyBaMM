@@ -29,9 +29,12 @@ class CoupledVariable(pybamm.Symbol):
     on_edges : bool, optional
         Whether the variable it names is evaluated on cell edges in its primary
         dimension, as a flux is. Default is False.
+    infer_domains : bool, optional
+        Whether to take the domains of the variable it names when resolved at model
+        build, instead of checking that they match. Default is False.
     """
 
-    __slots__ = ("_on_edges",)
+    __slots__ = ("_infer_domains", "_on_edges")
 
     def __init__(
         self,
@@ -40,11 +43,18 @@ class CoupledVariable(pybamm.Symbol):
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
         on_edges: bool = False,
+        infer_domains: bool = False,
     ) -> None:
         self._on_edges = on_edges
+        self._infer_domains = infer_domains
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
+
+    @property
+    def infer_domains(self) -> bool:
+        """Whether the domains are taken from the variable this names."""
+        return self._infer_domains
 
     def _evaluates_on_edges(self, dimension):
         return self._on_edges and dimension == "primary"
@@ -62,11 +72,21 @@ class CoupledVariable(pybamm.Symbol):
         perform_simplifications: bool = True,
     ):
         """Creates a new copy of the coupled variable."""
-        return type(self)(self.name, domains=self._domains, on_edges=self._on_edges)
+        return type(self)(
+            self.name,
+            domains=self._domains,
+            on_edges=self._on_edges,
+            infer_domains=self._infer_domains,
+        )
 
     def _diff(self, variable):
         # Only reached for time: resolved, like this variable, from model.variables
-        return CoupledVariableDot(self.name + "'", domains=self._domains)
+        return CoupledVariableDot(
+            self.name + "'",
+            domains=self._domains,
+            on_edges=self._on_edges,
+            infer_domains=self._infer_domains,
+        )
 
 
 class CoupledVariableDot(CoupledVariable):
@@ -87,6 +107,8 @@ class CoupledVariableDot(CoupledVariable):
         Dictionary of all domains.
     on_edges : bool, optional
         Whether the variable is evaluated on cell edges. Default is False.
+    infer_domains : bool, optional
+        Whether to take the domains of the variable it names. Default is False.
 
     """
 
@@ -95,7 +117,10 @@ class CoupledVariableDot(CoupledVariable):
     def get_coupled_variable(self) -> CoupledVariable:
         """Returns the :class:`CoupledVariable` this is the time derivative of."""
         return CoupledVariable(
-            self.name[:-1], domains=self._domains, on_edges=self._on_edges
+            self.name[:-1],
+            domains=self._domains,
+            on_edges=self._on_edges,
+            infer_domains=self._infer_domains,
         )
 
     def _diff(self, variable):

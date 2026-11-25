@@ -11,6 +11,7 @@ from warnings import catch_warnings, filterwarnings, warn
 import numpy as np
 
 import pybamm
+from pybamm.models.base_model import _CoupledVariableResolver
 
 from .controls import CURRENT_CONTROL, upsampling_variable_name
 from .step_termination import _read_termination
@@ -639,21 +640,21 @@ class BaseStepImplicit(BaseStep):
             The model with the submodel added.
         variables : dict
             The model's variables.
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If the submodel needs a variable the model does not have, or one whose
+            domains differ.
         """
         submodel.build()
         variables = new_model.variables
-        cache = {}
-
-        def replace_coupled(node, new_leaves):
-            if isinstance(node, pybamm.CoupledVariable):
-                return variables[node.name]
-            return pybamm.rebuild(node, new_leaves)
+        resolver = _CoupledVariableResolver(
+            variables, dict.fromkeys(submodel.coupled_variables, "external circuit")
+        )
 
         def resolve(equations):
-            return {
-                key: pybamm.tree_map(replace_coupled, symbol, cache=cache)
-                for key, symbol in equations.items()
-            }
+            return {key: resolver.resolve(symbol) for key, symbol in equations.items()}
 
         submodel_variables = resolve(submodel.variables)
         new_model.rhs.update(resolve(submodel.rhs))

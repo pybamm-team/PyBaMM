@@ -11,8 +11,8 @@ class _ControlVariables:
     The variables available to the function of an external circuit submodel.
 
     Variables the submodel defines (e.g. "Current [A]") are returned as they are.
-    Any other name returns a :class:`pybamm.CoupledVariable` with no domain, which
-    is replaced by the model variable of that name when the model is built.
+    Any other name returns a :class:`pybamm.CoupledVariable` that is replaced by
+    the model variable of that name, taking its domains, when the model is built.
 
     Parameters
     ----------
@@ -26,7 +26,7 @@ class _ControlVariables:
     def __getitem__(self, name):
         if name in self._submodel.variables:
             return self._submodel.variables[name]
-        return self._submodel.coupled_variable(name)
+        return self._submodel.coupled_variable(name, infer_domains=True)
 
 
 class FunctionControl(BaseModel):
@@ -40,8 +40,9 @@ class FunctionControl(BaseModel):
         The parameters to use for this submodel
     external_circuit_function : callable
         The function that controls the current. It is called with a mapping from
-        variable names to symbols; variables from other submodels are taken to have
-        no domain.
+        variable names to symbols. Variables from other submodels are placeholders
+        until the model is built, so the function should combine them with
+        arithmetic and functions only, not spatial operators such as averages.
     options : dict
         Dictionary of options to use for the submodel
     control : str, optional
