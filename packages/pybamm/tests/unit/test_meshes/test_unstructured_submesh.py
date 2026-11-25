@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pytest
 
@@ -1766,3 +1768,110 @@ class TestContainsPoints:
         np.testing.assert_array_equal(mesh.contains_points(points), [True, False])
         assert len(cache) == 2
         assert oldest_key not in cache
+
+
+class TestUnstructuredSubMeshSerialisation:
+    @staticmethod
+    def _round_trip(submesh):
+        """Encode through JSON text and decode, as a saved model would."""
+        from pybamm.expression_tree.operations.serialise_kernel import decode, encode
+
+        return decode(json.loads(json.dumps(encode(submesh))))
+
+    @staticmethod
+    def _tagged_hex_box():
+        """Hex box with box tags plus a custom tag on part of its top face."""
+        submesh = UnstructuredSubMesh(
+            *_hex_grid(
+                np.linspace(0, 1, 3), np.linspace(0, 2, 4), np.linspace(0, 3, 3)
+            ),
+            coord_sys="cartesian",
+        )
+        submesh.detect_box_boundaries()
+        top = submesh.boundary_faces["top"]
+        submesh.boundary_faces["tab_top"] = top[submesh.face_centroids[top, 1] < 1.0]
+        return submesh
+
+    def test_round_trip_reproduces_submesh(self):
+        submesh = self._tagged_hex_box()
+        loaded = self._round_trip(submesh)
+
+        assert type(loaded) is UnstructuredSubMesh
+        assert loaded.coord_sys == submesh.coord_sys
+        assert loaded.element_type == submesh.element_type
+        for attribute in (
+            "vertices",
+            "elements",
+            "faces",
+            "face_owner",
+            "face_neighbor",
+            "face_areas",
+            "face_normals",
+            "cell_volumes",
+            "cell_centroids",
+        ):
+            np.testing.assert_array_equal(
+                getattr(loaded, attribute), getattr(submesh, attribute)
+            )
+        assert loaded.boundary_faces.keys() == submesh.boundary_faces.keys()
+        for name, faces in submesh.boundary_faces.items():
+            np.testing.assert_array_equal(loaded.boundary_faces[name], faces)
+
+    def test_round_trip_triangles(self):
+        submesh = UnstructuredSubMesh(*_unit_square_two_triangles())
+        submesh.detect_box_boundaries()
+        loaded = self._round_trip(submesh)
+
+        np.testing.assert_array_equal(loaded.elements, submesh.elements)
+        for name, faces in submesh.boundary_faces.items():
+            np.testing.assert_array_equal(loaded.boundary_faces[name], faces)
+
+    def test_round_trip_after_reordering_keeps_boundary_faces(self):
+        submesh = self._tagged_hex_box()
+        submesh.optimize_ordering()
+        loaded = self._round_trip(submesh)
+
+        np.testing.assert_array_equal(loaded.elements, submesh.elements)
+        for name, faces in submesh.boundary_faces.items():
+            np.testing.assert_allclose(
+                np.sort(loaded.face_centroids[loaded.boundary_faces[name]], axis=0),
+                np.sort(submesh.face_centroids[faces], axis=0),
+            )
+
+    def test_interfaces_recomputed_in_mesh(self):
+        left = UnstructuredSubMesh(
+            *_hex_grid(np.linspace(0, 1, 3), np.linspace(0, 1, 3), [0, 1])
+        )
+        right = UnstructuredSubMesh(
+            *_hex_grid(np.linspace(1, 2, 4), np.linspace(0, 1, 3), [0, 1])
+        )
+        for submesh in (left, right):
+            submesh.detect_box_boundaries()
+        submesh_types = {"negative electrode": left, "separator": right}
+        expected = pybamm.Mesh({}, submesh_types, {})
+        loaded = pybamm.Mesh(
+            {}, {d: self._round_trip(m) for d, m in submesh_types.items()}, {}
+        )
+
+        for domain, other in [
+            ("negative electrode", "separator"),
+            ("separator", "negative electrode"),
+        ]:
+            expected_data = expected[domain].interface_data[other]
+            loaded_data = loaded[domain].interface_data[other]
+            assert loaded_data["other_mesh"] is loaded[other]
+            for key in (
+                "left_cells",
+                "right_cells",
+                "left_faces",
+                "right_faces",
+                "face_areas",
+                "cell_distances",
+            ):
+                np.testing.assert_array_equal(loaded_data[key], expected_data[key])
+
+    def test_unknown_boundary_face_raises(self):
+        snippet = self._tagged_hex_box().to_json()
+        snippet["boundary_faces"]["bad"] = [[0, 1, 2, 3]]
+        with pytest.raises(pybamm.GeometryError, match=r"Boundary 'bad'"):
+            UnstructuredSubMesh._from_json(snippet)

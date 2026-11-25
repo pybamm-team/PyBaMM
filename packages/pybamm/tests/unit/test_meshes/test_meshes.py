@@ -872,3 +872,32 @@ class TestPrebuiltSubMesh:
             pybamm.GeometryError, match=r"only a pybamm.UnstructuredSubMesh"
         ):
             pybamm.Mesh({}, {"negative particle": submesh}, {})
+
+    def test_mesh_json_round_trip_recomputes_interfaces(self):
+        import json
+
+        from pybamm.expression_tree.operations.serialise_kernel import decode, encode
+
+        geometry, var_pts = self._box_inputs()
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"])
+        z_s = pybamm.SpatialVariable("z_2d", domain=["separator"])
+        geometry["separator"] = {
+            x_s: {"min": 1.0, "max": 2.0},
+            z_s: {"min": 0.0, "max": 2.0},
+        }
+        mesh = pybamm.Mesh(
+            geometry,
+            {
+                "negative electrode": pybamm.UnstructuredMeshGenerator(),
+                "separator": pybamm.UnstructuredMeshGenerator(),
+            },
+            {**var_pts, x_s: 2},
+        )
+        loaded = decode(json.loads(json.dumps(encode(mesh))))
+
+        expected = mesh["negative electrode"].interface_data["separator"]
+        actual = loaded["negative electrode"].interface_data["separator"]
+        assert actual["other_mesh"] is loaded["separator"]
+        np.testing.assert_array_equal(actual["left_cells"], expected["left_cells"])
+        np.testing.assert_array_equal(actual["right_cells"], expected["right_cells"])
+        assert "negative electrode" in loaded["separator"].interface_data

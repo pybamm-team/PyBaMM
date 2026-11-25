@@ -583,6 +583,8 @@ class Mesh(dict):
             snippet["sub_mesh_domains"], snippet["children"], strict=True
         ):
             instance[domain] = submesh
+        # Interface data links two submeshes, so it is not serialised with either
+        instance._compute_unstructured_interfaces()
         return instance
 
 
