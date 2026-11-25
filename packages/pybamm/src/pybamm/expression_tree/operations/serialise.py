@@ -19,7 +19,13 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.tracing import tracing
 
+# geometry, spatial-method, var_pts and submesh-type files
 SUPPORTED_SCHEMA_VERSION = "1.1"
+# symbolic model files are versioned separately, so a change to their format
+# does not make older PyBaMM versions reject the other files
+MODEL_SCHEMA_VERSION = "2.0"
+# older model versions that are still read; models are always written as the above
+LEGACY_MODEL_SCHEMA_VERSIONS = ("1.1",)
 
 
 def _experiment_step_factories() -> dict:
@@ -472,6 +478,12 @@ class Serialise:
         if missing:
             raise AttributeError(f"Model is missing required sections: {missing}")
 
+        from pybamm.expression_tree.operations.serialise_flat import FlatEncoder
+
+        # each unique expression is stored once; uses of it are {"$ref": index}
+        encoder = FlatEncoder(default=Serialise._json_encoder)
+        encode_symbol = encoder.encode
+
         base_cls = model.__class__
         # If the class is object or builtins.object, use pybamm.BaseModel instead
         if base_cls is object or (
@@ -495,15 +507,15 @@ class Serialise:
             "convert_to_format": getattr(model, "convert_to_format", "casadi"),
             "rhs": [
                 (
-                    convert_symbol_to_json(variable),
-                    convert_symbol_to_json(rhs_expression),
+                    encode_symbol(variable),
+                    encode_symbol(rhs_expression),
                 )
                 for variable, rhs_expression in getattr(model, "rhs", {}).items()
             ],
             "algebraic": [
                 (
-                    convert_symbol_to_json(variable),
-                    convert_symbol_to_json(algebraic_expression),
+                    encode_symbol(variable),
+                    encode_symbol(algebraic_expression),
                 )
                 for variable, algebraic_expression in getattr(
                     model, "algebraic", {}
@@ -511,8 +523,8 @@ class Serialise:
             ],
             "initial_conditions": [
                 (
-                    convert_symbol_to_json(variable),
-                    convert_symbol_to_json(initial_value),
+                    encode_symbol(variable),
+                    encode_symbol(initial_value),
                 )
                 for variable, initial_value in getattr(
                     model, "initial_conditions", {}
@@ -520,10 +532,10 @@ class Serialise:
             ],
             "boundary_conditions": [
                 (
-                    convert_symbol_to_json(variable),
+                    encode_symbol(variable),
                     {
                         side: [
-                            convert_symbol_to_json(expression),
+                            encode_symbol(expression),
                             boundary_type,
                         ]
                         for side, (expression, boundary_type) in conditions.items()
@@ -536,13 +548,13 @@ class Serialise:
             "events": [
                 {
                     "name": event.name,
-                    "expression": convert_symbol_to_json(event.expression),
+                    "expression": encode_symbol(event.expression),
                     "event_type": event.event_type,
                 }
                 for event in getattr(model, "events", [])
             ],
             "variables": {
-                str(variable_name): convert_symbol_to_json(expression)
+                str(variable_name): encode_symbol(expression)
                 for variable_name, expression in getattr(model, "variables", {}).items()
             },
         }
@@ -562,11 +574,12 @@ class Serialise:
 
             model_content["options_format"] = saved_options_format(model.options)
 
-        SCHEMA_VERSION = "1.1"
         model_json = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": MODEL_SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
             "model": model_content,
+            # the tables that the model's {"$ref": index} entries point into
+            **encoder.tables(),
         }
 
         if compress:
@@ -644,7 +657,12 @@ class Serialise:
 
             try:
                 with open(filename, "w") as f:
-                    json.dump(model_json, f, indent=2, default=Serialise._json_encoder)
+                    json.dump(
+                        model_json,
+                        f,
+                        separators=(",", ":"),
+                        default=Serialise._json_encoder,
+                    )
             except OSError as file_err:
                 raise OSError(
                     f"Failed to write model JSON to file '{filename}': {file_err}"
@@ -721,9 +739,8 @@ class Serialise:
                         Serialise._encode_geometry_value(value)
                     )
 
-        SCHEMA_VERSION = "1.1"
         geometry_json = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": SUPPORTED_SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
             "geometry": geometry_dict_serialized,
         }
@@ -807,12 +824,7 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
-            raise ValueError(
-                f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
-            )
+        _check_schema_version(data)
 
         # Extract geometry data
         geometry_data = data.get("geometry")
@@ -950,9 +962,8 @@ class Serialise:
                 method
             )
 
-        SCHEMA_VERSION = "1.1"
         spatial_methods_json = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": SUPPORTED_SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
             "spatial_methods": spatial_methods_dict,
         }
@@ -1039,12 +1050,7 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
-            raise ValueError(
-                f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
-            )
+        _check_schema_version(data)
 
         # Extract spatial methods data
         spatial_methods_data = data.get("spatial_methods")
@@ -1101,9 +1107,8 @@ class Serialise:
             else:
                 raise ValueError(f"Unexpected key type in var_pts: {type(key)}")
 
-        SCHEMA_VERSION = "1.1"
         var_pts_json = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": SUPPORTED_SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
             "var_pts": var_pts_dict,
         }
@@ -1185,12 +1190,7 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
-            raise ValueError(
-                f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
-            )
+        _check_schema_version(data)
 
         # Extract var_pts data
         var_pts_data = data.get("var_pts")
@@ -1250,9 +1250,8 @@ class Serialise:
         for domain, submesh_item in submesh_types.items():
             submesh_types_dict[domain] = Serialise.serialise_submesh_item(submesh_item)
 
-        SCHEMA_VERSION = "1.1"
         submesh_types_json = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": SUPPORTED_SCHEMA_VERSION,
             "pybamm_version": pybamm.__version__,
             "submesh_types": submesh_types_dict,
         }
@@ -1336,12 +1335,7 @@ class Serialise:
                 ) from e
 
         # Validate schema version
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
-            raise ValueError(
-                f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
-            )
+        _check_schema_version(data)
 
         # Extract submesh types data
         submesh_types_data = data.get("submesh_types")
@@ -1437,12 +1431,25 @@ class Serialise:
                 raise ValueError(f"Failed to decompress model data: {e}") from e
 
         # Validate outer structure
-        schema_version = data.get("schema_version", SUPPORTED_SCHEMA_VERSION)
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
+        schema_version = _check_schema_version(
+            data,
+            supported=(MODEL_SCHEMA_VERSION, *LEGACY_MODEL_SCHEMA_VERSIONS),
+            # files with no version are read by their layout, as before
+            default=MODEL_SCHEMA_VERSION
+            if "nodes" in data
+            else LEGACY_MODEL_SCHEMA_VERSIONS[-1],
+        )
+        from pybamm.expression_tree.operations.serialise_flat import decode_nodes
+
+        # the version decides which format is parsed
+        is_flat = schema_version == MODEL_SCHEMA_VERSION
+        if is_flat != ("nodes" in data):
             raise ValueError(
-                f"Unsupported schema version: {schema_version}. "
-                f"Expected: {SUPPORTED_SCHEMA_VERSION}"
+                f"Schema version {schema_version} model "
+                + ("has no 'nodes' table" if is_flat else "has a 'nodes' table")
             )
+        # every {"$ref": index} below is nodes[index]; empty for nested files
+        nodes = decode_nodes(data) if is_flat else []
 
         model_data = data.get("model")
         if model_data is None:
@@ -1502,7 +1509,7 @@ class Serialise:
         symbol_map = {}
         for variable_json in all_variable_keys:
             try:
-                symbol = _require_symbol(variable_json)
+                symbol = _require_symbol(variable_json, nodes)
                 key = Serialise._create_symbol_key(variable_json)
                 symbol_map[key] = symbol
             except Exception as e:
@@ -1514,7 +1521,7 @@ class Serialise:
         for lhs_json, rhs_expr_json in model_data["rhs"]:
             try:
                 lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
-                rhs = convert_symbol_from_json(rhs_expr_json)
+                rhs = convert_symbol_from_json(rhs_expr_json, nodes)
                 model.rhs[lhs] = rhs
             except Exception as e:
                 raise ValueError(
@@ -1525,7 +1532,7 @@ class Serialise:
         for lhs_json, algebraic_expr_json in model_data["algebraic"]:
             try:
                 lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
-                rhs = convert_symbol_from_json(algebraic_expr_json)
+                rhs = convert_symbol_from_json(algebraic_expr_json, nodes)
                 model.algebraic[lhs] = rhs
             except Exception as e:
                 raise ValueError(
@@ -1536,7 +1543,7 @@ class Serialise:
         for lhs_json, initial_value_json in model_data["initial_conditions"]:
             try:
                 lhs = symbol_map[Serialise._create_symbol_key(lhs_json)]
-                rhs = convert_symbol_from_json(initial_value_json)
+                rhs = convert_symbol_from_json(initial_value_json, nodes)
                 model.initial_conditions[lhs] = rhs
             except Exception as e:
                 raise ValueError(
@@ -1550,7 +1557,7 @@ class Serialise:
                 sides = {}
                 for side, (expression_json, boundary_type) in condition_dict.items():
                     try:
-                        expr = _require_symbol(expression_json)
+                        expr = _require_symbol(expression_json, nodes)
                         sides[side] = (expr, boundary_type)
                     except Exception as e:
                         raise ValueError(
@@ -1566,7 +1573,7 @@ class Serialise:
         for event_data in model_data["events"]:
             try:
                 name = event_data["name"]
-                expr = convert_symbol_from_json(event_data["expression"])
+                expr = convert_symbol_from_json(event_data["expression"], nodes)
                 event_type = event_data["event_type"]
                 # ``_json_encoder`` stores Enums as their ``.name``.
                 if isinstance(event_type, str):
@@ -1583,7 +1590,7 @@ class Serialise:
                 key = Serialise._create_symbol_key(expression_json)
                 symbol = symbol_map.get(key)
                 if symbol is None:
-                    symbol = _require_symbol(expression_json)
+                    symbol = _require_symbol(expression_json, nodes)
                 model.variables[variable_name] = symbol
             except Exception as e:
                 raise ValueError(
@@ -2292,8 +2299,42 @@ def _relocate_legacy_model_tree(node):
     return out
 
 
-def convert_symbol_from_json(json_data):
+def _check_schema_version(
+    data: dict,
+    supported: tuple[str, ...] = (SUPPORTED_SCHEMA_VERSION,),
+    default: str | None = None,
+) -> str:
+    """
+    Return the schema version of a serialised document.
+
+    Parameters
+    ----------
+    data : dict
+        The document.
+    supported : tuple of str
+        The versions that can be read, current one first.
+    default : str, optional
+        The version of a document that does not state one. Defaults to the
+        current version.
+
+    Raises
+    ------
+    ValueError
+        If the version is not one of ``supported``.
+    """
+    schema_version = data.get("schema_version", default or supported[0])
+    if schema_version not in supported:
+        raise ValueError(
+            f"Unsupported schema version: {schema_version}. Expected: {supported[0]}"
+        )
+    return schema_version
+
+
+def convert_symbol_from_json(json_data, nodes=()):
     """Reconstruct a pybamm.Symbol (or decoded leaf value) from kernel/legacy JSON.
+
+    A reference ``{"$ref": index}`` is looked up in ``nodes``, the already-built
+    node table of a flat document.
 
     Strict: raw strings, lists, and dicts without a recognised type tag cannot
     be symbol nodes and raise :class:`SerialisationError` (as pre-kernel
@@ -2301,10 +2342,17 @@ def convert_symbol_from_json(json_data):
     decoded leaf values (tuples, ndarrays) are returned as-is; use the kernel
     ``decode`` directly for generic, non-symbol JSON.
     """
+    from pybamm.expression_tree.operations.serialise_flat import (
+        _REF,
+        resolve_reference,
+    )
     from pybamm.expression_tree.operations.serialise_kernel import (
         SerialisationError,
         decode,
     )
+
+    if isinstance(json_data, dict) and _REF in json_data:
+        return resolve_reference(json_data[_REF], nodes)
 
     decoded = decode(json_data)
     # decode returns a dict/list/str only when the input was one of those and
@@ -2317,7 +2365,7 @@ def convert_symbol_from_json(json_data):
     return decoded
 
 
-def _require_symbol(raw):
+def _require_symbol(raw, nodes=()):
     """Decode *raw* and reject anything that is not a pybamm.Symbol.
 
     convert_symbol_from_json also admits numeric scalars and decoded leaf
@@ -2328,7 +2376,7 @@ def _require_symbol(raw):
         SerialisationError,
     )
 
-    symbol = convert_symbol_from_json(raw)
+    symbol = convert_symbol_from_json(raw, nodes)
     if not isinstance(symbol, pybamm.Symbol):
         raise SerialisationError(f"expected a pybamm.Symbol, got {raw!r}")
     return symbol

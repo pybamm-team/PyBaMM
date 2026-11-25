@@ -17,7 +17,6 @@ import pytest
 import pybamm
 import pybamm.expression_tree.operations.serialise_kernel as sk
 from pybamm.expression_tree.operations.serialise import (
-    SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
     Serialise,
     convert_function_to_symbolic_expression,
@@ -1203,7 +1202,7 @@ class TestSerialise:
 
         with (
             patch(
-                "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
+                "pybamm.expression_tree.operations.serialise_flat.FlatEncoder.encode",
                 side_effect=Exception("conversion failed"),
             ),
             pytest.raises(
@@ -1245,7 +1244,7 @@ class TestSerialise:
         loaded_model = Serialise.load_custom_model(str(file_path))
 
         assert hasattr(loaded_model, "schema_version")
-        assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
+        assert loaded_model.schema_version == "2.0"
 
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"

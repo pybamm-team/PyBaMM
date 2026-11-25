@@ -2274,7 +2274,7 @@ class BaseModel:
         >>> isinstance(param_dict, dict)
         True
         >>> model.to_json("model.json")  # Save and return dict
-        {'schema_version': '1.1', ...}
+        {'schema_version': '2.0', ...}
         """
         model_json = Serialise.serialise_custom_model(self, compress=compress)
         if filename is not None:
@@ -2289,7 +2289,10 @@ class BaseModel:
             raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
         try:
             with open(filename, "w") as f:
-                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+                # compact, like Serialise.save_custom_model
+                json.dump(
+                    data, f, separators=(",", ":"), default=Serialise._json_encoder
+                )
         except OSError as file_err:
             file_err.add_note(f"Failed to write {label} to file '{filename}'")
             raise
