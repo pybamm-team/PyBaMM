@@ -280,6 +280,9 @@ class UserSuppliedSubmesh3D(pybamm.MeshGenerator):
             the **Gmsh `.msh` Version 2.2 (ASCII)** format is recommended.
     """
 
+    # Resolution comes from the mesh file, not var_pts
+    requires_npts = False
+
     def __init__(
         self,
         file_path,
