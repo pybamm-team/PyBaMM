@@ -22,7 +22,9 @@ ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 # uncompiled path without it, making the compiled benchmarks measure nothing.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 gcc libc6-dev \
-    && rm -rf /var/lib/apt/lists/*
+    # Logs and ldconfig's cache hold the build time, which would change the layer
+    && rm -rf /var/lib/apt/lists/* /var/log/apt /var/log/alternatives.log \
+       /var/log/dpkg.log /var/cache/ldconfig/aux-cache
 
 # No telemetry (the runner has no network) and no baked-in bytecode
 ENV VIRTUAL_ENV=/opt/venv \
@@ -62,11 +64,11 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     uv venv "$VIRTUAL_ENV" \
     && uv pip install --no-deps --requirement /tmp/requirements.txt
 
-# Install the in-repo solver wheel staged by the inputs stage, if CI built one
+# Install CI's in-repo solver wheel, if any, without uv's timestamped metadata
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     --mount=type=bind,from=inputs,source=/inputs/wheel,target=/tmp/wheel \
     for wheel in /tmp/wheel/*.whl; do \
-      if [ -e "$wheel" ]; then uv pip install --no-deps "$wheel"; fi; \
+      if [ -e "$wheel" ]; then uv pip install --no-installer-metadata --no-deps "$wheel"; fi; \
     done
 
 COPY packages/pybamm /pybamm/packages/pybamm
@@ -76,9 +78,9 @@ WORKDIR /pybamm/packages/pybamm
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     --mount=type=bind,from=inputs,source=/inputs/pybamm,target=/tmp/pybamm \
     if python -c "import importlib.metadata as m; m.version('pybammsolvers')" 2>/dev/null; then \
-      uv pip install --no-deps /tmp/pybamm/*.whl && uv pip check; \
+      uv pip install --no-installer-metadata --no-deps /tmp/pybamm/*.whl && uv pip check; \
     else \
-      uv pip install /tmp/pybamm/*.whl; \
+      uv pip install --no-installer-metadata /tmp/pybamm/*.whl; \
     fi
 
 WORKDIR /pybamm/packages/pybamm/tests/benchmarks

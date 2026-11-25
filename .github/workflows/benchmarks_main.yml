@@ -79,9 +79,11 @@ jobs:
           printf '%s' "$BENCHER_API_KEY" \
             | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
 
-      # Cached layers keep their digests, so the push skips unchanged layers
+      # With file times pinned, a rebuilt layer is byte-identical, so the push skips it
       - name: Build and push benchmark image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          SOURCE_DATE_EPOCH: "315532800" # 1980-01-01; sets image and file times, not RUN's env
         with:
           context: .
           file: packages/pybamm/tests/benchmarks/Dockerfile
@@ -89,7 +91,7 @@ jobs:
           sbom: false
           cache-from: type=gha,scope=benchmark-image
           cache-to: type=gha,scope=benchmark-image
-          outputs: type=image,name=${{ env.BENCHER_REGISTRY }}/${{ env.BENCHER_PROJECT }}:main-${{ github.sha }},push=true,oci-mediatypes=true,compression=zstd,compression-level=19,force-compression=true
+          outputs: type=image,name=${{ env.BENCHER_REGISTRY }}/${{ env.BENCHER_PROJECT }}:main-${{ github.sha }},push=true,oci-mediatypes=true,compression=zstd,compression-level=19,force-compression=true,rewrite-timestamp=true
 
   benchmark_time:
     name: Timing benchmarks (bare metal, ${{ matrix.suite }})
