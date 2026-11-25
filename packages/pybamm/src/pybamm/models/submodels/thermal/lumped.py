@@ -9,7 +9,9 @@ from .base_thermal import BaseThermal
 class Lumped(BaseThermal):
     """
     Class for lumped thermal submodel. For more information see :footcite:t:`Timms2021`
-    and :footcite:t:`Marquis2020`.
+    and :footcite:t:`Marquis2020`. The "Surface total cooling" variables are Newton
+    cooling to the ambient with an ambient surface temperature, and conduction from
+    the core to the casing with a lumped surface temperature.
 
     Parameters
     ----------
@@ -52,16 +54,13 @@ class Lumped(BaseThermal):
         T_surf_av = self._yz_average(T_surf)
         V = variables["Cell thermal volume [m3]"]
         if self.options["surface temperature"] == "lumped":
-            # Conduction from the core to the surface state
-            conductance = (
-                self.param.lambda_core_surface
-                * self.param.A_cooling
-                / self.param.L_core_surface
-            )
+            # Conduction from the core to the casing, not cooling to the ambient
+            Q_cool_W = -(T_vol_av - T_surf_av) / self.param.R_core_surface
         else:
             # Newton cooling straight to the ambient
-            conductance = self.param.h_total * self.param.A_cooling
-        Q_cool_W = -conductance * (T_vol_av - T_surf_av)
+            Q_cool_W = (
+                -self.param.h_total * self.param.A_cooling * (T_vol_av - T_surf_av)
+            )
         Q_cool_vol_av = Q_cool_W / V
 
         # Contact resistance heating Q_cr

@@ -1773,8 +1773,7 @@ class TestParameterValues:
         new_values.update(
             {
                 "Casing heat capacity [J.K-1]": 30,
-                "Core-to-surface thermal conductivity [W.m-1.K-1]": h,
-                "Core-to-surface thermal path length [m]": 1,
+                "Core-to-surface thermal resistance [K.W-1]": 1 / (h * area),
                 "Total heat transfer coefficient [W.m-2.K-1]": 1 / (10 * area),
             }
         )
@@ -1795,6 +1794,20 @@ class TestParameterValues:
         # The caller's parameter values are left untouched
         assert old_values["Total heat transfer coefficient [W.m-2.K-1]"] == h
 
+    def test_process_model_attaches_mapped_copy(self):
+        model = pybamm.lithium_ion.SPM(
+            {"thermal": "lumped", "surface temperature": "lumped"}
+        )
+        values = pybamm.ParameterValues("Chen2020")
+        values["Casing heat capacity [J.K-1]"] = 30
+        values["Environment thermal resistance [K.W-1]"] = 10
+        with pytest.warns(DeprecationWarning, match=r"Mapping the old values"):
+            values.process_model(model, delayed_variable_processing=True)
+        attached = model.symbol_processor.parameter_values
+        assert attached is not values
+        assert "Core-to-surface thermal resistance [K.W-1]" in attached
+        assert "Core-to-surface thermal resistance [K.W-1]" not in values
+
     def test_environment_thermal_resistance_not_mapped(self):
         lumped = pybamm.lithium_ion.SPM(
             {"thermal": "lumped", "surface temperature": "lumped"}
@@ -1804,18 +1817,10 @@ class TestParameterValues:
         # Ambient surface models never use the old parameter
         ambient = pybamm.lithium_ion.SPM({"thermal": "lumped"})
         assert values._map_environment_thermal_resistance(ambient) is values
-        # A partial migration is ambiguous
-        values["Core-to-surface thermal conductivity [W.m-1.K-1]"] = 1
-        with pytest.raises(KeyError, match=r"Core-to-surface thermal path length"):
-            values._map_environment_thermal_resistance(lumped)
-        # With both new parameters set, the old one is ignored with a warning
-        values["Core-to-surface thermal path length [m]"] = 0.1
+        # With the new parameter set, the old one is ignored with a warning
+        values["Core-to-surface thermal resistance [K.W-1]"] = 20
         with pytest.warns(DeprecationWarning, match=r"It is ignored"):
             assert values._map_environment_thermal_resistance(lumped) is values
-        # The warning is only emitted once per instance
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            values._map_environment_thermal_resistance(lumped)
 
     def test_process_model_attaches_to_symbol_processor(self):
         """Test that process_model attaches parameter_values to model's symbol_processor."""

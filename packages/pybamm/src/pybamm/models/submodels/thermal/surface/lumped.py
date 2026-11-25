@@ -6,9 +6,8 @@ import pybamm
 class Lumped(pybamm.BaseSubModel):
     """
     Class for the lumped surface temperature submodel, which adds an ODE for the
-    surface temperature. Heat reaches the surface from the cell core by conduction,
-    with conductance ``lambda * A / L`` from the core-to-surface thermal
-    conductivity and path length, and leaves to the ambient by Newton cooling
+    surface temperature. Heat reaches the surface from the cell core through the
+    core-to-surface thermal resistance, and leaves to the ambient by Newton cooling
     with the total heat transfer coefficient. For more information see
     :footcite:t:`Lin2014`.
 

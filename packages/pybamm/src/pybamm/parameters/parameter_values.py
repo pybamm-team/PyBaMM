@@ -1000,6 +1000,7 @@ class ParameterValues:
         >>> params = pybamm.ParameterValues("Chen2020")
         >>> processed_model = params.process_model(model)
         """
+        # TODO(27.1): remove with "Environment thermal resistance [K.W-1]"
         parameter_values = self._map_environment_thermal_resistance(unprocessed_model)
         model = parameter_values._processor.process_model(
             unprocessed_model,
@@ -1012,29 +1013,6 @@ class ParameterValues:
         )
         model.symbol_processor.parameter_values = parameter_values
         return model
-
-    def _warn_environment_thermal_resistance_once(self, message: str) -> None:
-        """
-        Emit the environment thermal resistance deprecation warning once per
-        instance.
-
-        Parameters
-        ----------
-        message : str
-            Warning text.
-        """
-        if getattr(self, "_warned_environment_thermal_resistance", False):
-            return
-        self._warned_environment_thermal_resistance = True
-        # Attribute the warning to the first caller outside pybamm, so the
-        # default filters show it to users
-        package_dir = os.path.dirname(pybamm.__file__)
-        frame = sys._getframe(1)
-        stacklevel = 2
-        while frame is not None and frame.f_code.co_filename.startswith(package_dir):
-            frame = frame.f_back
-            stacklevel += 1
-        warn(message, DeprecationWarning, stacklevel=stacklevel)
 
     def _map_environment_thermal_resistance(
         self, model: pybamm.BaseModel
@@ -1052,21 +1030,13 @@ class ParameterValues:
         -------
         pybamm.ParameterValues
             ``self`` when no translation applies, otherwise a copy in which the
-            core-to-surface conductivity takes the old total heat transfer
-            coefficient (path length 1 m) and the total heat transfer
-            coefficient reproduces the environment thermal resistance.
-
-        Raises
-        ------
-        KeyError
-            If the environment thermal resistance is set together with only one
-            of the core-to-surface conductivity and path length.
+            core-to-surface thermal resistance takes the old core-to-surface
+            Newton cooling and the total heat transfer coefficient reproduces
+            the environment thermal resistance.
         """
         old_name = "Environment thermal resistance [K.W-1]"
-        new_names = (
-            "Core-to-surface thermal conductivity [W.m-1.K-1]",
-            "Core-to-surface thermal path length [m]",
-        )
+        new_name = "Core-to-surface thermal resistance [K.W-1]"
+        h_name = "Total heat transfer coefficient [W.m-2.K-1]"
         options = getattr(model, "options", None)
         if (
             old_name not in self._store
@@ -1074,32 +1044,33 @@ class ParameterValues:
             or options.get("surface temperature") != "lumped"
         ):
             return self
-        missing = [name for name in new_names if name not in self._store]
-        if not missing:
-            self._warn_environment_thermal_resistance_once(
+        if new_name in self._store:
+            message = (
                 f"'{old_name}' is deprecated and will be removed in 27.1. It is "
-                f"ignored because '{new_names[0]}' and '{new_names[1]}' are set."
+                f"ignored because '{new_name}' is set."
             )
+        else:
+            message = (
+                f"'{old_name}' is deprecated and will be removed in 27.1. The "
+                f"lumped surface temperature model now couples the surface to the "
+                f"ambient through '{h_name}' and the core to the surface through "
+                f"'{new_name}'. Mapping the old values onto these parameters."
+            )
+        # Attribute the warning to the first caller outside pybamm, so the
+        # default filters show it to users
+        package_dir = os.path.dirname(pybamm.__file__)
+        frame = sys._getframe(1)
+        stacklevel = 2
+        while frame is not None and frame.f_code.co_filename.startswith(package_dir):
+            frame = frame.f_back
+            stacklevel += 1
+        warn(message, DeprecationWarning, stacklevel=stacklevel)
+        if new_name in self._store:
             return self
-        if len(missing) == 1:
-            raise KeyError(
-                f"'{old_name}' is set with only one of the core-to-surface "
-                f"parameters, so '{missing[0]}' cannot be inferred. Set "
-                f"'{missing[0]}' (and '{old_name}' is then ignored), or remove "
-                "the core-to-surface parameter to map the old values."
-            )
-        self._warn_environment_thermal_resistance_once(
-            f"'{old_name}' is deprecated and will be removed in 27.1. The lumped "
-            "surface temperature model now couples the surface to the ambient "
-            "through 'Total heat transfer coefficient [W.m-2.K-1]' and the core "
-            f"to the surface through '{new_names[0]}' and '{new_names[1]}'. "
-            "Mapping the old values onto these parameters, with a 1 m path length."
-        )
-        h_name = "Total heat transfer coefficient [W.m-2.K-1]"
+        area = model.param.A_cooling
         mapped = self.copy()
-        mapped[new_names[0]] = self._store[h_name]
-        mapped[new_names[1]] = 1.0
-        mapped[h_name] = 1 / (pybamm.Parameter(old_name) * model.param.A_cooling)
+        mapped[new_name] = 1 / (self._store[h_name] * area)
+        mapped[h_name] = 1 / (pybamm.Parameter(old_name) * area)
         return mapped
 
     def process_geometry(self, geometry: dict) -> None:
