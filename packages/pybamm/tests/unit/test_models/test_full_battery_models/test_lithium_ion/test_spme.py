@@ -61,6 +61,18 @@ class TestSPMe(BaseUnitTestLithiumIon):
                 rtol=1e-8,
             )
 
+    @pytest.mark.parametrize("surface_form", ["algebraic", "differential"])
+    def test_surface_form_initial_conditions_consistent_at_rest(self, surface_form):
+        model = pybamm.lithium_ion.SPMe({"surface form": surface_form})
+        parameter_values = model.default_parameter_values
+        parameter_values["Current function [A]"] = 0
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        solution = sim.solve([0, 10])
+        y_guess = sim.built_model.concatenated_initial_conditions.evaluate(0)
+        np.testing.assert_allclose(
+            solution.all_ys[0][:, 0], y_guess.ravel(), rtol=1e-6, atol=1e-8
+        )
+
     def test_surface_form_macinnes_variable(self):
         for surf in ["algebraic", "differential"]:
             model = pybamm.lithium_ion.SPMe(
