@@ -1201,9 +1201,10 @@ class Serialise:
 
     @staticmethod
     def serialise_submesh_item(submesh_item) -> dict:
-        """Serialise a SubMesh class or MeshGenerator. The class is encoded via the
-        kernel's class_reference codec ({"$type": "type", "class": dotted-path}); a
-        MeshGenerator's params ride alongside under "submesh_params"."""
+        """Serialise a SubMesh class, MeshGenerator or prebuilt SubMesh. The class is
+        encoded via the kernel's class_reference codec ({"$type": "type", "class":
+        dotted-path}); a MeshGenerator's params ride alongside under
+        "submesh_params"; a prebuilt submesh is encoded with its own data."""
         from pybamm.expression_tree.operations.serialise_kernel import encode
 
         if hasattr(submesh_item, "submesh_type"):  # MeshGenerator instance
@@ -1211,20 +1212,25 @@ class Serialise:
             if getattr(submesh_item, "submesh_params", None):
                 result["submesh_params"] = dict(submesh_item.submesh_params)
             return result
-        return encode(submesh_item)  # a SubMesh class
+        return encode(submesh_item)  # a SubMesh class or prebuilt SubMesh
 
     @staticmethod
     def deserialise_submesh_item(submesh_info: dict, return_class_only: bool = False):
         """Deserialise a SubMesh class / MeshGenerator from either the kernel
-        class_reference shape or the legacy {class, module} shape."""
+        class_reference shape or the legacy {class, module} shape, or a prebuilt
+        SubMesh from its kernel encoding (returned as is)."""
         from pybamm.expression_tree.operations.serialise_kernel import (
+            TAG,
             _resolve_class,
+            decode,
             normalise_legacy,
         )
 
         node = normalise_legacy(
             dict(submesh_info)
         )  # legacy {class,module} -> $type form
+        if node[TAG] != "type":
+            return decode(node)
         submesh_class = _resolve_class(node["class"])
         if return_class_only:
             return submesh_class
