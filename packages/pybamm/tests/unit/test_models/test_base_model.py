@@ -1750,6 +1750,12 @@ class TestBaseModel:
         assert model.variables["inferred"] == 3 * u
         assert model.variables["inferred"].domain == ["negative electrode"]
 
+    def test_build_fundamental_on_its_own(self):
+        model = pybamm.lithium_ion.SPM(build=False)
+        model.build_fundamental()
+        model.build_coupled_variables()
+        assert set(model._variables_by_submodel) == set(model.submodels)
+
     def test_build_legacy_submodels(self):
         class Submodel1(pybamm.BaseSubModel):
             def get_fundamental_variables(self):

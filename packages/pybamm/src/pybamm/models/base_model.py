@@ -1357,7 +1357,7 @@ class BaseModel:
                 f"Getting fundamental variables for {submodel_name} submodel ({self.name})"
             )
             submodel_fundamental_variables = submodel.get_fundamental_variables()
-            self._variables_by_submodel[submodel_name].update(
+            self._variables_by_submodel.setdefault(submodel_name, {}).update(
                 submodel_fundamental_variables
             )
             self.variables.update(submodel_fundamental_variables)
@@ -1386,7 +1386,7 @@ class BaseModel:
                         updated_variables = submodel.get_coupled_variables(
                             self.variables
                         )
-                        self._variables_by_submodel[submodel_name].update(
+                        self._variables_by_submodel.setdefault(submodel_name, {}).update(
                             {
                                 key: updated_variables[key]
                                 for key in updated_variables
@@ -1452,7 +1452,7 @@ class BaseModel:
                     and variable.name == name
                 )
             }
-            self._variables_by_submodel[submodel_name].update(submodel.variables)
+            self._variables_by_submodel.setdefault(submodel_name, {}).update(submodel.variables)
             self.update(submodel)
             self.check_no_repeated_keys()
 

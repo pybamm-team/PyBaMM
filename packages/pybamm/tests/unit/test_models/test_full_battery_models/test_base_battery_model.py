@@ -642,6 +642,19 @@ class TestBaseBatteryModel:
             model._constrain_voltage_to_expression()
 
 
+class TestThermalElectrolyteConductivity:
+    def test_flag_follows_conductivity_swapped_before_build(self):
+        model = pybamm.lithium_ion.SPMe({"thermal": "lumped"}, build=False)
+        model.submodels["electrolyte conductivity"] = (
+            pybamm.electrolyte_conductivity.Full(model.param, model.options)
+        )
+        model.build_model()
+        assert model.submodels["thermal"].full_electrolyte_conductivity
+        assert not pybamm.lithium_ion.SPMe({"thermal": "lumped"}).submodels[
+            "thermal"
+        ].full_electrolyte_conductivity
+
+
 class TestLegacyDependentDefaults:
     def test_shorthand_is_not_rewritten(self):
         options = BatteryModelOptions({"SEI": "constant"})

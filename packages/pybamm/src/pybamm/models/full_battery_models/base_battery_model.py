@@ -344,6 +344,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["voltage as a state"] == "true":
             self._register_voltage_variable()
 
+        self._configure_thermal_submodel()
         self.build_submodels()
 
         if self.options["voltage as a state"] == "true":
@@ -560,20 +561,27 @@ class BaseBatteryModel(pybamm.BaseModel):
             thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
         x_average = getattr(self, "x_average", False)
+        self.submodels["thermal"] = thermal_submodel(
+            self.param, self.options, x_average
+        )
+
+    def _configure_thermal_submodel(self):
+        """
+        Tell the thermal submodel whether the electrolyte conductivity is full, from
+        the submodels chosen when the model is built.
+        """
+        thermal = self.submodels.get("thermal")
+        if not isinstance(thermal, pybamm.thermal.BaseThermal):
+            return
         conductivity = pybamm.electrolyte_conductivity
         full_conductivity = (
             conductivity.Full,
             conductivity.surface_potential_form.FullAlgebraic,
             conductivity.surface_potential_form.FullDifferential,
         )
-        self.submodels["thermal"] = thermal_submodel(
-            self.param,
-            self.options,
-            x_average,
-            full_electrolyte_conductivity=any(
-                isinstance(submodel, full_conductivity)
-                for submodel in self.submodels.values()
-            ),
+        thermal.full_electrolyte_conductivity = any(
+            isinstance(submodel, full_conductivity)
+            for submodel in self.submodels.values()
         )
 
     def set_surface_temperature_submodel(self):
