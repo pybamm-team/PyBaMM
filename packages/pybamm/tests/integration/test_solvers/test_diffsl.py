@@ -3,7 +3,9 @@
 #
 
 import csv
+import difflib
 import importlib.util
+import itertools
 import logging
 import time
 from pathlib import Path
@@ -53,6 +55,35 @@ class TestDiffSLExport:
                 "Charge at C/20 for 10 minutes",
             ]
         )
+
+    @staticmethod
+    def _assert_same_program(simulation_code, model_code):
+        # pytest would print the whole program on a mismatch; show where it differs
+        diff = difflib.unified_diff(
+            model_code.splitlines(),
+            simulation_code.splitlines(),
+            "model export",
+            "simulation export",
+            n=1,
+            lineterm="",
+        )
+        first_lines = [line[:200] for line in itertools.islice(diff, 30)]
+        if first_lines:
+            pytest.fail("Exported DiffSL code differs:\n" + "\n".join(first_lines))
+
+    @staticmethod
+    def _plot_voltages(name, t, voltage_pybamm, voltage_diffsol):
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        ax.plot(t, voltage_pybamm, label="PyBaMM")
+        ax.plot(t, voltage_diffsol, label="DiffSL")
+        ax.set_xlabel("Time [s]")
+        ax.set_ylabel("Voltage [V]")
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(Path(f"{name}.png"), dpi=150)
+        plt.close(fig)
 
     @pytest.mark.skipif(not has_pydiffsol, reason="pydiffsol is not installed")
     # Slowest first, so xdist does not finish on a lone DFN compile
@@ -154,7 +185,83 @@ class TestDiffSLExport:
                 }
             )
 
+        if OUTPUT_PLOTS:
+            self._plot_voltages(
+                request.node.name, t_interp, voltage_pybamm, voltage_diffsol
+            )
+
         np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=2e-3)
+
+    # Slowest first, matching the compile tests
+    @pytest.mark.parametrize(
+        "model",
+        [
+            pybamm.lithium_ion.DFN(),
+            pybamm.lithium_ion.SPMe(),
+            pybamm.lithium_ion.SPM(),
+        ],
+        ids=["DFN", "SPMe", "SPM"],
+    )
+    @pytest.mark.parametrize(
+        "inputs",
+        [[], ["Lower voltage cut-off [V]"], ["Upper voltage cut-off [V]"]],
+        ids=["no_inputs", "with_lower_cutoff", "with_upper_cutoff"],
+    )
+    def test_simulation_export_matches_model(self, model, inputs, request):
+        """Without an experiment, a Simulation exports the same DiffSL program and
+        inputs as its discretised model, so test_models' diffsol check covers it."""
+        pv = model.default_parameter_values.copy()
+        pv_inputs = {}
+        for input_name in inputs:
+            input_value = (
+                1.1 * pv[input_name]
+                if "Upper voltage" in input_name
+                else 0.9 * pv[input_name]
+            )
+            pv_inputs[input_name] = input_value
+            pv[input_name] = "[input]"
+        # Copied before any processing, so the Simulation shares no cached state
+        pv_simulation = pv.copy()
+        output_variable = "Voltage [V]"
+
+        geometry = model.default_geometry
+        model_param = pv.process_model(model, inplace=False)
+        pv.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        model_disc = disc.process_model(model_param, inplace=True)
+        model_exporter = pybamm.DiffSLExport(model_disc)
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pv_simulation,
+            experiment_model_mode="unified",
+            solver=pybamm.IDAKLUSolver(output_variables=[output_variable]),
+        )
+        sim_exporter = pybamm.DiffSLExport(sim)
+        assert sim.built_model is not None
+        diffsl_code = sim_exporter.to_diffeq(outputs=[output_variable])
+        if OUTPUT_DIFFSL:
+            Path(f"{request.node.name}.txt").write_text(diffsl_code)
+        self._assert_same_program(
+            diffsl_code, model_exporter.to_diffeq(outputs=[output_variable])
+        )
+        np.testing.assert_array_equal(
+            sim_exporter.map_inputs(pv_inputs, outputs=[output_variable]),
+            model_exporter.map_inputs(pv_inputs, outputs=[output_variable]),
+        )
+
+        t_eval = [0, 3600]
+        t_interp = np.linspace(t_eval[0], t_eval[1], 100)
+        voltage_model = pybamm.IDAKLUSolver(output_variables=[output_variable]).solve(
+            model_disc, t_eval, t_interp=t_interp, inputs=pv_inputs
+        )[output_variable](t_interp)
+        # The second solve re-solves the already-built Simulation
+        for _ in range(2):
+            voltage_simulation = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)[
+                output_variable
+            ](t_interp)
+        np.testing.assert_allclose(voltage_simulation, voltage_model, rtol=1e-10)
 
     @pytest.mark.skipif(not has_pydiffsol, reason="pydiffsol is not installed")
     # Slowest first, so xdist does not finish on a lone DFN compile
@@ -172,14 +279,7 @@ class TestDiffSLExport:
         [[], ["Lower voltage cut-off [V]"], ["Upper voltage cut-off [V]"]],
         ids=["no_inputs", "with_lower_cutoff", "with_upper_cutoff"],
     )
-    @pytest.mark.parametrize(
-        "experiment",
-        [
-            pytest.param("simple", id="with_experiment"),
-            None,
-        ],
-    )
-    def test_simulations(self, model, inputs, experiment, request, timing_results):
+    def test_simulations_with_experiment(self, model, inputs, request, timing_results):
         import pydiffsol as ds
 
         pv = model.default_parameter_values.copy()
@@ -193,7 +293,7 @@ class TestDiffSLExport:
             pv_inputs[input_name] = input_value
             pv[input_name] = "[input]"
         output_variable = "Voltage [V]"
-        experiment = self._simple_experiment() if experiment == "simple" else None
+        experiment = self._simple_experiment()
         solver = pybamm.IDAKLUSolver(output_variables=[output_variable])
 
         sim = pybamm.Simulation(
@@ -210,16 +310,12 @@ class TestDiffSLExport:
         # For experiment simulations, ambient temperature is injected as an
         # InputParameter; supply its default value so map_inputs can resolve it.
         map_inputs_dict = dict(pv_inputs)
-        if experiment is not None:
-            map_inputs_dict["Ambient temperature [K]"] = pv["Ambient temperature [K]"]
+        map_inputs_dict["Ambient temperature [K]"] = pv["Ambient temperature [K]"]
         ds_inputs = exporter.map_inputs(map_inputs_dict, outputs=[output_variable])
         logger = logging.getLogger()
         logger.info(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
 
-        model_disc = (
-            sim.built_model if experiment is None else sim._built_experiment_model
-        )
-        assert model_disc is not None
+        assert sim._built_experiment_model is not None
         if OUTPUT_DIFFSL:
             code_path = Path(f"{request.node.name}.txt")
             with open(code_path, "w") as f:
@@ -241,15 +337,10 @@ class TestDiffSLExport:
             ode.ic_options.armijo_constant = 1e-1
             ode.options.max_nonlinear_solver_iterations = 100
 
-        t_eval = [0, 3600]
-        t_interp = np.linspace(t_eval[0], t_eval[1], 100)
         for _i in range(2):
             t0 = time.perf_counter()
-            if experiment is None:
-                solution = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)
-            else:
-                solution = sim.solve(inputs=pv_inputs)
-                t_interp = solution.t
+            solution = sim.solve(inputs=pv_inputs)
+        t_interp = solution.t
 
         voltage_pybamm = solution[output_variable].data
         pybamm_solve_time = time.perf_counter() - t0
@@ -264,8 +355,7 @@ class TestDiffSLExport:
         if voltage_diffsol.shape[0] == 1:
             voltage_diffsol = voltage_diffsol.flatten()
 
-        if experiment is not None:
-            voltage_pybamm = np.interp(diffsol_solution.ts, solution.t, voltage_pybamm)
+        voltage_pybamm = np.interp(diffsol_solution.ts, solution.t, voltage_pybamm)
 
         if OUTPUT_TIMING:
             timing_results.append(
@@ -278,18 +368,9 @@ class TestDiffSLExport:
             )
 
         if OUTPUT_PLOTS:
-            import matplotlib.pyplot as plt
-
-            figure_path = Path(f"{request.node.name}.png")
-            fig, ax = plt.subplots()
-            ax.plot(diffsol_solution.ts, voltage_pybamm, label="PyBaMM")
-            ax.plot(diffsol_solution.ts, voltage_diffsol, label="DiffSL")
-            ax.set_xlabel("Time [s]")
-            ax.set_ylabel("Voltage [V]")
-            ax.legend()
-            fig.tight_layout()
-            fig.savefig(figure_path, dpi=150)
-            plt.close(fig)
+            self._plot_voltages(
+                request.node.name, diffsol_solution.ts, voltage_pybamm, voltage_diffsol
+            )
 
         # Note this tolerance is quite loose, for SPM and SPMe (not DFN) with experiment
         # there are often 1-2 points with higher error just after events,
