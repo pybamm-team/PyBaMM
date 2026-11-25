@@ -282,9 +282,8 @@ class NonlinearSolver(pybamm.BaseSolver):
                 f"block [0, {len_alg}); cannot localise for the Newton solver"
             )
 
-        # The C++ driver mutates its evaluator, so it takes the pool's exclusive handout
         _setup = idaklu.StandaloneNewtonSolver(
-            rust_evaluators=rust_model.evaluator_pool(1),
+            rust_evaluator=rust_model.evaluator(),
             n_rhs=len_rhs,
             n_alg=len_alg,
             jac_rows=jac_rows,

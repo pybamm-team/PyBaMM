@@ -21,18 +21,23 @@ variables to configure.
 - `pybamm.rust` also lowers a discretised model to a `CompiledModel` for the
   IDAKLU solver.
 - pybammsolvers does **not** link against the Rust core (the package
-  dependency only flows the other way). The IDAKLU C++ consumer resolves the
-  `extern "C"` entry points at runtime — `dlsym(RTLD_DEFAULT)` on POSIX, a
-  loaded-module walk with `GetProcAddress` on Windows — once
-  `pybamm.rust._core` is imported in-process.
-- The FFI contract's source of truth is the `extern "C"` exports in
-  `packages/pybamm-rust/pybamm-core/src/ffi.rs` (symbols carry a
-  `pybamm_rust_` prefix). The C++ consumer mirrors them as a function-pointer
-  table in
-  `packages/pybammsolvers/src/pybammsolvers/idaklu_source/Expressions/Rust/pybamm_rust_ffi.h`.
-  A version handshake (`pybamm_rust_abi_version()` /
-  `PYBAMM_RUST_ABI_VERSION`) and the `test_ffi_abi_contract` drift test keep
-  the two sides in lockstep.
+  dependency only flows the other way). Instead, `CompiledModel.evaluator()`
+  hands IDAKLU each evaluator in a Python capsule named
+  `pybamm.rust.evaluator`. The capsule holds the evaluator and a pointer to the
+  function table of the build that made it, and IDAKLU calls only through that
+  table. Nothing is resolved by symbol name, so `pybamm.rust._core` exports no
+  FFI symbols.
+- IDAKLU claims each capsule by renaming it `pybamm.rust.evaluator.claimed`,
+  and then owns the evaluator: each solver frees its own, and a claimed
+  evaluator cannot be handed to a second solver.
+- The contract's source of truth is `FfiTable` and `EvaluatorHandle` in
+  `packages/pybamm-rust/pybamm-core/src/ffi.rs`. The C++ consumer mirrors them
+  in
+  `packages/pybammsolvers/src/pybammsolvers/idaklu_source/Expressions/Rust/pybamm_rust_ffi.h`,
+  and the `test_ffi_abi_contract` drift test compares the two field by field.
+- The table leads with its ABI version and its size. IDAKLU refuses an
+  evaluator of another version, or one whose table is shorter than the one it
+  reads, before calling anything.
 - Rust reads and writes the C++ buffers at the Rust model's own sizes, so
   `create_rust_solver_group` checks every count it sizes a buffer from
   (states, inputs, Jacobian non-zeros, sensitivity parameters, outputs and
@@ -88,17 +93,23 @@ uv sync --extra all --group dev --reinstall-package pybammsolvers
 The drift test parses both sides of the boundary, so the workflow is
 mechanical:
 
-1. Edit the exports in `ffi.rs` and the consumer table in
-   `pybamm_rust_ffi.h` together. The table mirrors the exports exactly: the
-   drift test fails on an export the table does not bind, a binding with no
-   export, or a binding `RustFunctions.hpp` never calls.
+1. Edit `FfiTable` and `FFI_TABLE` in `ffi.rs` and `PybammRustFfi` in
+   `pybamm_rust_ffi.h` together. The drift test fails on any field the two
+   tables do not share, in order and type, on an `FFI_TABLE` entry wired to
+   another entry's function, and on an entry idaklu never calls.
 2. Run `cargo test -p pybamm-core --test test_ffi_abi_contract` from
-   `packages/pybamm-rust/`. On any change to the exported surface it fails
-   and prints the new `EXPECTED_ABI_HASH`; update it in `ffi.rs` and bump
-   `RUST_ABI_VERSION` / `PYBAMM_RUST_ABI_VERSION` in lockstep.
-3. Rebuild both extensions (previous section). A stale pybammsolvers binary
-   fails loudly at first use — either an unresolvable symbol or an ABI
-   version mismatch — rather than corrupting an evaluation.
+   `packages/pybamm-rust/`. The test holds the layout the current ABI version
+   froze:
+   - **Appending** table entries passes it unchanged. A pybammsolvers built
+     against the shorter table reads only the entries it knows, so it keeps
+     working with the newer core.
+   - **Any other change** (an entry's signature or meaning, removing or
+     reordering entries, or the handle's layout) fails it. Bump
+     `RUST_ABI_VERSION` and `PYBAMM_RUST_ABI_VERSION` together; the test then
+     prints the new layout to freeze in its place.
+3. Rebuild both extensions (previous section). A pybammsolvers built for
+   another ABI version refuses the evaluator, naming both versions, rather
+   than corrupting an evaluation.
 
 ## Running tests
 
@@ -111,20 +122,14 @@ uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_par
 uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_spm.py
 ```
 
-## Verifying FFI symbols
+## Checking the ABI version
 
-The entry points are exported by `pybamm.rust._core` and resolved from it at
-runtime, so they should be *defined* there and appear nowhere in idaklu:
+`idaklu.rust_abi_version` is the version a pybammsolvers build reads; it must
+equal `RUST_ABI_VERSION` in the `ffi.rs` that built `pybamm.rust._core`:
 
 ```bash
-# macOS (Linux: nm -D --defined-only)
-nm -gU packages/pybamm/src/pybamm/rust/_core.abi3.so | grep pybamm_rust_
+uv run python -c "from pybammsolvers import idaklu; print(idaklu.rust_abi_version)"
 ```
-
-Expected output lists symbols like `_pybamm_rust_eval_rhs` and
-`_pybamm_rust_abi_version`. If a Rust-backed solve fails with an
-unresolvable-symbol error instead, the loaded extension predates the current
-FFI surface — rebuild both extensions from the same source tree.
 
 ## Running benchmarks
 
@@ -159,7 +164,8 @@ between it and the local SUNDIALS build cause runtime crashes.
 uv sync --extra all --group dev --reinstall-package pybamm
 ```
 
-### Other symbol errors
+### Rust ABI version errors
 
-An ABI mismatch between components — rebuild both extensions from the same
-tree (see "Rebuilding after changes").
+pybammsolvers and `pybamm.rust._core` were built for different ABI versions,
+or the core's table is older than the one pybammsolvers reads. Rebuild both
+extensions from the same tree (see "Rebuilding after changes").

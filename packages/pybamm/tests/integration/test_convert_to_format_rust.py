@@ -114,12 +114,12 @@ class TestRustNewton:
         assert restored._setup is None
         assert bool(restored) is False
 
-    def test_rust_newton_solver_owns_its_evaluator_pool(self):
+    def test_rust_newton_solver_owns_its_evaluator(self):
         import gc
 
         solver = pybamm.NonlinearSolver()
         setup = solver._set_up_root_solver_rust(self._pure_algebraic_rust(), {"a": 3.0})
-        # Only the C++ solver still references the pool its evaluator lives in
+        # Only the C++ solver still holds the evaluator it claimed
         gc.collect()
         success, y = setup.solve_batch(
             np.array([0.0]), np.array([3.0]), np.array([3.0])
@@ -131,9 +131,11 @@ class TestRustNewton:
     def test_rust_newton_solver_refuses_a_bare_address(self):
         from pybammsolvers import idaklu
 
-        with pytest.raises(AttributeError, match="as_ptr"):
+        with pytest.raises(
+            ValueError, match=r"expected a 'pybamm\.rust\.evaluator' capsule, got int"
+        ):
             idaklu.StandaloneNewtonSolver(
-                rust_evaluators=0xDEAD0,
+                rust_evaluator=0xDEAD0,
                 n_rhs=0,
                 n_alg=1,
                 jac_rows=[0],

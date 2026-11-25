@@ -6,7 +6,6 @@ from pybamm.rust._core import (
     CompiledFunction,
     CompiledJacobian,
     CompiledModel,
-    EvaluatorPool,
     Expr,
     ExprGraph,
 )
@@ -15,7 +14,6 @@ __all__ = [
     "CompiledFunction",
     "CompiledJacobian",
     "CompiledModel",
-    "EvaluatorPool",
     "Expr",
     "ExprGraph",
 ]

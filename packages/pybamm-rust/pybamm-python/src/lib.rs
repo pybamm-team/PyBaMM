@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 mod arrays;
 mod compiled_function;
 mod errors;
-mod evaluator_pool;
+mod evaluator_capsule;
 mod expr;
 mod function_metadata;
 mod jacobian;
@@ -23,7 +23,6 @@ fn core_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<compiled_function::CompiledFunction>()?;
     m.add_class::<jacobian::CompiledJacobian>()?;
     m.add_class::<model::CompiledModel>()?;
-    m.add_class::<evaluator_pool::EvaluatorPool>()?;
 
     Ok(())
 }

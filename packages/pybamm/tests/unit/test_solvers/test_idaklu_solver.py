@@ -262,22 +262,19 @@ class TestIDAKLUSolver:
             solver.solve(_rust_decay_model(), [0, 1], inputs={"rate": 0.1})
         assert "options['compile'] has no effect" in caplog.text
 
-    def test_rust_evaluator_pool_hands_out_distinct_evaluators(self):
+    def test_each_rust_solver_claims_its_own_evaluator(self):
         solver = pybamm.IDAKLUSolver(options={"num_threads": 3})
         solver.set_up(_rust_decay_model(with_input=False))
-        pool = solver._setup["rust_evaluators"]
+        capsules = solver._setup["rust_evaluators"]
 
-        assert len(pool) == 3
-        # Each evaluator address is handed out once, and set_up consumed them all.
-        with pytest.raises(RuntimeError, match=r"already handed to a solver"):
-            pool.as_ptr(0)
-
-        fresh = solver._setup["rust_model"].evaluator_pool(3)
-        assert len({fresh.as_ptr(i) for i in range(3)}) == 3
-        with pytest.raises(IndexError, match=r"out of range for a pool of 3"):
-            fresh.as_ptr(3)
-        with pytest.raises(RuntimeError, match=r"already handed to a solver"):
-            fresh.as_ptr(1)
+        assert len(capsules) == 3
+        # A claim renames the capsule, which then leaves the evaluator to its solver
+        for capsule in capsules:
+            assert repr(capsule).startswith(
+                '<capsule object "pybamm.rust.evaluator.claimed"'
+            )
+        fresh = solver._setup["rust_model"].evaluator()
+        assert repr(fresh).startswith('<capsule object "pybamm.rust.evaluator"')
 
     @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     def test_every_failing_input_set_is_named(self, convert_to_format):

@@ -7,12 +7,12 @@ from typing import Literal, TypeAlias, TypedDict, final
 import numpy as np
 import numpy.typing as npt
 from scipy.sparse import csc_matrix
+from typing_extensions import CapsuleType
 
 __all__ = [
     "CompiledFunction",
     "CompiledJacobian",
     "CompiledModel",
-    "EvaluatorPool",
     "Expr",
     "ExprGraph",
 ]
@@ -509,8 +509,8 @@ class CompiledModel:
         """COO ``(rows, cols)`` of the algebraic jacobian; raises for ODEs."""
 
     def jacobian_stats(self) -> _JacobianStats: ...
-    def evaluator_pool(self, n: int) -> EvaluatorPool:
-        """``n`` independent evaluators over this model's tape (``n >= 1``)."""
+    def evaluator(self) -> CapsuleType:
+        """A new evaluator for one solver, in a capsule the solver claims and then owns."""
 
     @property
     def n_states(self) -> int: ...
@@ -542,12 +542,3 @@ class CompiledModel:
     def n_colors(self) -> int: ...
     @property
     def nnz(self) -> int: ...
-
-@final
-class EvaluatorPool:
-    """N independent evaluators over one shared tape, one per parallel solver."""
-
-    def as_ptr(self, index: int) -> int:
-        """Address of evaluator ``index``, handed out once; the pool must outlive it."""
-
-    def __len__(self) -> int: ...

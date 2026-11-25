@@ -911,7 +911,9 @@ class TestCompiledModelBundle:
         assert model.n_states == 2
         assert model.nnz >= 2
         assert model.n_colors >= 1
-        assert isinstance(model.evaluator_pool(1).as_ptr(0), int)
+        assert repr(model.evaluator()).startswith(
+            '<capsule object "pybamm.rust.evaluator"'
+        )
         model.csc_sparsity_pattern()
         stats = model.jacobian_stats()
         assert stats["n_dense_rows"] == 0

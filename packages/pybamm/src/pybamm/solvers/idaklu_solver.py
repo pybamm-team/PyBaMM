@@ -662,7 +662,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self._setup = {
             "rust_model": rust_model,
             # One evaluator per parallel solver, all sharing rust_model's tape.
-            "rust_evaluators": rust_model.evaluator_pool(options["num_solvers"]),
+            "rust_evaluators": [
+                rust_model.evaluator() for _ in range(options["num_solvers"])
+            ],
             "number_of_states": len(y0),
             "number_of_inputs": n_inputs,
             "number_of_sensitivity_parameters": rust_model.n_sens_params,

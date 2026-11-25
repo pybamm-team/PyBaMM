@@ -7,16 +7,17 @@ use numpy::{PyArray1, PyArrayMethods, PyReadonlyArray1, PyReadwriteArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
-use pyo3::types::PyDict;
+use pyo3::types::{PyCapsule, PyDict};
 
 use pybamm_core::model as core_model;
 use pybamm_core::{
-    CompiledExpr, CsrData, DagRef, NodeId, ObservableKind, PackedWidth, ParamIdx, Shape,
+    CompiledExpr, CsrData, DagRef, ModelEvaluator, NodeId, ObservableKind, PackedWidth, ParamIdx,
+    Shape,
 };
 
 use crate::compiled_function::CompiledFunction;
 use crate::errors::core_err_to_py;
-use crate::evaluator_pool::EvaluatorPool;
+use crate::evaluator_capsule::evaluator_capsule;
 use crate::expr::{Expr, ExprGraph};
 use crate::function_metadata::FunctionMetadata;
 use crate::jacobian::CompiledJacobian;
@@ -849,13 +850,13 @@ impl CompiledModel {
         (colptr, rowind)
     }
 
-    /// `n` independent evaluators over this model's tape, one per parallel solver.
-    fn evaluator_pool(&self, n: usize) -> PyResult<EvaluatorPool> {
-        if n == 0 {
-            return Err(PyValueError::new_err(
-                "evaluator_pool needs at least one evaluator, got 0",
-            ));
-        }
-        Ok(EvaluatorPool::from_compiled(&self.compiled, n))
+    /// A new evaluator over this model's tapes, with its own scratch, for one solver.
+    ///
+    /// It comes in a `pybamm.rust.evaluator` capsule, which a solver claims and then owns.
+    fn evaluator<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyCapsule>> {
+        evaluator_capsule(
+            py,
+            ModelEvaluator::from_compiled(Arc::clone(&self.compiled)),
+        )
     }
 }

@@ -193,14 +193,15 @@ class TestNonlinearSolverRust:
             "use_sparse": True,
         }
         assert (kwargs["jac_rows"], kwargs["jac_cols"]) == ([0, 1], [0, 1])
-        # Each solver takes its own pool: an evaluator is handed out once
-        idaklu.StandaloneNewtonSolver(
-            rust_evaluators=rust_model.evaluator_pool(1), **kwargs
-        )
+        # Each solver claims and owns its evaluator, so one cannot serve two
+        evaluator = rust_model.evaluator()
+        idaklu.StandaloneNewtonSolver(rust_evaluator=evaluator, **kwargs)
+        with pytest.raises(ValueError, match=r"already claimed by a solver"):
+            idaklu.StandaloneNewtonSolver(rust_evaluator=evaluator, **kwargs)
 
         with pytest.raises(ValueError, match=match):
             idaklu.StandaloneNewtonSolver(
-                rust_evaluators=rust_model.evaluator_pool(1), **{**kwargs, **change}
+                rust_evaluator=rust_model.evaluator(), **{**kwargs, **change}
             )
 
     def test_matches_casadi_newton(self):

@@ -26,12 +26,13 @@ module, and explains how the Jacobian is assembled (see
 ## Who consumes it
 
 - **IDAKLU**, through the C ABI in `ffi.rs`. `pybammsolvers` cannot link against this
-  crate, because PyBaMM depends on `pybammsolvers` and not the reverse. So the FFI entry
-  points are compiled into the Python extension, and the C++ side resolves them at
-  runtime with `dlsym` once that extension is loaded. IDAKLU therefore has no undefined
-  symbols and loads standalone, with the Rust path resolved lazily on first use. The two
-  sides agree on an ABI version and refuse to proceed on a mismatch; bumping the Rust
-  constant means bumping the C++ one in the same change.
+  crate, because PyBaMM depends on `pybammsolvers` and not the reverse. So each evaluator
+  reaches IDAKLU in a Python capsule that also carries the function table of the build
+  that made it, and IDAKLU calls only through that table. Nothing is resolved by symbol
+  name, so IDAKLU loads standalone. The table leads with an ABI version, which IDAKLU
+  must match, and its size: within a version entries are only appended, so a newer core
+  still works with an older IDAKLU. Bumping the Rust version means bumping the C++ one
+  in the same change.
 
 ## Building
 
