@@ -1909,7 +1909,7 @@ class TestSolution:
         with pytest.raises(ValueError, match=r"Input cannot be converted"):
             sol.observe(None)
         # Time derivatives need the state derivatives, which aren't stored
-        with pytest.raises(ValueError, match=r"Must provide a 'y_dot'"):
+        with pytest.raises(pybamm.ModelError, match=r"Must provide a 'y_dot'"):
             sol.observe(model.variables["Voltage [V]"].diff(pybamm.t))
 
         # 2. Trying to observe a symbol which is not part of the parameter_values or model

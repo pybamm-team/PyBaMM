@@ -7,6 +7,13 @@ from scipy.sparse import issparse
 import pybamm
 
 
+@pytest.fixture
+def rust_backend(monkeypatch):
+    """Make newly constructed models default to the Rust backend."""
+    monkeypatch.setattr(pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "rust")
+    yield
+
+
 def _reads_y_dot(expr):
     return any(isinstance(node, pybamm.StateVectorDot) for node in expr.pre_order())
 

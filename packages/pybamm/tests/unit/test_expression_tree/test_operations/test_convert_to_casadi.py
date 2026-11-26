@@ -562,12 +562,13 @@ class TestCasadiConverter:
     def test_errors(self):
         y = pybamm.StateVector(slice(0, 10))
         with pytest.raises(
-            ValueError, match=r"Must provide a 'y' for converting state vectors"
+            pybamm.ModelError, match=r"Must provide a 'y' for converting state vectors"
         ):
             y.to_casadi()
         y_dot = pybamm.StateVectorDot(slice(0, 10))
         with pytest.raises(
-            ValueError, match=r"Must provide a 'y_dot' for converting state vectors"
+            pybamm.ModelError,
+            match=r"Must provide a 'y_dot' for converting state vectors",
         ):
             y_dot.to_casadi()
         var = pybamm.Variable("var")
