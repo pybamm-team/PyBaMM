@@ -41,6 +41,7 @@ class BaseSimulation:
         Parameters and their corresponding numerical values.
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
+        (a prebuilt :class:`pybamm.UnstructuredSubMesh` is used as is)
     var_pts: dict (optional)
         A dictionary of the number of points used by each spatial variable
     spatial_methods: dict (optional)
@@ -96,8 +97,8 @@ class BaseSimulation:
         self._unprocessed_model = model
         self._model = model
 
-        self._geometry = geometry or self._model.default_geometry
         self._submesh_types = submesh_types or self._model.default_submesh_types
+        self._geometry = geometry or self._default_geometry(self._submesh_types)
         self._var_pts = var_pts or self._model.default_var_pts
         self._spatial_methods = spatial_methods or self._model.default_spatial_methods
         self._solver = solver or self._model.default_solver
@@ -129,6 +130,27 @@ class BaseSimulation:
             warnings.filterwarnings("ignore")
 
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
+    def _default_geometry(self, submesh_types):
+        """
+        Return the model's default geometry without the domains that have a
+        prebuilt submesh in ``submesh_types``.
+        """
+        geometry = self._model.default_geometry
+        prebuilt_domains = {
+            domain
+            for domain, submesh_type in submesh_types.items()
+            if isinstance(submesh_type, pybamm.SubMesh)
+        }
+        if not prebuilt_domains:
+            return geometry
+        return pybamm.Geometry(
+            {
+                domain: domain_geometry
+                for domain, domain_geometry in geometry.items()
+                if domain not in prebuilt_domains
+            }
+        )
 
     def __getstate__(self):
         """

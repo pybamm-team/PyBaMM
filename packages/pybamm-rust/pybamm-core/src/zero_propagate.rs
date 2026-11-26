@@ -1,8 +1,9 @@
 //! Shape-aware zero propagation: folds every subtree it proves identically zero.
 //!
-//! The rules are `CasADi`'s on-the-fly ones (`0 * x`, `0 / x`, `0 @ v` and `M @ 0` are zero),
-//! so the result matches the input up to the sign of zero wherever every intermediate of the
-//! input is finite. At a `0 * inf` or `0 / 0` it yields zero where the input yields NaN.
+//! The rules are `CasADi`'s on-the-fly ones (`0 * x`, `0 / x`, `0 % x`, `0 @ v` and `M @ 0` are
+//! zero), so the result matches the input up to the sign of zero wherever every intermediate of
+//! the input is finite. At a `0 * inf`, `0 / 0` or `0 % 0` it yields zero where the input yields
+//! NaN.
 
 use crate::arena::{Arena, Dag, DagRef, NodeId, NodeMap};
 use crate::ir::NodeWidths;
@@ -31,7 +32,7 @@ fn infer_shape(
 
         Node::Add(a, b) | Node::Sub(a, b) => is_zero(a) && is_zero(b),
         Node::Mul(a, b) | Node::MatMul(a, b) | Node::MaskedMul(a, b) => is_zero(a) || is_zero(b),
-        Node::Div(a, _) => is_zero(a),
+        Node::Div(a, _) | Node::Modulo(a, _) => is_zero(a),
 
         Node::Neg(c)
         | Node::Abs(c)
@@ -70,7 +71,6 @@ fn infer_shape(
         | Node::Minimum(..)
         | Node::Maximum(..)
         | Node::Hypot(..)
-        | Node::Modulo(..)
         | Node::EqualHeaviside(..)
         | Node::NotEqualHeaviside(..)
         | Node::Equality(..)
@@ -203,6 +203,8 @@ pub mod tests {
             (Node::Sub(zero, zero), true),
             (Node::Div(zero, x), true),
             (Node::Div(x, zero), false),
+            (Node::Modulo(zero, x), true),
+            (Node::Modulo(x, zero), false),
             (Node::MatMul(matrix, zero), true),
             (Node::MatMul(zero_matrix, x), true),
             (Node::MatMul(matrix, x), false),

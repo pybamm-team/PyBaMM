@@ -361,17 +361,23 @@ class EISSolution(SolutionBase):
         Frequencies in Hz at which impedance was computed.
     impedance : np.ndarray
         Complex impedance values at each frequency.
+    components : dict, optional
+        Named per-electrode impedances, e.g.
+        ``{"Positive electrode impedance [Ohm]": ..., "Negative electrode impedance [Ohm]": ...}``,
+        made available alongside ``solution.impedance``.
     """
 
     __slots__ = ()
 
-    def __init__(self, frequencies, impedance):
+    def __init__(self, frequencies, impedance, components=None):
         super().__init__()
         impedance = np.asarray(impedance, dtype=complex)
         self._data["Frequency [Hz]"] = np.asarray(frequencies)
         self._data["Impedance [Ohm]"] = impedance
         self._data["Z_re [Ohm]"] = impedance.real
         self._data["Z_im [Ohm]"] = impedance.imag
+        for name, values in (components or {}).items():
+            self._data[name] = np.asarray(values, dtype=complex)
 
     @property
     def frequencies(self):
@@ -402,7 +408,9 @@ class EISSolution(SolutionBase):
         Parameters
         ----------
         **kwargs
-            Keyword arguments forwarded to :func:`pybamm.nyquist_plot`.
+            Keyword arguments forwarded to :func:`pybamm.nyquist_plot`. When
+            per-electrode impedances are present, ``label`` is ignored because
+            each component is labeled automatically.
 
         Returns
         -------
@@ -411,7 +419,39 @@ class EISSolution(SolutionBase):
         """
         from pybamm.plotting.nyquist_plot import nyquist_plot
 
-        return nyquist_plot(self.impedance, **kwargs)
+        electrode_keys = [
+            key for key in self._data if key.endswith(" electrode impedance [Ohm]")
+        ]
+        if not electrode_keys:
+            return nyquist_plot(self.impedance, **kwargs)
+
+        plot_kwargs = dict(kwargs)
+        ax = plot_kwargs.pop("ax", None)
+        show_plot = plot_kwargs.pop("show_plot", True)
+        plot_kwargs.pop("label", None)
+        fig, ax = nyquist_plot(
+            self.impedance,
+            ax=ax,
+            show_plot=False,
+            label="Cell",
+            **plot_kwargs,
+        )
+        for key in electrode_keys:
+            label = key.removesuffix(" impedance [Ohm]")
+            _, ax = nyquist_plot(
+                self._data[key],
+                ax=ax,
+                show_plot=False,
+                label=label,
+                **plot_kwargs,
+            )
+        ax.legend()
+
+        if show_plot:  # pragma: no cover
+            plt = pybamm.import_optional_dependency("matplotlib.pyplot")
+            plt.show()
+
+        return fig, ax
 
     def bode_plot(self, **kwargs):
         """Generate a Bode plot from the impedance data.
