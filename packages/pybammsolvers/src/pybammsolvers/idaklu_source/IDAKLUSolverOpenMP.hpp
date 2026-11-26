@@ -626,7 +626,7 @@ public:
    */
   void SetStepOutputSensitivities(sunrealtype &tval);
 
-  /** @brief Save output sensitivities via native projection, in the CasADi path's yS layout */
+  /** @brief Save output sensitivities via native projection, into yS's (output, param) layout */
   void NativeSetStepOutputSensitivities(sunrealtype &tval);
 
   // Native-projection scratch: [n_params * n_states] and [n_params * length_of_return_vector].

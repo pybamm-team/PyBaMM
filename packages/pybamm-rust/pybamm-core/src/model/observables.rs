@@ -34,10 +34,9 @@ impl CompiledModel {
     /// Compile `roots` as this model's observables of `kind`, replacing any set before.
     ///
     /// Every root is validated and checked against the declared states and inputs before any
-    /// compiles; only events may read `y_dot`, which IDA gives its root function. The roots
-    /// are simplified together once, and their tapes and tangents derive
-    /// from that graph, so they agree with each other. Two or more also fuse into one tape, so
-    /// shared subexpressions run once.
+    /// compiles; only events may read `y_dot`. The roots are simplified together once, and
+    /// their tapes and tangents derive from that graph, so they agree with each other. Two or
+    /// more also fuse into one tape, so shared subexpressions run once.
     pub fn set_observables(
         &mut self,
         kind: ObservableKind,

@@ -1,7 +1,7 @@
 //! C ABI for the C++ IDAKLU solver: each [`EvaluatorHandle`] carries its build's [`FfiTable`].
 //!
-//! Entries return `SUCCESS` (or a count), `ERROR_NULL_POINTER` on a null, or `ERROR_PANIC` on a
-//! caught panic. All require `user_data` to be a handle's `model` no other call is using,
+//! Entries other than `release` return `SUCCESS` (or a count), `ERROR_NULL_POINTER` on a null,
+//! or `ERROR_PANIC` on a caught panic. All require `user_data` to be a handle's `model` no other call is using,
 //! `inputs` to hold `input_width` elements (or be null at width zero), each buffer to hold the
 //! count its `# Safety` names, and no output to overlap another argument.
 

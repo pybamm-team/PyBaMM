@@ -14,7 +14,7 @@ public:
   /**
    * @brief Default constructor
    *
-   * `number_of_inputs` is the width each solver copies from an inputs row.
+   * `number_of_inputs` is the width of each inputs row.
    */
   IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters,
                     int number_of_inputs):
