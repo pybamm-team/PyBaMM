@@ -543,16 +543,16 @@ class BaseModel:
 
     def _resolve_coupled_variables(
         self,
-        symbol: pybamm.Symbol | numbers.Number,
+        symbol: pybamm.Symbol,
         cache: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
-    ) -> pybamm.Symbol | numbers.Number:
+    ) -> pybamm.Symbol:
         """
         Resolve CoupledVariables by looking up their targets in self._variables.
 
         Parameters
         ----------
-        symbol : :class:`pybamm.Symbol` or number
-            The expression to resolve; numbers are returned unchanged.
+        symbol : :class:`pybamm.Symbol`
+            The expression to resolve.
         cache : dict, optional
             Memo of ``{original node: resolved node}``. Pass the same dict across
             calls to resolve shared subtrees only once.
@@ -562,9 +562,6 @@ class BaseModel:
         :class:`pybamm.Symbol`
             The resolved expression.
         """
-        # unprocessed equations may still hold plain numbers
-        if not isinstance(symbol, pybamm.Symbol):
-            return symbol
         if cache is None:
             cache = {}
 
@@ -600,6 +597,9 @@ class BaseModel:
         cache = {}
 
         def resolve(expr):
+            # unprocessed equations may still hold plain numbers
+            if not isinstance(expr, pybamm.Symbol):
+                return expr
             return self._resolve_coupled_variables(expr, cache)
 
         rhs = {var: resolve(expr) for var, expr in self.rhs.items()}
