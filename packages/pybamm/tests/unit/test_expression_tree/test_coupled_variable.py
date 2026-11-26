@@ -161,14 +161,12 @@ class TestCoupledVariable:
             pybamm.Simulation(make_model()).solve([0, 1])
 
         # Without resolving, the CoupledVariable hits the discretisation error
-        sim = pybamm.Simulation(
-            make_model(), discretisation_kwargs={"resolve_coupled_variables": False}
-        )
+        disc = pybamm.Discretisation(resolve_coupled_variables=False)
         with pytest.raises(
             pybamm.DiscretisationError,
             match="CoupledVariable 'missing_variable' was not resolved",
         ):
-            sim.solve([0, 1])
+            disc.process_model(make_model())
 
     def test_coupled_variable_with_battery_model(self):
         """Test CoupledVariable with a real battery model (SPM)."""
@@ -259,8 +257,7 @@ class TestCoupledVariable:
             "c": c,
         }
 
-        disc = pybamm.Discretisation()
-        resolved = disc._resolve_coupled_variables_in_model(model, inplace=True)
+        resolved = model._resolve_coupled_variables_in_equations(inplace=True)
 
         assert resolved is model
         assert model.rhs[a] == c + 1
@@ -275,8 +272,78 @@ class TestCoupledVariable:
         model.initial_conditions = {a: pybamm.Scalar(1)}
         model.variables = {"a": a}
 
-        disc = pybamm.Discretisation()
-        resolved = disc._resolve_coupled_variables_in_model(model, inplace=False)
+        resolved = model._resolve_coupled_variables_in_equations(inplace=False)
 
         assert resolved is model
         assert model.rhs[a] is rhs_a
+
+    @pytest.mark.parametrize(
+        "variable_kwargs",
+        [
+            {"scale": pybamm.Parameter("Scale")},
+            {"reference": pybamm.Parameter("Scale") - 1},
+        ],
+    )
+    def test_coupled_variable_after_parameter_processing(self, variable_kwargs):
+        # targets must match the parameter-processed rhs keys
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u", **variable_kwargs)
+        model.rhs = {u: -pybamm.CoupledVariable("w")}
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {"u": u, "v": 2 * u, "w": pybamm.CoupledVariable("v")}
+
+        simulation = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues({"Scale": 1})
+        )
+        solution = simulation.solve([0, 1])
+
+        np.testing.assert_allclose(solution["u"](1.0), np.exp(-2), rtol=1e-3)
+
+    @pytest.mark.parametrize("with_parameters", [False, True])
+    def test_coupled_variable_in_eagerly_processed_variable(self, with_parameters):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        k = pybamm.Parameter("k") if with_parameters else pybamm.Scalar(2)
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {"u": u, "v": k * u, "w": pybamm.CoupledVariable("v")}
+
+        if with_parameters:
+            pybamm.ParameterValues({"k": 2}).process_model(model)
+        pybamm.Discretisation().process_model(model)
+
+        w = model.get_processed_variable("w")
+        np.testing.assert_allclose(w.evaluate(y=np.array([3.0])), 6.0)
+
+    def test_coupled_variable_target_gets_interpolant_events(self):
+        x = np.linspace(0, 2, 11)
+        events = {}
+        for coupled in [False, True]:
+            model = pybamm.BaseModel()
+            u = pybamm.Variable("u")
+            f = pybamm.FunctionParameter("f", {"u": u})
+            model.rhs = {u: pybamm.CoupledVariable("w") if coupled else f}
+            model.initial_conditions = {u: pybamm.Scalar(1)}
+            model.variables = {"u": u, "w": f}
+
+            pybamm.ParameterValues({"f": ("f", (x, -x))}).process_model(model)
+            events[coupled] = sorted(event.name for event in model.events)
+
+        assert len(events[False]) == 2
+        assert events[True] == events[False]
+
+    def test_parameter_processing_keeps_unprocessed_model_coupled(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        coupled = pybamm.CoupledVariable("w")
+        model.rhs = {u: -coupled}
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {"u": u, "w": 2 * pybamm.Parameter("k") * u}
+
+        processed = pybamm.ParameterValues({"k": 1}).process_model(model, inplace=False)
+
+        assert model.rhs[u] == -coupled
+        assert not any(
+            isinstance(node, pybamm.CoupledVariable)
+            for node in processed.rhs[u].pre_order()
+        )

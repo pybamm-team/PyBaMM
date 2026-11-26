@@ -543,16 +543,16 @@ class BaseModel:
 
     def _resolve_coupled_variables(
         self,
-        symbol: pybamm.Symbol,
+        symbol: pybamm.Symbol | numbers.Number,
         cache: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
-    ) -> pybamm.Symbol:
+    ) -> pybamm.Symbol | numbers.Number:
         """
         Resolve CoupledVariables by looking up their targets in self._variables.
 
         Parameters
         ----------
-        symbol : :class:`pybamm.Symbol`
-            The expression to resolve.
+        symbol : :class:`pybamm.Symbol` or number
+            The expression to resolve; numbers are returned unchanged.
         cache : dict, optional
             Memo of ``{original node: resolved node}``. Pass the same dict across
             calls to resolve shared subtrees only once.
@@ -562,6 +562,9 @@ class BaseModel:
         :class:`pybamm.Symbol`
             The resolved expression.
         """
+        # unprocessed equations may still hold plain numbers
+        if not isinstance(symbol, pybamm.Symbol):
+            return symbol
         if cache is None:
             cache = {}
 
@@ -577,6 +580,75 @@ class BaseModel:
             return self._resolve_coupled_variables(self._variables[node.name], cache)
 
         return pybamm.tree_map(resolve, symbol, cache=cache)
+
+    def _resolve_coupled_variables_in_equations(self, inplace: bool) -> BaseModel:
+        """
+        Resolve CoupledVariables in rhs, algebraic, initial_conditions,
+        boundary_conditions and events.
+
+        Parameters
+        ----------
+        inplace : bool
+            If False, resolve into a copy of the model and leave it unchanged.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel`
+            The model with resolved equations: the model itself if nothing needed
+            resolving or ``inplace`` is True, otherwise a copy.
+        """
+        cache = {}
+
+        def resolve(expr):
+            return self._resolve_coupled_variables(expr, cache)
+
+        rhs = {var: resolve(expr) for var, expr in self.rhs.items()}
+        algebraic = {var: resolve(expr) for var, expr in self.algebraic.items()}
+        initial_conditions = {
+            var: resolve(expr) for var, expr in self.initial_conditions.items()
+        }
+        boundary_conditions = {
+            var: {
+                side: (resolve(expr), bc_type) for side, (expr, bc_type) in bcs.items()
+            }
+            for var, bcs in self.boundary_conditions.items()
+        }
+        events = [
+            pybamm.Event(event.name, resolve(event.expression), event.event_type)
+            for event in self.events
+        ]
+
+        # the shared cache may return an equal node from another equation, so
+        # compare by equality rather than identity
+        unchanged = (
+            all(rhs[var] == expr for var, expr in self.rhs.items())
+            and all(algebraic[var] == expr for var, expr in self.algebraic.items())
+            and all(
+                initial_conditions[var] == expr
+                for var, expr in self.initial_conditions.items()
+            )
+            and all(
+                boundary_conditions[var][side][0] == expr
+                for var, bcs in self.boundary_conditions.items()
+                for side, (expr, _) in bcs.items()
+            )
+            and all(
+                new.expression == event.expression
+                for new, event in zip(events, self.events, strict=True)
+            )
+        )
+        if unchanged:
+            return self
+
+        model = self if inplace else self.new_copy()
+        # assign new dicts: the inner boundary condition dicts may be shared with
+        # the model this one was copied from
+        model.rhs = rhs
+        model.algebraic = algebraic
+        model.initial_conditions = initial_conditions
+        model.boundary_conditions = boundary_conditions
+        model.events = events
+        return model
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """

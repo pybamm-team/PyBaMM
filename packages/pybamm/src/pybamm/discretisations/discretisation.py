@@ -202,7 +202,7 @@ class Discretisation:
 
         # resolve before boundary conditions are discretised below
         if self._resolve_coupled_variables:
-            model = self._resolve_coupled_variables_in_model(model, inplace)
+            model = model._resolve_coupled_variables_in_equations(inplace)
 
         # Set the y split for variables
         pybamm.logger.verbose(f"Set variable slices for {model.name}")
@@ -252,10 +252,13 @@ class Discretisation:
         if not delayed_variable_processing:
             # Process variables and store in _variables_processed
             variables_to_process = model.get_processed_variables_dict()
+            cache = {}
             for name, var in pre_processed_variables.items():
                 if name not in variables_to_process:
                     # New variable (e.g., added by _pre_process_variables)
-                    variables_to_process[name] = var
+                    variables_to_process[name] = model._resolve_coupled_variables(
+                        var, cache
+                    )
             processed_variables = self.process_dict(variables_to_process)
             model_disc.update_processed_variables(processed_variables)
 
@@ -312,78 +315,6 @@ class Discretisation:
 
         model_disc.is_discretised = True
         return model_disc
-
-    def _resolve_coupled_variables_in_model(self, model, inplace):
-        """
-        Resolve CoupledVariables in rhs, algebraic, initial_conditions,
-        boundary_conditions and events.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose equations are resolved.
-        inplace : bool
-            If False, resolve into a copy of ``model`` and leave ``model`` unchanged.
-
-        Returns
-        -------
-        :class:`pybamm.BaseModel`
-            The model with resolved equations: ``model`` itself if nothing needed
-            resolving or ``inplace`` is True, otherwise a copy.
-        """
-        cache = {}
-
-        def resolve(expr):
-            return model._resolve_coupled_variables(expr, cache)
-
-        rhs = {var: resolve(expr) for var, expr in model.rhs.items()}
-        algebraic = {var: resolve(expr) for var, expr in model.algebraic.items()}
-        initial_conditions = {
-            var: resolve(expr) for var, expr in model.initial_conditions.items()
-        }
-        boundary_conditions = {
-            var: {
-                side: (resolve(expr), bc_type) for side, (expr, bc_type) in bcs.items()
-            }
-            for var, bcs in model.boundary_conditions.items()
-        }
-        events = [
-            pybamm.Event(event.name, resolve(event.expression), event.event_type)
-            for event in model.events
-        ]
-
-        # the shared cache may return an equal node from another equation, so
-        # compare by equality rather than identity
-        unchanged = (
-            all(rhs[var] == expr for var, expr in model.rhs.items())
-            and all(algebraic[var] == expr for var, expr in model.algebraic.items())
-            and all(
-                initial_conditions[var] == expr
-                for var, expr in model.initial_conditions.items()
-            )
-            and all(
-                boundary_conditions[var][side][0] == expr
-                for var, bcs in model.boundary_conditions.items()
-                for side, (expr, _) in bcs.items()
-            )
-            and all(
-                new.expression == event.expression
-                for new, event in zip(events, model.events, strict=True)
-            )
-        )
-        if unchanged:
-            return model
-
-        if not inplace:
-            model = model.new_copy()
-        # assign new dicts: the inner boundary condition dicts may be shared with
-        # the model this one was copied from
-        model.rhs = rhs
-        model.algebraic = algebraic
-        model.initial_conditions = initial_conditions
-        model.boundary_conditions = boundary_conditions
-        model.events = events
-        return model
 
     def set_variable_slices(self, variables):
         """

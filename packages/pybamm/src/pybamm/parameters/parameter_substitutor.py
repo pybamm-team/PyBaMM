@@ -457,26 +457,31 @@ class ParameterSubstitutor:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
+        # resolve first, so passes over the processed equations see coupled targets
+        equations = unprocessed_model._resolve_coupled_variables_in_equations(
+            inplace=False
+        )
+
         # Find all InputParameters in the parameter values
         unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
         model.fixed_input_parameters = unpacker.unpack_parameter_values(self._store)
 
         new_rhs = {}
-        for variable, equation in unprocessed_model.rhs.items():
+        for variable, equation in equations.rhs.items():
             pybamm.logger.verbose(f"Processing parameters for {variable!r} (rhs)")
             new_variable = self.process_symbol(variable)
             new_rhs[new_variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
-        for variable, equation in unprocessed_model.algebraic.items():
+        for variable, equation in equations.algebraic.items():
             pybamm.logger.verbose(f"Processing parameters for {variable!r} (algebraic)")
             new_variable = self.process_symbol(variable)
             new_algebraic[new_variable] = self.process_symbol(equation)
         model.algebraic = new_algebraic
 
         new_initial_conditions = {}
-        for variable, equation in unprocessed_model.initial_conditions.items():
+        for variable, equation in equations.initial_conditions.items():
             pybamm.logger.verbose(
                 f"Processing parameters for {variable!r} (initial conditions)"
             )
@@ -484,24 +489,27 @@ class ParameterSubstitutor:
             new_initial_conditions[new_variable] = self.process_symbol(equation)
         model.initial_conditions = new_initial_conditions
 
-        model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
+        model.boundary_conditions = self.process_boundary_conditions(equations)
 
         if not delayed_variable_processing:
             # Process variables and store in _variables_processed, NOT in variables
-            variables_to_process = (
-                unprocessed_model.variables
-                | unprocessed_model.get_processed_variables_dict()
-            )
+            already_processed = unprocessed_model.get_processed_variables_dict()
+            variables_to_process = unprocessed_model.variables | already_processed
             processed_variables = {}
+            cache = {}
             for variable, equation in variables_to_process.items():
                 pybamm.logger.verbose(
                     f"Processing parameters for {variable!r} (variables)"
                 )
+                if variable not in already_processed:
+                    equation = unprocessed_model._resolve_coupled_variables(
+                        equation, cache
+                    )
                 processed_variables[variable] = self.process_symbol(equation)
             model.update_processed_variables(processed_variables)
 
         new_events = []
-        for event in unprocessed_model.events:
+        for event in equations.events:
             pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
             new_events.append(
                 pybamm.Event(
