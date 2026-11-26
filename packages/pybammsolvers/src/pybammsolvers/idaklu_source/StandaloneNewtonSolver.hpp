@@ -102,7 +102,7 @@ public:
 
   /** @brief Rust-backed constructor, owning the evaluator `rust_evaluator` holds. */
   StandaloneNewtonSolver(
-    py::object rust_evaluator,
+    const py::object& rust_evaluator,
     int n_rhs,
     int n_alg,
     const std::vector<expr_int>& jac_rows,

@@ -227,7 +227,7 @@ int checked_atol_width(const std::vector<sunrealtype>& atol, int n_alg) {
 }  // namespace
 
 StandaloneNewtonSolver::StandaloneNewtonSolver(
-  py::object rust_evaluator,
+  const py::object& rust_evaluator,
   int n_rhs,
   int n_alg,
   const std::vector<expr_int>& jac_rows,

@@ -205,7 +205,7 @@ IDAKLUSolverGroup *create_casadi_solver_group(
 // An int leads: without pybind11 headers, CodeQL parses a leading `py::object` as a variable initialiser
 IDAKLUSolverGroup *create_rust_solver_group(
     int number_of_states,
-    py::sequence rust_evaluators,
+    const py::sequence &rust_evaluators,
     int number_of_inputs,
     int number_of_sens_params,
     int number_of_events,
