@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import json
-import os
 import re
-import sys
 from collections import defaultdict
 from collections.abc import Iterator, Mapping
 from pathlib import Path
@@ -1056,15 +1054,7 @@ class ParameterValues:
                 f"ambient through '{h_name}' and the core to the surface through "
                 f"'{new_name}'. Mapping the old values onto these parameters."
             )
-        # Attribute the warning to the first caller outside pybamm, so the
-        # default filters show it to users
-        package_dir = os.path.dirname(pybamm.__file__)
-        frame = sys._getframe(1)
-        stacklevel = 2
-        while frame is not None and frame.f_code.co_filename.startswith(package_dir):
-            frame = frame.f_back
-            stacklevel += 1
-        warn(message, DeprecationWarning, stacklevel=stacklevel)
+        warn(message, DeprecationWarning, stacklevel=pybamm.util.user_stacklevel())
         if new_name in self._store:
             return self
         area = model.param.A_cooling
