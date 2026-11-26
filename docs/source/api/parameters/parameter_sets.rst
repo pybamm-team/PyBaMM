@@ -86,6 +86,10 @@ PyBaMM provides pre-defined parameter sets for several common chemistries,
 listed below. See :ref:`adding-parameter-sets` for information on registering new
 parameter sets with PyBaMM.
 
+Install ``pybamm[bpx]`` to use the ``MolicelP45B_AboutEnergy2026`` parameter set.
+If you install the extra from a running notebook, restart the kernel to make the
+set available in ``pybamm.parameter_sets``.
+
 Lead-acid Parameter Sets
 ========================
 

@@ -29,12 +29,15 @@ jobs:
     permissions:
       pull-requests: read
       contents: read
+    env:
+      STYLE_PREFLIGHT: ${{ github.base_ref != github.event.repository.default_branch }}
     outputs:
       benchmark: ${{ steps.filter.outputs.benchmark }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: ${{ env.STYLE_PREFLIGHT == 'true' && 2 || 1 }}
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -54,6 +57,13 @@ jobs:
               - '.github/workflows/benchmarks_pr.yml'
               - '.github/workflows/benchmarks_track.yml'
 
+      # Run the shared check here to keep the benchmark artifact handoff independent.
+      - name: Check style before starting benchmarks
+        if: env.STYLE_PREFLIGHT == 'true' && steps.filter.outputs.benchmark == 'true'
+        uses: $/.github/actions/check-style
+        with:
+          preflight: "true"
+
   build_solver:
     needs: changes
     if: needs.changes.outputs.benchmark == 'true'
@@ -64,10 +74,11 @@ jobs:
       target: linux-x64
       cache_wheels: true
 
+  # Only PRs into the default branch spend Bencher's daily registry quota
   build_image:
     name: Build benchmark image
     needs: [changes, build_solver]
-    if: needs.changes.outputs.benchmark == 'true'
+    if: needs.changes.outputs.benchmark == 'true' && github.base_ref == github.event.repository.default_branch
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -92,13 +103,15 @@ jobs:
       # Reuse, but don't write, main's layer cache so unchanged layers aren't re-pushed
       - name: Build benchmark image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          SOURCE_DATE_EPOCH: "315532800" # 1980-01-01; sets image and file times, not RUN's env
         with:
           context: .
           file: packages/pybamm/tests/benchmarks/Dockerfile
           provenance: false
           sbom: false
           cache-from: type=gha,scope=benchmark-image
-          outputs: type=oci,dest=benchmark-image.tar,name=pybamm-benchmarks:pr,compression=zstd,compression-level=19,force-compression=true
+          outputs: type=oci,dest=benchmark-image.tar,name=pybamm-benchmarks:pr,compression=zstd,compression-level=19,force-compression=true,rewrite-timestamp=true
 
       # Layers are already zstd-compressed
       - name: Upload benchmark image

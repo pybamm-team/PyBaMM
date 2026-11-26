@@ -21,6 +21,65 @@ class TestSPMe(BaseUnitTestLithiumIon):
         options = {"electrolyte conductivity": "integrated"}
         self.check_well_posedness(options)
 
+    @pytest.mark.parametrize(
+        ("surface_form", "working_electrode"),
+        [
+            ("algebraic", "both"),
+            ("differential", "both"),
+            ("false", "positive"),
+            ("algebraic", "positive"),
+            ("differential", "positive"),
+        ],
+    )
+    def test_integrated_conductivity_unsupported_raises(
+        self, surface_form, working_electrode
+    ):
+        options = {
+            "electrolyte conductivity": "integrated",
+            "surface form": surface_form,
+            "working electrode": working_electrode,
+        }
+        with pytest.raises(pybamm.OptionError, match=r"'integrated' is only supported"):
+            pybamm.lithium_ion.SPMe(options)
+
+    @pytest.mark.parametrize(
+        ("options", "parameter_set"),
+        [
+            ({"surface form": "algebraic"}, None),
+            ({"surface form": "differential"}, None),
+            (
+                {
+                    "open-circuit potential": "MSMR",
+                    "particle": "MSMR",
+                    "number of MSMR reactions": ("6", "4"),
+                    "intercalation kinetics": "MSMR",
+                    "surface form": "algebraic",
+                },
+                "MSMR_Example",
+            ),
+        ],
+    )
+    def test_surface_form_reaction_is_uniform(self, options, parameter_set):
+        model = pybamm.lithium_ion.SPMe(options)
+        parameter_values = (
+            pybamm.ParameterValues(parameter_set)
+            if parameter_set
+            else model.default_parameter_values
+        )
+        sim = pybamm.Simulation(model, parameter_values=parameter_values, C_rate=2)
+        solution = sim.solve([0, 600])
+        t = 600
+        x_n = sim.mesh["negative electrode"].nodes
+
+        a_j = solution[
+            "Negative electrode volumetric interfacial current density [A.m-3]"
+        ](t, x=x_n)
+        i_cc = solution["Current collector current density [A.m-2]"](t)
+        L_n = parameter_values["Negative electrode thickness [m]"]
+        np.testing.assert_allclose(a_j, a_j[0], rtol=1e-12)
+        # loose enough for the default solver tolerances and the double layer
+        np.testing.assert_allclose(a_j, i_cc / L_n, rtol=1e-3)
+
     def test_surface_form_c_e_av_is_variable(self):
         for surf in ["algebraic", "differential"]:
             model = pybamm.lithium_ion.SPMe(
@@ -47,6 +106,18 @@ class TestSPMe(BaseUnitTestLithiumIon):
                 parameter_values["Initial concentration in electrolyte [mol.m-3]"],
                 rtol=1e-8,
             )
+
+    @pytest.mark.parametrize("surface_form", ["algebraic", "differential"])
+    def test_surface_form_initial_conditions_consistent_at_rest(self, surface_form):
+        model = pybamm.lithium_ion.SPMe({"surface form": surface_form})
+        parameter_values = model.default_parameter_values
+        parameter_values["Current function [A]"] = 0
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        solution = sim.solve([0, 10])
+        y_guess = sim.built_model.concatenated_initial_conditions.evaluate(0)
+        np.testing.assert_allclose(
+            solution.all_ys[0][:, 0], y_guess.ravel(), rtol=1e-6, atol=1e-8
+        )
 
     def test_surface_form_macinnes_variable(self):
         for surf in ["algebraic", "differential"]:

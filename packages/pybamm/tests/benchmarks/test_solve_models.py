@@ -116,6 +116,40 @@ def test_repeated_solve(benchmark, caplog, model_class, compile_model):
     benchmark(sim.solve, t_eval, t_interp=t_interp)
 
 
+_SENSITIVITY_INPUTS = [
+    "Current function [A]",
+    "Negative particle diffusivity [m2.s-1]",
+]
+
+
+@pytest.mark.parametrize(
+    "model_class",
+    [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
+    ids=["spm", "spme", "dfn"],
+)
+def test_sensitivity_solve(benchmark, record_peak_memory, model_class):
+    # Each t_eval point is a breakpoint, where the sensitivities are re-initialised
+    t_eval = np.linspace(0.0, 3000.0, 100)
+
+    def setup():
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        inputs = {name: parameter_values[name] for name in _SENSITIVITY_INPUTS}
+        parameter_values.update(dict.fromkeys(inputs, "[input]"))
+        sim = pybamm.Simulation(model_class(), parameter_values=parameter_values)
+        sim.build()
+        return (sim, inputs), {}
+
+    def solve(sim, inputs):
+        return sim.solve(t_eval, inputs=inputs, calculate_sensitivities=True)
+
+    (sim, inputs), _ = setup()
+    solve(sim, inputs)
+    solution = benchmark(solve, sim, inputs)
+    assert solution.termination == "final time"
+    assert set(_SENSITIVITY_INPUTS) <= set(solution.sensitivities)
+    record_peak_memory(solve, setup)
+
+
 @pytest.mark.parametrize(
     "model_class",
     [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],

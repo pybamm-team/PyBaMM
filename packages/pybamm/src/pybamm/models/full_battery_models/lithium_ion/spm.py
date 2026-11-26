@@ -78,7 +78,12 @@ class SPM(BaseModel):
                 phases = self.options.phases[domain]
                 for phase in phases:
                     submod = intercalation_kinetics(
-                        self.param, domain, "lithium-ion main", self.options, phase
+                        self.param,
+                        domain,
+                        "lithium-ion main",
+                        self.options,
+                        phase,
+                        x_average=True,
                     )
                     self.submodels[f"{domain} {phase} interface"] = submod
                 if len(phases) > 1:

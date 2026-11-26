@@ -282,6 +282,7 @@ Doctests, examples, and coverage
 
 - ``nox -s examples``: Run the Jupyter notebooks in ``docs/source/examples/notebooks/``.
 - ``nox -s examples -- <path-to-notebook-1.ipynb> <path-to_notebook-2.ipynb>``: Run specific Jupyter notebooks.
+- ``nox -s examples-smoke``: Run three getting-started notebooks as a quick check of simulations, parameters and experiments.
 - ``nox -s scripts``: Run the example scripts in ``examples/scripts/``.
 - ``nox -s doctests``: Run doctests.
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.

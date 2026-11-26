@@ -17,7 +17,6 @@ import pytest
 import pybamm
 import pybamm.expression_tree.operations.serialise_kernel as sk
 from pybamm.expression_tree.operations.serialise import (
-    SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
     Serialise,
     convert_function_to_symbolic_expression,
@@ -249,7 +248,7 @@ class TestSerialise:
         newest_solver = newest_model.default_solver
         newest_solver.solve(newest_model, [0, 3600])
 
-    @pytest.mark.parametrize("convert_to_format", ["python", "jax"])
+    @pytest.mark.parametrize("convert_to_format", ["python", "jax", "rust"])
     def test_discretised_model_round_trips_convert_to_format(self, convert_to_format):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
@@ -268,7 +267,7 @@ class TestSerialise:
         del data["convert_to_format"]
         assert Serialise().load_model(data).convert_to_format == "casadi"
 
-    @pytest.mark.parametrize("convert_to_format", ["python", "jax"])
+    @pytest.mark.parametrize("convert_to_format", ["python", "jax", "rust"])
     def test_custom_model_round_trips_convert_to_format(self, convert_to_format):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
@@ -1042,6 +1041,26 @@ class TestSerialise:
             sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
         )
 
+    def test_load_restores_default_geometry_as_geometry(self):
+        class _LocalLithiumIonModel(pybamm.lithium_ion.BaseModel):
+            pass
+
+        model = _LocalLithiumIonModel()
+        x = pybamm.Variable("x", domain="positive particle")
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {"x": x}
+
+        data = json.loads(
+            json.dumps(Serialise.serialise_custom_model(model), default=str)
+        )
+        with pytest.warns(UserWarning, match=r"Falling back"):
+            loaded = Serialise.load_custom_model(data)
+
+        assert isinstance(model.default_geometry, pybamm.Geometry)
+        assert isinstance(loaded.default_geometry, pybamm.Geometry)
+        assert loaded.default_geometry.keys() == model.default_geometry.keys()
+
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no
         ``discretisation`` section, so existing payloads are unaffected."""
@@ -1183,7 +1202,7 @@ class TestSerialise:
 
         with (
             patch(
-                "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
+                "pybamm.expression_tree.operations.serialise_flat.FlatEncoder.encode",
                 side_effect=Exception("conversion failed"),
             ),
             pytest.raises(
@@ -1225,7 +1244,7 @@ class TestSerialise:
         loaded_model = Serialise.load_custom_model(str(file_path))
 
         assert hasattr(loaded_model, "schema_version")
-        assert loaded_model.schema_version == SUPPORTED_SCHEMA_VERSION
+        assert loaded_model.schema_version == "2.0"
 
     def test_load_invalid_json(self):
         invalid_json = "{ invalid json"

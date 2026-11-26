@@ -29,8 +29,9 @@ class BaseOpenCircuitPotential(BaseInterface):
     def __init__(
         self, param, domain, reaction, options, phase="primary", x_average=False
     ):
-        super().__init__(param, domain, reaction, options=options, phase=phase)
-        self.x_average = x_average
+        super().__init__(
+            param, domain, reaction, options=options, phase=phase, x_average=x_average
+        )
 
     def _alias_ocp_as_equilibrium(self, variables):
         """Publish the "equilibrium open-circuit potential [V]" variables as
