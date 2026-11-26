@@ -2636,6 +2636,10 @@ class TestIDAKLUSolver:
 
             def create_rust_solver_group(self, **kwargs):
                 kwargs[count] += 1
+                if count == "number_of_states":
+                    # Lengthen the per-state arrays too, so only the Rust model disagrees
+                    kwargs["atol"] = np.append(kwargs["atol"], kwargs["atol"][-1])
+                    kwargs["rhs_alg_id"] = np.append(kwargs["rhs_alg_id"], 1.0)
                 return idaklu.create_rust_solver_group(**kwargs)
 
         monkeypatch.setattr(pybamm.solvers.idaklu_solver, "idaklu", OffByOneIdaklu())
