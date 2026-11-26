@@ -236,6 +236,17 @@ IDAKLUSolverGroup *create_rust_solver_group(
             " evaluator(s) but num_solvers is " + std::to_string(num_solvers) +
             "; each solver needs its own evaluator.");
     }
+    // IDA sizes its vectors from atol and reads rhs_alg_id per state, while Rust writes
+    // number_of_states into them, so a shorter array would be overrun.
+    auto check_per_state = [number_of_states](const char *name, py::ssize_t size) {
+        if (size != number_of_states) {
+            throw std::invalid_argument(
+                std::string(name) + " has length " + std::to_string(size) +
+                " but number_of_states is " + std::to_string(number_of_states) + ".");
+        }
+    };
+    check_per_state("atol", atol_np.size());
+    check_per_state("rhs_alg_id", rhs_alg_id.size());
     // The sub-block IC hands Rust a residual buffer sized from the algebraic ids.
     if (number_of_algebraic_states != 0) {
         auto ids = rhs_alg_id.unchecked<1>();

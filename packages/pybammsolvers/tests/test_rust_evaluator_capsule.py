@@ -1,9 +1,11 @@
-"""pybammsolvers claims a Rust evaluator only from a capsule whose ABI it can read."""
+"""pybammsolvers claims a Rust evaluator only from a capsule whose ABI it can read,
+for a solver group whose sizes fit."""
 
 from __future__ import annotations
 
 import ctypes
 
+import numpy as np
 import pytest
 import pybammsolvers.idaklu as idaklu
 
@@ -76,3 +78,43 @@ class TestRustEvaluatorCapsule:
             ValueError, match=r"expected a 'pybamm\.rust\.evaluator' capsule, got int"
         ):
             _newton_solver(0xDEAD0)
+
+
+def _rust_solver_group(rust_evaluators, options, *, atol, rhs_alg_id):
+    return idaklu.create_rust_solver_group(
+        number_of_states=2,
+        rust_evaluators=rust_evaluators,
+        number_of_inputs=0,
+        number_of_sens_params=0,
+        number_of_events=0,
+        n_alg=0,
+        output_lens=[],
+        jac_colptrs=np.array([0, 1, 2]),
+        jac_rowvals=np.array([0, 1]),
+        jac_nnz=2,
+        jac_bandwidth_lower=0,
+        jac_bandwidth_upper=0,
+        alg_jac_rowvals=np.array([], dtype=np.int64),
+        alg_jac_colvals=np.array([], dtype=np.int64),
+        alg_jac_nnz=0,
+        rhs_alg_id=rhs_alg_id,
+        atol=atol,
+        rtol=1e-6,
+        options=options,
+    )
+
+
+class TestRustSolverGroup:
+    @pytest.mark.parametrize("short", ["atol", "rhs_alg_id"])
+    def test_refuses_a_per_state_array_of_another_length(self, short, solver_options):
+        per_state = {"atol": np.full(2, 1e-8), "rhs_alg_id": np.ones(2)}
+        per_state[short] = per_state[short][:1]
+        # Another ABI version, so a claim would raise RuntimeError instead
+        table = _TableHead(abi_version=0, size=ctypes.sizeof(_TableHead))
+        handle = _Handle(ctypes.pointer(table), None)
+        capsule = _capsule(handle)
+        with pytest.raises(
+            ValueError, match=rf"{short} has length 1 but number_of_states is 2\."
+        ):
+            _rust_solver_group([capsule], solver_options, **per_state)
+        assert repr(capsule).startswith('<capsule object "pybamm.rust.evaluator"')
