@@ -20,11 +20,12 @@ class Full(BaseElectrolyteDiffusion):
     options : dict, optional
         A dictionary of options to be passed to the model.
     x_average_state : bool, optional
-        Whether to make the x-averaged electrolyte concentration an algebraic state
-        when a surface form is used. This keeps the Jacobian sparse for the
-        composite conductivity submodels, which read the x-average in every
-        equation, but only adds an extra state for the full conductivity submodel,
-        which never reads it. Default is False.
+        Whether to make the x-averaged electrolyte concentrations (whole cell and
+        each porous electrode) algebraic states when a surface form is used. This
+        keeps the Jacobian sparse for the composite conductivity submodels and
+        x-averaged kinetics, which read the x-averages in every equation, but only
+        adds extra states for the full conductivity submodel, which never reads
+        them. Default is False.
     """
 
     def __init__(self, param, options=None, x_average_state=False):
@@ -34,6 +35,31 @@ class Full(BaseElectrolyteDiffusion):
     @property
     def _c_e_av_is_state(self) -> bool:
         return self.x_average_state and self.options["surface form"] != "false"
+
+    @property
+    def _electrode_domains(self):
+        return [
+            domain
+            for domain in self.options.whole_cell_domains
+            if "electrode" in domain
+        ]
+
+    def _get_standard_domain_concentration_variables(self, c_e_dict):
+        variables = super()._get_standard_domain_concentration_variables(c_e_dict)
+        if not self._c_e_av_is_state:
+            return variables
+
+        for domain in self._electrode_domains:
+            name = f"X-averaged {domain.split()[0]} electrolyte concentration [mol.m-3]"
+            c_e_k_av = pybamm.Variable(
+                name,
+                domain="current collector",
+                bounds=(0, np.inf),
+                scale=self.param.c_e_init_av,
+            )
+            variables[name] = c_e_k_av
+            variables[name.replace("[mol.m-3]", "[Molar]")] = c_e_k_av / 1000
+        return variables
 
     def _get_standard_whole_cell_concentration_variables(self, c_e):
         if not self._c_e_av_is_state:
@@ -140,6 +166,16 @@ class Full(BaseElectrolyteDiffusion):
         c_e_av_expr = pybamm.x_average(c_e)
         self.algebraic = {c_e_av: (c_e_av - c_e_av_expr) / self.param.c_e_init_av}
 
+        for domain in self._electrode_domains:
+            Domain = domain.split()[0].capitalize()
+            c_e_k = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
+            c_e_k_av = variables[
+                f"X-averaged {domain.split()[0]} electrolyte concentration [mol.m-3]"
+            ]
+            self.algebraic[c_e_k_av] = (
+                c_e_k_av - pybamm.x_average(c_e_k)
+            ) / self.param.c_e_init_av
+
     def set_initial_conditions(self, variables):
         eps_c_e = variables["Porosity times concentration [mol.m-3]"]
 
@@ -150,6 +186,9 @@ class Full(BaseElectrolyteDiffusion):
         if self._c_e_av_is_state:
             c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
             self.initial_conditions[c_e_av] = self.param.c_e_init
+            for domain in self._electrode_domains:
+                name = f"X-averaged {domain.split()[0]} electrolyte concentration [mol.m-3]"
+                self.initial_conditions[variables[name]] = self.param.c_e_init
 
     def set_boundary_conditions(self, variables):
         c_e = variables["Electrolyte concentration [mol.m-3]"]
