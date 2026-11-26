@@ -45,7 +45,7 @@ class Full(BaseThroughCellModel):
     def get_coupled_variables(self, variables):
         # Set up
         L_n = self.param.n.L
-        x_s = pybamm.standard_spatial_vars.x_s
+        x_s = pybamm.standard_spatial_vars.x_s_edge
 
         # Transverse velocity in the separator determines through-cell velocity
         div_Vbox_s = variables[

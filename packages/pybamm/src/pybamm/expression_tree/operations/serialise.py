@@ -1565,7 +1565,10 @@ class Serialise:
                             isinstance(boundary_type, list)
                             and boundary_type[0] == "Flux"
                         ):
-                            boundary_type = ("Flux", _require_symbol(boundary_type[1], nodes))
+                            boundary_type = (
+                                "Flux",
+                                _require_symbol(boundary_type[1], nodes),
+                            )
                         sides[side] = (expr, boundary_type)
                     except Exception as e:
                         raise ValueError(

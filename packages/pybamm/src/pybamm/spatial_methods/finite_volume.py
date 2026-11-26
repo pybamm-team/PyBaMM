@@ -199,8 +199,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         dirichlet_type_bc = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
         neumann_type_bc = [side for side, bc in bcs.items() if bc[1] == "Neumann"]
-        not_dirichlet_type_bc = [
-            side for side in ["left", "right"] if side not in dirichlet_type_bc
+        not_dirichlet_or_neumann = [
+            side
+            for side in ["left", "right"]
+            if side not in dirichlet_type_bc and side not in neumann_type_bc
         ]
 
         # Add Dirichlet boundary conditions, if defined
@@ -216,15 +218,15 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Multiply by gradient matrix
         out = self._apply_matrix(gradient_matrix, discretised_symbol)
 
-        # Extrapolate to the boundary edges to ensure gradient has the expected length
-        if not_dirichlet_type_bc:
-            out = self._extrapolate_gradient_to_boundaries(
-                symbol, out, not_dirichlet_type_bc, domain
-            )
-
-        # Replace extrapolation with Neumann boundary conditions, if defined
+        # Add Neumann boundary conditions, if defined
         if neumann_type_bc:
             out = self.add_neumann_values(symbol, out, bcs, domain)
+
+        # Extrapolate to the boundary edges to ensure gradient has the expected length
+        if not_dirichlet_or_neumann:
+            out = self._extrapolate_gradient_to_boundaries(
+                symbol, out, not_dirichlet_or_neumann, domain
+            )
 
         return out
 
@@ -992,23 +994,23 @@ class FiniteVolume(pybamm.SpatialMethod):
         # get relevant grid points
         submesh = self.mesh[domain]
 
+        # Prepare sizes and empty bcs_vector
+        n = submesh.npts - 1
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+
         lbc_value, lbc_type = bcs.get("left", (None, None))
         rbc_value, rbc_type = bcs.get("right", (None, None))
 
-        # Count the number of ghost nodes
+        # Count number of Neumann boundary conditions
         n_bcs = 0
-        if lbc_type == "Dirichlet":
+        if lbc_type == "Neumann":
             n_bcs += 1
-        if rbc_type == "Dirichlet":
+        if rbc_type == "Neumann":
             n_bcs += 1
-
-        # Prepare sizes
-        n = submesh.npts - n_bcs + 1
-        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Add any values from Neumann boundary conditions to the bcs vector
         if lbc_type == "Neumann" and lbc_value != 0:
-            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n, 1))
+            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n + n_bcs, 1))
             lbc_matrix = self._block_diagonal(lbc_sub_matrix, second_dim_repeats)
             if lbc_value.evaluates_to_number():
                 left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -1016,9 +1018,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
         else:
-            lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         if rbc_type == "Neumann" and rbc_value != 0:
-            rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
+            rbc_sub_matrix = coo_matrix(
+                ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
+            )
             rbc_matrix = self._block_diagonal(rbc_sub_matrix, second_dim_repeats)
             if rbc_value.evaluates_to_number():
                 right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -1026,7 +1030,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
         else:
-            rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
 
         bcs_vector = lbc_vector + rbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
@@ -1034,13 +1038,17 @@ class FiniteVolume(pybamm.SpatialMethod):
         # has domain electrode, since it is a function of the macroscopic variables
         bcs_vector = bcs_vector.with_domains(discretised_gradient)
 
-        # Remove the placeholder at any boundary dge with a Neumann condition
-        diag_entries = np.ones(n, dtype=np.float64)
+        # Make matrix which makes "gaps" in the the discretised gradient into
+        # which the known Neumann values will be added.
         if lbc_type == "Neumann":
-            diag_entries[0] = 0
+            left_vector = csr_matrix((1, n))
+        else:
+            left_vector = None
         if rbc_type == "Neumann":
-            diag_entries[n - 1] = 0
-        sub_matrix = diags(diag_entries, shape=(n, n), dtype=np.float64)
+            right_vector = csr_matrix((1, n))
+        else:
+            right_vector = None
+        sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
 
         # repeat matrix for secondary dimensions
         matrix = self._block_diagonal(sub_matrix, second_dim_repeats)

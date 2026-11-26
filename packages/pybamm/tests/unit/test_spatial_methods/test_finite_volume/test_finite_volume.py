@@ -208,15 +208,15 @@ class TestFiniteVolume:
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         edges = [pybamm.Vector(mesh[dom].edges, domain=dom) for dom in whole_cell]
-        # Concatenation of edges should get averaged to nodes first, using edge_to_node
+        # Concatenation of edges should be a FluxConcatenation
         v_disc = fin_vol.concatenation(edges)
-        np.testing.assert_array_equal(v_disc.evaluate()[:, 0], mesh[whole_cell].nodes)
+        np.testing.assert_array_equal(v_disc.evaluate()[:, 0], mesh[whole_cell].edges)
 
         # test for bad shape
         edges = [
             pybamm.Vector(np.ones(mesh[dom].npts + 2), domain=dom) for dom in whole_cell
         ]
-        with pytest.raises(pybamm.ShapeError, match=r"child must have size n_nodes"):
+        with pytest.raises(pybamm.ShapeError, match=r"child has size"):
             fin_vol.concatenation(edges)
 
     def test_discretise_diffusivity_times_spatial_operator(self):

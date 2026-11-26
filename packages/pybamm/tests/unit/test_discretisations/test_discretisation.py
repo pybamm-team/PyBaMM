@@ -113,9 +113,9 @@ class TestDiscretise:
             "right domain": pybamm.SymbolicUniform1DSubMesh,
         }
         spatial_methods = {
-            "left domain": pybamm.FiniteVolume(),
-            "middle domain": pybamm.FiniteVolume(),
-            "right domain": pybamm.FiniteVolume(),
+            "left domain": SpatialMethodForTesting(),
+            "middle domain": SpatialMethodForTesting(),
+            "right domain": SpatialMethodForTesting(),
         }
         x_l = pybamm.SpatialVariable("x_l", ["left domain"], coord_sys="cartesian")
         x_m = pybamm.SpatialVariable("x_m", ["middle domain"], coord_sys="cartesian")
