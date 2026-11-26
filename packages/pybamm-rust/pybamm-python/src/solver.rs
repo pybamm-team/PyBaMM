@@ -489,6 +489,7 @@ fn solve_request<'a>(
         outputs,
         sensitivities,
         lu_threads: 1,
+        interrupt: None,
     })
 }
 

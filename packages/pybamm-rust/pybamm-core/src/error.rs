@@ -229,6 +229,10 @@ pub enum CoreError {
         got: f64,
     },
 
+    /// The solve's interrupt asked it to stop before it finished.
+    #[error("the solve was interrupted")]
+    Interrupted,
+
     /// The integrator or its linear algebra panicked; the message is the panic's own.
     #[error("the solver panicked: {0}")]
     SolverPanic(String),

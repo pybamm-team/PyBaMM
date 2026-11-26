@@ -44,7 +44,10 @@ impl PreparedSolver {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
     use super::*;
+    use crate::solver::solve::Interrupt;
     use crate::solver::test_fixtures::{decay_with_output_and_event, structurally_singular_dae};
     use crate::test_support::{bits, block_bits};
 
@@ -222,6 +225,84 @@ mod tests {
             } else {
                 assert!(result.is_ok(), "set {i} failed alongside set 2");
             }
+        }
+    }
+
+    /// Reads as interrupted from its `after`-th poll on, counting every poll.
+    #[derive(Debug)]
+    struct InterruptAfter {
+        polls: AtomicUsize,
+        after: usize,
+    }
+
+    impl Interrupt for InterruptAfter {
+        fn interrupted(&self) -> bool {
+            self.polls.fetch_add(1, Ordering::Relaxed) >= self.after
+        }
+    }
+
+    #[test]
+    fn an_interrupt_stops_a_solve_between_steps() {
+        let solver = prepared();
+        let times = t_eval();
+        let (y0, inputs) = ([1.0], [0.4]);
+        let set = InputSet::new(&y0, &inputs);
+        let full = solver
+            .solve(SolveRequest::new(&times), set)
+            .expect("solve failed");
+        let interrupt = InterruptAfter {
+            polls: AtomicUsize::new(0),
+            after: 3,
+        };
+
+        let err = solver
+            .solve(SolveRequest::new(&times).with_interrupt(&interrupt), set)
+            .expect_err("an interrupted solve finished");
+
+        assert!(matches!(err, CoreError::Interrupted), "{err:?}");
+        let polls = interrupt.polls.load(Ordering::Relaxed);
+        assert!(
+            polls < full.statistics.solver.number_of_steps,
+            "stopped after {polls} polls, not before the full solve's steps"
+        );
+    }
+
+    #[test]
+    fn an_unset_interrupt_leaves_the_solve_bit_identical() {
+        let solver = prepared();
+        let times = t_eval();
+        let (y0, inputs) = ([1.0], [0.4]);
+        let set = InputSet::new(&y0, &inputs);
+        let flag = AtomicBool::new(false);
+
+        let plain = solver
+            .solve(SolveRequest::new(&times), set)
+            .expect("solve failed");
+        let watched = solver
+            .solve(SolveRequest::new(&times).with_interrupt(&flag), set)
+            .expect("solve failed");
+
+        assert_same_outcome(&watched, &plain, "unset interrupt");
+    }
+
+    #[test]
+    fn an_interrupt_stops_every_set_of_a_batch() {
+        let solver = prepared();
+        let times = t_eval();
+        let rates = rates(6);
+        let y0 = [1.0];
+        let sets = sets(&y0, &rates);
+        let flag = AtomicBool::new(true);
+        let request = SolveRequest::new(&times).with_interrupt(&flag);
+
+        let batched = run_in_pool(3, || solver.solve_batch(request, &sets));
+
+        assert_eq!(batched.len(), sets.len());
+        for (i, result) in batched.into_iter().enumerate() {
+            assert!(
+                matches!(result, Err(CoreError::Interrupted)),
+                "set {i} ran past the interrupt"
+            );
         }
     }
 
