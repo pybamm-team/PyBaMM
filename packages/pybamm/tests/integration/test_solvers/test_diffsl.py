@@ -261,7 +261,7 @@ class TestDiffSLExport:
             voltage_simulation = sim.solve(t_eval, t_interp=t_interp, inputs=pv_inputs)[
                 output_variable
             ](t_interp)
-        np.testing.assert_allclose(voltage_simulation, voltage_model, rtol=1e-10)
+            np.testing.assert_allclose(voltage_simulation, voltage_model, rtol=1e-10)
 
     @pytest.mark.skipif(not has_pydiffsol, reason="pydiffsol is not installed")
     # Slowest first, so xdist does not finish on a lone DFN compile

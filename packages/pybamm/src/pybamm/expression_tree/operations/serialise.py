@@ -258,8 +258,8 @@ class Serialise:
         if filename is None:
             filename = model.name + "_" + datetime.now().strftime("%Y_%m_%d-%p%I_%M")
 
-        # json.dump streams through the pure-Python encoder; dumps uses the C one
-        # and, encoding first, leaves any existing file intact if it fails
+        # json.dump streams through the pure-Python encoder; dumps uses the C one,
+        # and an encoding error then raises before open() truncates the file
         model_json_str = json.dumps(model_json)
         with open(filename + ".json", "w") as f:
             f.write(model_json_str)

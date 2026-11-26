@@ -248,7 +248,7 @@ class TestSerialise:
         newest_solver = newest_model.default_solver
         newest_solver.solve(newest_model, [0, 3600])
 
-    def test_save_model_failure_keeps_existing_file(self, mocker, tmp_path):
+    def test_save_model_encoding_failure_keeps_existing_file(self, mocker, tmp_path):
         existing = tmp_path / "model.json"
         existing.write_text("previous contents")
         mocker.patch.object(

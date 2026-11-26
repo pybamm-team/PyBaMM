@@ -2003,12 +2003,16 @@ class TestIDAKLUSolver:
         assert solution.termination == "event: dV/dt > -1e-4 V/s"
 
         t = solution.t[-1]
+        half_window = 0.05
+        assert half_window < t < 3600 - half_window
         # tight tolerances decouple the reference from the event solve's errors;
         # stopping either side of t avoids interpolating between solver steps
         reference = pybamm.Simulation(
             model_class(), solver=pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-11)
-        ).solve(np.array([0, t - 0.05, t + 0.05, 3600]))["Voltage [V]"]
-        slope = (reference(t + 0.05) - reference(t - 0.05)) / 0.1
+        ).solve(np.array([0, t - half_window, t + half_window, 3600]))["Voltage [V]"]
+        slope = (reference(t + half_window) - reference(t - half_window)) / (
+            2 * half_window
+        )
         np.testing.assert_allclose(slope, -1e-4, rtol=1e-2)
 
     def test_state_derivative_termination_in_experiment(self):
