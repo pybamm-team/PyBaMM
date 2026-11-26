@@ -287,7 +287,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             for phase in self.options.phases[domain]:
                 ocp_option = getattr(domain_options, phase)["open-circuit potential"]
                 ocp_submodels = pybamm.open_circuit_potential
-                if ocp_option == "single":
+                # A scalar option also reaches the lithium-metal electrode
+                if ocp_option == "single" or reaction == "lithium metal plating":
                     ocp_model = ocp_submodels.SingleOpenCircuitPotential
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
