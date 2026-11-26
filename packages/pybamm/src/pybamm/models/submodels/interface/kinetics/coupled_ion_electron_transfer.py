@@ -36,9 +36,14 @@ class CoupledIonElectronTransfer(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool, optional
+        Whether the reaction sees x-averaged potentials, concentrations and
+        temperature, so that it is uniform in x. Default is False.
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
         if reaction == "lithium metal plating":
             raise pybamm.OptionError(
                 "Coupled ion-electron transfer kinetics need a host lattice, so "
@@ -52,7 +57,7 @@ class CoupledIonElectronTransfer(BaseKinetics):
                 "Coupled ion-electron transfer kinetics are only implemented for "
                 f"lithium-ion intercalation, not '{reaction}'"
             )
-        super().__init__(param, domain, reaction, options, phase)
+        super().__init__(param, domain, reaction, options, phase, x_average)
         domain_options = getattr(self.options, self.domain)
         if getattr(domain_options, self.phase)["exchange-current density"] != "single":
             raise pybamm.OptionError(
