@@ -91,18 +91,19 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Changelog entries
 
-Every PR that ships user-visible behaviour must add an entry to the `# [Unreleased]` section at the top of [`CHANGELOG.md`](https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md). Pick the section that matches the change:
+Every PR that ships user-visible behaviour must add a changelog fragment: a file in [`changelog.d/`](https://github.com/pybamm-team/PyBaMM/tree/main/changelog.d) named `<PR number>.<type>.md`, e.g. `1234.bugfix.md`. Don't edit `CHANGELOG.md` itself; fragments are collected into it at release time, so PRs never conflict over it. Pick the type that matches the change:
 
-- `## Breaking changes` — removing or renaming public API, signature/default/return-type changes that existing code would notice, default model/solver changes that move outputs, dropping Python/OS/dependency support, on-disk format changes without a backward-compatible reader. Include a one-line migration note.
-- `## Deprecated` — when you add a `DeprecationWarning` to a public API that will be removed in a later release. Note when removal is planned.
-- `## Features` — new functionality (new optional kwargs, new submodels, new public API, etc.).
-- `## Bug fixes` — corrections to existing behaviour.
+- `breaking` (Breaking changes) — removing or renaming public API, signature/default/return-type changes that existing code would notice, default model/solver changes that move outputs, dropping Python/OS/dependency support, on-disk format changes without a backward-compatible reader. Include a one-line migration note.
+- `deprecated` (Deprecated) — when you add a `DeprecationWarning` to a public API that will be removed in a later release. Note when removal is planned.
+- `feature` (Features) — new functionality (new optional kwargs, new submodels, new public API, etc.).
+- `bugfix` (Bug fixes) — corrections to existing behaviour.
+- `optimization` (Optimizations) — faster or leaner without changing results.
 
 If your PR is internal-only (refactor, docs typo, CI tweak, tests), no changelog entry is needed.
 
-Each entry is a single bullet ending in a PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`. Use the full URL so the rendered markdown on docs.pybamm.org links correctly.
+The fragment holds the entry text only, with no leading `- ` and no PR link; the link is added from the file name. A PR with several entries of one type numbers the extras, e.g. `1234.bugfix.1.md`. See [`changelog.d/README.md`](https://github.com/pybamm-team/PyBaMM/blob/main/changelog.d/README.md) for the format and how to preview the result.
 
-To write the entry before opening the PR, run `uv run --no-project scripts/next_pr_number.py`. It prints the likely next number using the [GitHub CLI](https://cli.github.com). This is only a prediction: if another issue, pull request, or discussion takes the number first, update the entry manually.
+To name the fragment before opening the PR, run `uv run --no-project scripts/next_pr_number.py`. It prints the likely next number using the [GitHub CLI](https://cli.github.com). This is only a prediction, so CI checks that every fragment a PR adds is named after it; if another issue, pull request, or discussion took the number first, rename the file.
 
 For the full release policy — what counts as "public API", deprecation horizon, version scheme — see [`RELEASE.md`](https://github.com/pybamm-team/PyBaMM/blob/main/RELEASE.md).
 
@@ -491,7 +492,9 @@ uv.lock
 
 Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub Actions](https://github.com/features/actions).
 
-Tests are run for different operating systems, and for all Python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
+Pull requests are tested on Linux: the unit tests run on the oldest and newest Python versions supported by PyBaMM, and the other test sessions on Python 3.13. A pull request that changes platform-sensitive code is also tested on Windows, macOS and Linux ARM; these runs are advisory and do not block a merge. Unless a pull request changes the example notebooks or `noxfile.py`, only a few getting-started notebooks are run. On a draft pull request, or one that targets a branch other than `main`, the style checks run first and the tests start only if they pass. A scheduled workflow tests every supported operating system and Python version each night.
+
+If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 
 Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmark results are compared to the results available for the latest commit on the `main` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
 

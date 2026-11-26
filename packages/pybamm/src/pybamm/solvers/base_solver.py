@@ -19,6 +19,7 @@ from pybamm.expression_tree.array import to_casadi_dm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.solvers.rust_lowering import rust_input_parameter_widths
 
 # CasADi function names allow only letters, digits and single underscores
 _NOT_IDENTIFIER_CHARS = re.compile(r"[^a-z0-9]+")
@@ -70,6 +71,8 @@ class BaseSolver:
 
     #: Whether the solver uses the jacobian of the rhs on its own
     uses_rhs_jacobian = True
+    #: Whether termination events can use the state derivatives, `y_dot`
+    supports_state_derivative_events = False
 
     def __init__(
         self,
@@ -427,7 +430,7 @@ class BaseSolver:
         )
         for ipts in inputs:
             if stacked:
-                inputs_y0_ics = stack_inputs(ipts)
+                inputs_y0_ics = stack_inputs(ipts, model.convert_to_format)
             else:
                 inputs_y0_ics = ipts
 
@@ -562,7 +565,11 @@ class BaseSolver:
             "model": model,
         }
 
-        if model.convert_to_format != "casadi":
+        if model.convert_to_format == "rust":
+            vars_for_processing.update({"input_names": list(inputs.keys())})
+            return vars_for_processing
+
+        elif model.convert_to_format != "casadi":
             # Create Jacobian from concatenated rhs and algebraic
             y = pybamm.StateVector(slice(0, model.len_rhs_and_alg))
             # set up Jacobian object, for re-use of dict
@@ -577,6 +584,7 @@ class BaseSolver:
             y_diff = casadi.MX.sym("y_diff", model.len_rhs)
             y_alg = casadi.MX.sym("y_alg", model.len_alg)
             y_casadi = casadi.vertcat(y_diff, y_alg)
+            y_dot_casadi = casadi.MX.sym("y_dot", model.len_rhs_and_alg)
             p_casadi = {}
             for name, value in inputs.items():
                 if isinstance(value, numbers.Number):
@@ -590,6 +598,7 @@ class BaseSolver:
                     "y_diff": y_diff,
                     "y_alg": y_alg,
                     "y_casadi": y_casadi,
+                    "y_dot_casadi": y_dot_casadi,
                     "p_casadi": p_casadi,
                     "p_casadi_stacked": p_casadi_stacked,
                 }
@@ -717,18 +726,25 @@ class BaseSolver:
                 )[0]
                 # use the actual casadi object as this will go into the rhs
                 casadi_switch_events.append(event_casadi)
-            else:
-                # use the function call
-                event_call = process(
-                    event.expression,
-                    f"event_{n}",
-                    vars_for_processing,
-                    use_jacobian=False,
-                )[0]
-                if event.event_type == pybamm.EventType.TERMINATION:
-                    terminate_events.append(event_call)
-                elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                    interpolant_extrapolation_events.append(event_call)
+            elif event.event_type == pybamm.EventType.TERMINATION:
+                terminate_events.append(
+                    process(
+                        event.expression,
+                        f"event_{n}",
+                        vars_for_processing,
+                        use_jacobian=False,
+                        use_state_derivatives=self.supports_state_derivative_events,
+                    )[0]
+                )
+            elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                interpolant_extrapolation_events.append(
+                    process(
+                        event.expression,
+                        f"event_{n}",
+                        vars_for_processing,
+                        use_jacobian=False,
+                    )[0]
+                )
 
         return (
             casadi_switch_events,
@@ -1138,7 +1154,7 @@ class BaseSolver:
             inputs_list = inputs or [{}]
 
         model_inputs_list: list[dict] = [
-            self._set_up_model_inputs(model, inputs) for inputs in inputs_list
+            self.set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
         # Before the sensitivity setting below changes the model
@@ -1439,13 +1455,20 @@ class BaseSolver:
             pybamm.logger.verbose("No additional discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
-        stacked_inputs = stack_inputs(inputs) if model.uses_stacked_inputs else None
+        stacked_inputs = (
+            stack_inputs(inputs, model.convert_to_format)
+            if model.uses_stacked_inputs
+            else None
+        )
 
         def evaluate(function):
             if stacked_inputs is None:
                 return np.ravel(function(t=0, y=y0, inputs=inputs))
-            # Much faster than numpy's conversion of a CasADi matrix
-            return np.array(function(0, y0, stacked_inputs).elements())
+            value = function(0, y0, stacked_inputs)
+            if isinstance(value, casadi.DM):
+                # Much faster than numpy's conversion of a CasADi matrix
+                return np.array(value.elements())
+            return np.ravel(value)
 
         # The last float before and the first float after each discontinuity
         stops, restarts = [], []
@@ -1516,7 +1539,7 @@ class BaseSolver:
 
         inputs = inputs_dict
         if model.uses_stacked_inputs:
-            inputs = stack_inputs(inputs_dict)
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
 
         events_eval = np.empty(num_terminate_events)
         for idx, event in enumerate(model.terminate_events_eval):
@@ -1529,15 +1552,19 @@ class BaseSolver:
             events_eval[idx] = event_eval
 
         if events_eval.min() <= 0:
-            # find the events that were triggered by initial conditions
-            termination_events = [
-                x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
-            ]
-            idxs = np.where(events_eval <= 0)[0]
-            event_names = [termination_events[idx].name for idx in idxs]
-            raise pybamm.SolverError(
-                f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
+            self._raise_events_at_initial_conditions(
+                model, events_eval <= 0, inputs_dict
             )
+
+    @staticmethod
+    def _raise_events_at_initial_conditions(model, fired, inputs_dict):
+        termination_events = [
+            x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
+        ]
+        event_names = [termination_events[idx].name for idx in np.flatnonzero(fired)]
+        raise pybamm.SolverError(
+            f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
+        )
 
     @staticmethod
     def _overlay_options(
@@ -1944,7 +1971,7 @@ class BaseSolver:
         timer = pybamm.Timer()
 
         # Set up inputs
-        model_inputs = self._set_up_model_inputs(model, inputs)
+        model_inputs = self.set_up_model_inputs(model, inputs)
 
         # Before the sensitivity setting below changes the model
         self._check_single_model(model)
@@ -2018,7 +2045,7 @@ class BaseSolver:
                 for name in sorted(ip.name for ip in previous_model.input_parameters):
                     if name not in mapper_p_inputs or mapper_p_inputs[name] is None:
                         mapper_p_inputs[name] = inputs.get(name, 0)
-                mapper_inputs = BaseSolver._set_up_model_inputs(
+                mapper_inputs = BaseSolver.set_up_model_inputs(
                     previous_model, mapper_p_inputs
                 )
                 p_casadi_stacked = casadi.vertcat(*[p for p in mapper_inputs.values()])
@@ -2288,9 +2315,36 @@ class BaseSolver:
         return "spawn"
 
     @staticmethod
-    def _set_up_model_inputs(model: pybamm.BaseModel, inputs: dict):
-        """Set up input parameters"""
+    def set_up_model_inputs(model: pybamm.BaseModel, inputs: dict) -> dict:
+        """Set up and order the input parameter values for a model.
+
+        List values are expanded to ``"name (i)"`` keys and values are not
+        type-checked. Inputs referenced by the model's equations, initial
+        conditions, events or variables are required. An input declared in the
+        parameter values but not referenced by the model gets a NaN placeholder if
+        missing, and ``solution.observe`` is then permanently disabled on ``model``,
+        even if a later call supplies the input. Other inputs are dropped.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose input parameters are set up.
+        inputs : dict or :class:`pybamm.ParameterValues`
+            Input parameter values, keyed by name.
+
+        Returns
+        -------
+        dict
+            Input parameter values for the model, sorted by name.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If a value is missing for a required input.
+        """
         inputs = ParameterValues.check_parameter_values(inputs)
+        if model.convert_to_format == "rust":
+            validate_rust_input_widths(model, inputs)
 
         # First, check all the strictly required input parameters that must be included
         # for the model to be solvable.
@@ -2317,6 +2371,21 @@ class BaseSolver:
                 f"No value provided for input: [{missing_str}].\n"
                 f"Required inputs: [{ip_str}].\n"
             )
+
+        if model.convert_to_format == "rust":
+            # The dummy is one value, but the Rust backend packs each input at its width.
+            widths = rust_input_parameter_widths(model)
+            vector_inputs = sorted(
+                name
+                for name in input_parameters
+                if inputs.get(name) is None and widths.get(name, 1) > 1
+            )
+            if vector_inputs:
+                raise pybamm.SolverError(
+                    f"No value provided for vector input(s): {vector_inputs}. "
+                    "With convert_to_format='rust', every vector input needs a value "
+                    "of its expected size, even one that only variables use."
+                )
 
         # Next, check the full set of specified input parameters that are required for
         # the model to be observable.
@@ -2354,6 +2423,40 @@ class BaseSolver:
         return ordered_inputs
 
 
+def validate_rust_input_widths(model: pybamm.BaseModel, inputs: dict) -> None:
+    """Reject a given input whose number of values is not its packed width."""
+    widths = rust_input_parameter_widths(model)
+    for name, value in inputs.items():
+        expected = widths.get(name)
+        if value is None or expected is None:
+            continue
+        if np.size(value) != expected:
+            raise pybamm.SolverError(
+                f"Input '{name}' has {np.size(value)} value(s), but the model "
+                f"expects {expected}."
+            )
+
+
+def validate_rust_sensitivity_widths(
+    model: pybamm.BaseModel, calculate_sensitivities: list[str]
+) -> None:
+    """Reject sensitivity requests for vector-width inputs on the Rust backend."""
+    widths = rust_input_parameter_widths(model)
+    wide_params = sorted(
+        name for name in calculate_sensitivities if widths.get(name, 1) > 1
+    )
+    if wide_params:
+        raise pybamm.SolverError(
+            "convert_to_format='rust' sensitivities are not supported "
+            f"for vector-width input parameters: {wide_params}. The Rust "
+            "backend's tangent/JVP machinery assumes one scalar direction "
+            "per named parameter, so seeding a sensitivity direction for "
+            "a vector input would silently compute the wrong derivative. "
+            "Use convert_to_format='casadi' for sensitivities with "
+            "respect to these inputs."
+        )
+
+
 def flatten_inputs(inputs_dict: dict) -> npt.NDArray[np.float64]:
     """Flatten ``{name: value}`` into one 1D array.
 
@@ -2380,19 +2483,26 @@ def flatten_inputs(inputs_dict: dict) -> npt.NDArray[np.float64]:
     )
 
 
-def stack_inputs(inputs_dict: dict) -> casadi.DM:
+def stack_inputs(
+    inputs_dict: dict, convert_to_format: str = "casadi"
+) -> casadi.DM | npt.NDArray[np.float64]:
     """Stack ``{name: value}`` into one column vector, in dict-key order.
 
     Parameters
     ----------
     inputs_dict : dict
         Input values for one input set.
+    convert_to_format : str, optional
+        The format of the evaluators the vector is for (default is "casadi").
 
     Returns
     -------
-    :class:`casadi.DM`
-        Column vector of the input values, with zero rows for an empty dict.
+    :class:`casadi.DM` or numpy.ndarray
+        The input values, with zero rows for an empty dict: a flat numpy array
+        for ``"rust"``, and a column :class:`casadi.DM` otherwise.
     """
+    if convert_to_format == "rust":
+        return flatten_inputs(inputs_dict)
     if not inputs_dict:
         return casadi.DM.zeros(0, 1)
     stacked = np.concatenate(
@@ -2402,7 +2512,12 @@ def stack_inputs(inputs_dict: dict) -> casadi.DM:
 
 
 def process(
-    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+    symbol,
+    name,
+    vars_for_processing,
+    use_jacobian=None,
+    return_jacp_stacked=None,
+    use_state_derivatives=False,
 ):
     """
     Parameters
@@ -2418,30 +2533,37 @@ def process(
     return_jacp_stacked: bool, optional
         returns Jacobian function wrt the stacked sensitivity parameters instead
         of jacp
+    use_state_derivatives: bool, optional
+        whether the CasADi or Rust functions take the state derivatives, `y_dot`,
+        as a fourth input. Default is False
 
     Returns
     -------
     func: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the function $f(y, t, p)$ given by `symbol`
 
     jac: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxJacobian` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the Jacobian $\\frac{\\partial f}{\\partial y}$
         of the function given by `symbol`
 
     jacp: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxSensitivities` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the parameter sensitivities
         $\frac{\\partial f}{\\partial p}$
         of the function given by `symbol`
 
     jac_action: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for product of the Jacobian with a vector $v$,
         i.e. $\\frac{\\partial f}{\\partial y} * v$
     """
@@ -2470,6 +2592,51 @@ def process(
             report(f"Calculating jacobian for {name} using jax")
             jac = func.get_jacobian()
             jac_action = func.get_jacobian_action()
+        else:
+            jac = None
+            jac_action = None
+
+    elif model.convert_to_format == "rust":
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+        from pybamm.solvers.rust_lowering import reject_y_dot, rust_graph_with_inputs
+
+        if return_jacp_stacked and model.calculate_sensitivities:
+            raise pybamm.SolverError(
+                "return_jacp_stacked is not supported for convert_to_format='rust'. "
+                "Use the per-parameter tuple returned by jacp instead."
+            )
+
+        report(f"Converting {name} to Rust")
+        input_names = vars_for_processing["input_names"]
+
+        graph = rust_graph_with_inputs(model, input_names)
+        rust_expr = symbol.to_rust(graph, {})
+
+        # Full system width, so rectangular sub-groups differentiate wrt all states
+        cf = graph.compile(rust_expr, name=name, n_states=model.len_rhs_and_alg)
+        if not use_state_derivatives:
+            reject_y_dot(cf)
+        func = RustEvaluator(cf, "func")
+
+        if model.calculate_sensitivities:
+            report(
+                f"Calculating sensitivities for {name} with respect "
+                f"to parameters {model.calculate_sensitivities} using Rust"
+            )
+            # The graph's registry numbers the parameters; `input_names` only filters
+            sens_indices = []
+            for p in model.calculate_sensitivities:
+                index = graph.input_index(p)
+                if index is not None and p in input_names:
+                    sens_indices.append(index)
+            jacp = RustEvaluator(cf, "jacp", sens_indices=sens_indices)
+        else:
+            jacp = None
+
+        if use_jacobian:
+            report(f"Calculating jacobian for {name} using Rust")
+            jac = RustEvaluator(cf, "jac")
+            jac_action = RustEvaluator(cf, "jac_action")
         else:
             jac = None
             jac_action = None
@@ -2510,7 +2677,12 @@ def process(
 
         # Process with CasADi
         report(f"Converting {name} to CasADi")
-        casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+        args = [t_casadi, y_casadi, p_casadi_stacked]
+        y_dot_casadi = None
+        if use_state_derivatives:
+            y_dot_casadi = vars_for_processing["y_dot_casadi"]
+            args.append(y_dot_casadi)
+        casadi_expression = symbol.to_casadi(t_casadi, y_casadi, y_dot_casadi, p_casadi)
         # Add sensitivity vectors to the rhs and algebraic equations
         jacp = None
 
@@ -2527,7 +2699,7 @@ def process(
                 )
                 jacp = casadi.Function(
                     f"d{name}_dp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
+                    args,
                     [casadi.jacobian(casadi_expression, sensitivity_inputs_stacked)],
                 )
             else:
@@ -2536,7 +2708,7 @@ def process(
                 # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
                 jacp = casadi.Function(
                     name + "_jacp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
+                    args,
                     [
                         casadi.densify(
                             casadi.jacobian(casadi_expression, p_casadi[pname])
@@ -2572,8 +2744,6 @@ def process(
             jac = None
             jac_action = None
 
-        func = casadi.Function(
-            name, [t_casadi, y_casadi, p_casadi_stacked], [casadi_expression]
-        )
+        func = casadi.Function(name, args, [casadi_expression])
 
     return func, jac, jacp, jac_action

@@ -13,7 +13,6 @@ import warnings
 from contextlib import redirect_stdout
 
 import numpy as np
-import pandas as pd
 import pytest
 from scipy.integrate import quad_vec
 from scipy.interpolate import CubicHermiteSpline
@@ -204,15 +203,11 @@ class TestIDAKLUSolver:
             solver.solve(model, np.linspace(0, 1, 10), inputs=inputs_list)
         assert re.findall(r"input set (\d+): ", str(error.value)) == ["1", "3"]
 
-    # Without sensitivities, IDAS's Newton test fails on a NaN residual itself
-    @pytest.mark.parametrize(
-        ("calculate_sensitivities", "flag"),
-        [(False, "IDA_CONV_FAIL"), (True, "IDA_REP_RES_ERR")],
-    )
-    def test_a_single_input_set_failure_is_named(self, calculate_sensitivities, flag):
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    def test_a_single_input_set_failure_is_named(self, calculate_sensitivities):
         # The first step's own error, not IDA_BAD_K from reading back that step
         with pytest.raises(
-            pybamm.SolverError, match=rf"^input set 0: IDASolve at t0: {flag}"
+            pybamm.SolverError, match=r"^input set 0: IDASolve at t0: IDA_CONV_FAIL"
         ):
             pybamm.IDAKLUSolver().solve(
                 get_broken_input_model(),
@@ -1669,6 +1664,378 @@ class TestIDAKLUSolver:
                 f"{picked!r}, but step.termination is {step.termination!r}"
             )
 
+    @staticmethod
+    def _state_derivative_event_model(events):
+        # y' = -y and algebraic z = y^2, so z' = -2 y^2 by the chain rule
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        z = pybamm.Variable("z")
+        model.rhs = {y: -y}
+        model.algebraic = {z: z - y**2}
+        model.initial_conditions = {y: 1, z: 1}
+        model.variables = {"y": y, "z": z}
+        model.events = [pybamm.Event(name, fn(y, z)) for name, fn in events.items()]
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    @pytest.mark.parametrize("output_variables", [None, ["y"]])
+    @pytest.mark.parametrize("calc_ic", [True, False])
+    @pytest.mark.parametrize(
+        ("event_fn", "t_event"),
+        [
+            # differential state: y' = -y > -0.5 until y = 0.5
+            (lambda y, z: -0.5 - y.diff(pybamm.t), np.log(2)),
+            # algebraic state: z' = -2 y^2 > -0.5 until y = 0.5
+            (lambda y, z: -0.5 - z.diff(pybamm.t), np.log(2)),
+            # observable, by the chain rule: d(y z)/dt = -3 y^3 > -3/8 until y = 0.5
+            (lambda y, z: -3 / 8 - (y * z).diff(pybamm.t), np.log(2)),
+            # z' = -2 y^2 < -1 until y^2 = 0.5, though IDA's initial yp has z' = 0
+            (lambda y, z: -1 - z.diff(pybamm.t), np.log(2) / 2),
+            # a root inside the first step, just after t0, is still reported
+            (lambda y, z: y - (1 - 1e-10), 1e-10),
+            # the same for an event reading yp, which IDA skips in its first step
+            (lambda y, z: y - (1 - 1e-10) + 1e-20 * z.diff(pybamm.t), 1e-10),
+        ],
+    )
+    # 0.2 is a breakpoint, where IDA is reinitialized
+    @pytest.mark.parametrize("t_eval", [[0, 5], np.array([0, 0.2, 5])])
+    def test_state_derivative_event(
+        self, event_fn, t_event, t_eval, calc_ic, output_variables
+    ):
+        model = self._state_derivative_event_model({"derivative event": event_fn})
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-8,
+            atol=1e-8,
+            options={"calc_ic": calc_ic},
+            output_variables=output_variables,
+        )
+        solution = solver.solve(model, t_eval)
+        assert solution.termination == "event: derivative event"
+        np.testing.assert_allclose(solution.t[-1], t_event, rtol=1e-5)
+
+    @pytest.mark.parametrize("output_variables", [None, ["y"]])
+    @pytest.mark.parametrize("calc_ic", [True, False])
+    def test_state_derivative_event_violated_at_initial_conditions(
+        self, calc_ic, output_variables
+    ):
+        # z' = -2 at t = 0, so z' > -1 is violated before the first step
+        model = self._state_derivative_event_model(
+            {"derivative event": lambda y, z: z.diff(pybamm.t) + 1}
+        )
+        solver = pybamm.IDAKLUSolver(
+            options={"calc_ic": calc_ic}, output_variables=output_variables
+        )
+        with pytest.raises(
+            pybamm.SolverError, match=r"\['derivative event'\] are non-positive"
+        ):
+            solver.solve(model, [0, 5])
+
+    @pytest.mark.parametrize(
+        ("plain_event", "match"),
+        [
+            # an event not reading yp is known at t0, ahead of the failed step
+            (lambda y: y - 2, r"\['plain'\] are non-positive at initial"),
+            # with none at t0, the events reading yp are unknown: the failure stands
+            (lambda y: y - 0.5, r"IDASolve at t0"),
+        ],
+    )
+    def test_state_derivative_event_with_failed_first_step(self, plain_event, match):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        z = pybamm.Variable("z")
+        model.rhs = {y: -y}
+        # the algebraic residual is NaN for t > 0, so the first step fails
+        model.algebraic = {z: z - pybamm.sqrt(-pybamm.t)}
+        model.initial_conditions = {y: 1, z: 0}
+        model.events = [
+            pybamm.Event("plain", plain_event(y)),
+            pybamm.Event("derivative", y.diff(pybamm.t) + 10),
+        ]
+        pybamm.Discretisation().process_model(model)
+        with pytest.raises(pybamm.SolverError, match=match):
+            pybamm.IDAKLUSolver().solve(model, [0, 5])
+
+    def test_state_derivative_event_at_t0_precedes_root_in_first_step(self):
+        # z' = -2 at t0 violates z' > -1 there, ahead of y's root at 1e-10
+        model = self._state_derivative_event_model(
+            {
+                "in step": lambda y, z: y - (1 - 1e-10),
+                "derivative event": lambda y, z: z.diff(pybamm.t) + 1,
+            }
+        )
+        with pytest.raises(
+            pybamm.SolverError, match=r"\['derivative event'\] are non-positive"
+        ):
+            pybamm.IDAKLUSolver().solve(model, [0, 5])
+
+    def test_state_derivative_event_after_step_change(self):
+        # q' = -I jumps when the algebraic current I steps from 0 to I_app at t0
+        model = pybamm.BaseModel()
+        q = pybamm.Variable("q")
+        current = pybamm.Variable("I")
+        model.rhs = {q: -current}
+        model.algebraic = {current: current - pybamm.InputParameter("I_app")}
+        model.initial_conditions = {q: 1, current: 0}
+        model.events = [pybamm.Event("dq/dt < -1", q.diff(pybamm.t) + 1)]
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver()
+        solution = solver.solve(model, [0, 1], inputs={"I_app": 0.5})
+        assert solution.termination == "final time"
+        with pytest.raises(pybamm.SolverError, match=r"non-positive at initial"):
+            solver.solve(model, [0, 1], inputs={"I_app": 2})
+
+    def test_state_derivative_event_restart_keeps_stats(self):
+        # y's root at 1e-10 is crossed in the first step, retaken after a restart
+        model = self._state_derivative_event_model(
+            {"in step": lambda y, z: y - (1 - 1e-10) + 1e-20 * z.diff(pybamm.t)}
+        )
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 5])
+        # the discarded step counts too
+        assert solution.solver_statistics.number_of_steps == 2
+
+    def test_state_derivative_event_not_named_before_first_step(self):
+        # 'plain' stops the solve before the first step gives yp, so 'derivative',
+        # which reads z' = 0 from the initial yp, is not named
+        model = self._state_derivative_event_model(
+            {
+                "plain": lambda y, z: y - 2,
+                "derivative": lambda y, z: -z.diff(pybamm.t) - 1,
+            }
+        )
+        with pytest.raises(pybamm.SolverError, match=r"Events \['plain'\] are"):
+            pybamm.IDAKLUSolver().solve(model, [0, 5])
+
+    @staticmethod
+    def _current_jump_model(events, jump=1.5, strict=False):
+        # I jumps from 0.5 to 2 at the breakpoint t = 0.2, and so does -q';
+        # with strict, it jumps just after 0.2
+        model = pybamm.BaseModel()
+        q = pybamm.Variable("q")
+        current = pybamm.Variable("I")
+        model.rhs = {q: -current}
+        switch = (pybamm.t > 0.2) if strict else (pybamm.t >= 0.2)
+        model.algebraic = {current: current - (0.5 + jump * switch)}
+        model.initial_conditions = {q: 1, current: 0.5}
+        model.variables = {"I": current}
+        model.events = [
+            pybamm.Event(name, fn(q, current)) for name, fn in events.items()
+        ]
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    @pytest.mark.parametrize("with_derivative_event", [False, True])
+    def test_event_violated_after_breakpoint(self, with_derivative_event):
+        # IDA finds no sign change in an event already violated after a
+        # breakpoint, whether or not another event reads yp
+        events = {"I < 1.5": lambda q, current: 1.5 - current}
+        if with_derivative_event:
+            events["dq/dt > -100"] = lambda q, current: q.diff(pybamm.t) + 100
+        model = self._current_jump_model(events)
+        solution = pybamm.IDAKLUSolver().solve(model, np.array([0, 0.2, 1]))
+        assert solution.termination == "final time"
+
+    @pytest.mark.skipif(
+        not (shutil.which("gcc") or shutil.which("cc")),
+        reason="No C compiler available for AOT compilation",
+    )
+    def test_compiled_events_on_states_do_not_read_yp(self):
+        # CasADi cannot see inside a compiled rootfn, so which events read yp
+        # must come from the symbolic one
+        model = self._current_jump_model({"I < 1.5": lambda q, current: 1.5 - current})
+        solver = pybamm.IDAKLUSolver(options={"compile": True})
+        solution = solver.solve(model, np.array([0, 0.2, 1]))
+        assert solver._setup["events_read_yp"] == [False]
+        assert solution.termination == "final time"
+
+    @pytest.mark.skipif(
+        not (shutil.which("gcc") or shutil.which("cc")),
+        reason="No C compiler available for AOT compilation",
+    )
+    def test_compiled_state_derivative_event(self):
+        model = self._current_jump_model(
+            {
+                "I < 3": lambda q, current: 3 - current,
+                "dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1,
+            }
+        )
+        solver = pybamm.IDAKLUSolver(options={"compile": True})
+        solution = solver.solve(model, np.array([0, 0.2, 1]))
+        assert solver._setup["events_read_yp"] == [False, True]
+        assert solution.termination == "event: dq/dt > -1"
+        assert solution.t[-1] == pytest.approx(0.2)
+
+    def test_event_violated_after_breakpoint_is_named(self):
+        # q' + 1 = -1 at the restart is further from zero than the other event
+        model = self._current_jump_model(
+            {
+                "dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1,
+                "always positive": lambda q, current: 0.01 + 0 * q,
+            }
+        )
+        solution = pybamm.IDAKLUSolver().solve(model, np.array([0, 0.2, 1]))
+        assert solution.termination == "event: dq/dt > -1"
+
+    @pytest.mark.parametrize(
+        ("output_variables", "options"),
+        [
+            (None, None),
+            (["I"], None),
+            (None, {"hermite_reduction_factor": 2.0}),
+            # IDA, not the Newton solver, reinitialises at the breakpoint
+            (None, {"calc_ic": False}),
+        ],
+    )
+    def test_state_derivative_event_violated_after_breakpoint(
+        self, output_variables, options
+    ):
+        # q' = -2 just after the breakpoint violates q' > -1 there
+        model = self._current_jump_model(
+            {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1}
+        )
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables, options=options)
+        solution = solver.solve(model, np.array([0, 0.2, 1]))
+        assert solution.termination == "event: dq/dt > -1"
+        assert solution.t[-1] == pytest.approx(0.2)
+        # the event state is the one after the breakpoint's reinitialisation
+        np.testing.assert_allclose(solution.y_event.ravel(), [0.9, 2], rtol=1e-6)
+        # and it is the last saved point, with the state before the jump just before
+        t_event = solution.t[-1]
+        assert np.all(np.diff(solution.t) > 0)
+        np.testing.assert_allclose(solution["I"](t_event), 2, rtol=1e-6)
+        np.testing.assert_allclose(solution["I"](np.nextafter(t_event, 0)), 0.5)
+        np.testing.assert_allclose(solution.last_state["I"].entries, [2], rtol=1e-6)
+        if output_variables is None:
+            np.testing.assert_array_equal(
+                solution.all_ys[-1][:, -1], solution.y_event.ravel()
+            )
+            np.testing.assert_allclose(
+                solution.all_yps[-1][:, -1], [-2, 0], rtol=1e-6, atol=1e-8
+            )
+
+    @pytest.mark.parametrize("output_variables", [None, ["I"]])
+    def test_state_derivative_event_violated_after_breakpoint_sensitivities(
+        self, output_variables
+    ):
+        # dI/djump is 1 once the breakpoint's reinitialisation has applied the jump
+        model = self._current_jump_model(
+            {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1},
+            jump=pybamm.InputParameter("jump"),
+        )
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+        solution = solver.solve(
+            model,
+            np.array([0, 0.2, 1]),
+            inputs={"jump": 1.5},
+            calculate_sensitivities=True,
+        )
+        assert solution.termination == "event: dq/dt > -1"
+        for final in (solution, solution.last_state):
+            np.testing.assert_allclose(
+                np.ravel(final["I"].sensitivities["jump"])[-1], 1, rtol=1e-6
+            )
+
+    def test_state_derivative_event_violated_when_starting_at_a_discontinuity(self):
+        # t > 0.2 adds a t_eval point a float after t0 = 0.2, where IDA restarts
+        # after its first step, and q' = -2 there violates q' > -1
+        model = self._current_jump_model(
+            {"dq/dt > -1": lambda q, current: q.diff(pybamm.t) + 1},
+            jump=pybamm.InputParameter("jump"),
+            strict=True,
+        )
+        solution = pybamm.IDAKLUSolver().solve(
+            model, [0.2, 1], inputs={"jump": 1.5}, calculate_sensitivities=True
+        )
+        assert solution.termination == "event: dq/dt > -1"
+        # The event point follows t0, which keeps the state before the jump
+        np.testing.assert_array_equal(solution.t, [0.2, np.nextafter(0.2, 1)])
+        np.testing.assert_allclose(solution["I"](solution.t), [0.5, 2], rtol=1e-6)
+        np.testing.assert_allclose(solution.y_event.ravel(), [1, 2], rtol=1e-6)
+        np.testing.assert_allclose(
+            np.ravel(solution["I"].sensitivities["jump"]), [0, 1], atol=1e-6
+        )
+
+    def test_state_derivative_event_with_inputs_threads_and_sensitivities(self):
+        # y' = -k y < -0.5 until y = 0.5 / k, at t = ln(2 k) / k
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        k = pybamm.InputParameter("k")
+        model.rhs = {y: -k * y}
+        model.initial_conditions = {y: 1}
+        model.variables = {"y": y}
+        model.events = [pybamm.Event("dy/dt > -0.5", -0.5 - y.diff(pybamm.t))]
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-8, atol=1e-8, options={"num_threads": 2, "num_solvers": 2}
+        )
+        rates = [1.0, 1.5, 2.0]
+        solutions = solver.solve(
+            model,
+            [0, 5],
+            inputs=[{"k": rate} for rate in rates],
+            calculate_sensitivities=True,
+        )
+        for solution, rate in zip(solutions, rates, strict=True):
+            assert solution.termination == "event: dy/dt > -0.5"
+            np.testing.assert_allclose(
+                solution.t[-1], np.log(2 * rate) / rate, rtol=1e-6
+            )
+            # dy/dk = -t exp(-k t)
+            t = solution.t
+            np.testing.assert_allclose(
+                solution["y"].sensitivities["k"].ravel(),
+                -t * np.exp(-rate * t),
+                rtol=1e-5,
+                atol=1e-8,
+            )
+
+    @pytest.mark.parametrize(
+        "model_class",
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
+    )
+    def test_voltage_derivative_event(self, model_class):
+        # dV/dt by the chain rule through the observable's states, at 1C discharge
+        model = model_class()
+        voltage = model.variables["Voltage [V]"]
+        model.events.append(
+            pybamm.Event("dV/dt > -1e-4 V/s", -voltage.diff(pybamm.t) - 1e-4)
+        )
+        solution = pybamm.Simulation(model).solve([0, 3600])
+        assert solution.termination == "event: dV/dt > -1e-4 V/s"
+
+        reference = pybamm.Simulation(model_class()).solve(np.linspace(0, 3600, 36001))[
+            "Voltage [V]"
+        ]
+        t = solution.t[-1]
+        slope = (reference(t + 0.05) - reference(t - 0.05)) / 0.1
+        np.testing.assert_allclose(slope, -1e-4, rtol=1e-2)
+
+    def test_state_derivative_termination_in_experiment(self):
+        def current_settled(threshold):
+            return pybamm.step.CustomTermination(
+                f"|dI/dt| < {threshold} A/s",
+                lambda variables: (
+                    abs(variables["Current [A]"].diff(pybamm.t)) - threshold
+                ),
+            )
+
+        experiment = pybamm.Experiment(
+            [
+                "Charge at 1C until 4.1 V",
+                # already settled when the hold starts, so it is skipped
+                pybamm.step.voltage(4.1, termination=current_settled(1)),
+                pybamm.step.voltage(4.1, termination=current_settled(1e-5)),
+            ]
+        )
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=experiment)
+        solution = sim.solve()
+
+        assert len(solution.cycles) == 2
+        hold = solution.cycles[-1]
+        assert hold.termination == "event: |dI/dt| < 1e-05 A/s [experiment]"
+        t = hold.t
+        current = hold["Current [A]"](t)
+        np.testing.assert_allclose(np.abs(np.gradient(current, t)[-1]), 1e-5, rtol=0.05)
+
     def test_pickle_roundtrip_preserves_closest_event_idx(self):
         # The pickle drops _setup; the next solve rebuilds it from the model.
         import pickle
@@ -2082,12 +2449,10 @@ class TestIDAKLUSolver:
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
         data_loader = pybamm.DataLoader()
-        drive_cycle = pd.read_csv(
+        drive_cycle = np.loadtxt(
             pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
-            comment="#",
-            skip_blank_lines=True,
-            header=None,
-        ).to_numpy()
+            delimiter=",",
+        )
         current_interpolant = pybamm.Interpolant(
             drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )
@@ -3182,8 +3547,7 @@ class TestIDAKLUNonFiniteResiduals:
         return model
 
     def test_a_nan_iterate_is_rejected_with_sensitivities(self):
-        # The sensitivity corrector's convergence norm drops NaN, so only the
-        # residual check stops a NaN state being accepted here
+        # The simultaneous corrector accepted this NaN state; its norm drops NaN
         model = self._square_root_decay_model()
         t_eval = np.linspace(0, 5, 6)
         inputs = {"a": 10.0, "b": 1e-3}
@@ -3239,13 +3603,9 @@ class TestIDAKLUNonFiniteResiduals:
                 calculate_sensitivities=calculate_sensitivities,
             )
 
-    # Without sensitivities, IDAS's Newton test fails on a NaN residual itself
-    @pytest.mark.parametrize(
-        ("calculate_sensitivities", "flag"),
-        [(False, "IDA_CONV_FAIL"), (True, "IDA_REP_RES_ERR")],
-    )
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
     def test_a_failing_step_after_a_breakpoint_reports_its_own_error(
-        self, calculate_sensitivities, flag
+        self, calculate_sensitivities
     ):
         # Smooth up to the breakpoint at t = 0.5 and NaN after it, where the
         # restarted solver has no step to read back the derivatives of
@@ -3257,7 +3617,8 @@ class TestIDAKLUNonFiniteResiduals:
         model.variables = {"u": u}
         pybamm.Discretisation().process_model(model)
 
-        with pytest.raises(pybamm.SolverError, match=rf"^input set 0: {flag}"):
+        # IDAS's Newton test fails on a NaN residual itself
+        with pytest.raises(pybamm.SolverError, match=r"^input set 0: IDA_CONV_FAIL"):
             pybamm.IDAKLUSolver().solve(
                 model,
                 np.linspace(0, 1, 5),
@@ -3452,3 +3813,274 @@ class TestIDAKLUSensitivityErrorControl:
         # The states converge in one iteration, so only the staggered
         # corrector's cap of one iteration makes the solver cut its steps
         assert number_of_steps(1) > 2 * number_of_steps(40)
+
+
+def _coupled_dae(mass_scale=1.0, switch=None):
+    """Discretised ``m y' = -a y + z``, ``0 = z - b y - c s(t)``.
+
+    ``m`` is ``mass_scale``, ``s`` is ``switch`` (zero if None), ``y(0) = 1``, and
+    ``z(0) = 0`` is an inconsistent guess, so the algebraic sensitivities at t0
+    must be computed by the solver.
+    """
+    model = pybamm.BaseModel()
+    y = pybamm.Variable("y")
+    z = pybamm.Variable("z")
+    a = pybamm.InputParameter("a")
+    b = pybamm.InputParameter("b")
+    residual = z - b * y
+    if switch is not None:
+        residual = residual - pybamm.InputParameter("c") * switch
+    model.rhs = {y: -a * y + z}
+    model.algebraic = {z: residual}
+    model.initial_conditions = {y: 1, z: 0}
+    model.variables = {"y": y, "z": z, "2z": 2 * z}
+    pybamm.Discretisation().process_model(model)
+    if mass_scale != 1:
+        model.mass_matrix = pybamm.Matrix(mass_scale * model.mass_matrix.entries)
+    return model
+
+
+def _coupled_dae_solution(t, a, b, c=0.0, mass_scale=1.0, t0=0.0):
+    """Closed-form ``(y, z)`` of :func:`_coupled_dae` with ``s(t) = [t > 0.5]``,
+    from ``y(t0) = 1`` with ``t0 <= 0.5``."""
+    rate = (b - a) / mass_scale
+    y_half = np.exp(rate * (0.5 - t0))
+    after = t > 0.5
+    shift = np.where(after, t - 0.5, 0.0)
+    y = np.where(
+        after,
+        y_half * np.exp(rate * shift)
+        + c / mass_scale / rate * (np.exp(rate * shift) - 1),
+        np.exp(rate * (t - t0)),
+    )
+    return {"y": y, "z": b * y + c * after}
+
+
+def _closed_form_sensitivities(closed_form, t, inputs, step=1e-6):
+    """Central differences of a closed-form solution, ``{(name, input): ...}``."""
+    sensitivities = {}
+    for name in inputs:
+        plus = dict(inputs, **{name: inputs[name] + step})
+        minus = dict(inputs, **{name: inputs[name] - step})
+        values_plus = closed_form(t, **plus)
+        values_minus = closed_form(t, **minus)
+        for variable in values_plus:
+            sensitivities[variable, name] = (
+                values_plus[variable] - values_minus[variable]
+            ) / (2 * step)
+    return sensitivities
+
+
+class TestIDAKLUSensitivityInitialConditions:
+    inputs = {"a": 2.0, "b": 0.5, "c": 1.0}
+
+    def _assert_matches(self, solution, closed_form, inputs, scales=None):
+        """Assert the states and their sensitivities at every stored time."""
+        scales = scales or {}
+        t = solution.t
+        exact = closed_form(t, **inputs)
+        exact_sensitivities = _closed_form_sensitivities(closed_form, t, inputs)
+        for variable, values in exact.items():
+            name, scale = scales.get(variable, (variable, 1))
+            np.testing.assert_allclose(
+                solution[name](t), scale * values, rtol=1e-7, atol=1e-8
+            )
+            for parameter in inputs:
+                np.testing.assert_allclose(
+                    np.ravel(solution[name].sensitivities[parameter]),
+                    scale * exact_sensitivities[variable, parameter],
+                    rtol=1e-6,
+                    atol=1e-7,
+                    err_msg=f"d{name}/d{parameter}",
+                )
+
+    @pytest.mark.parametrize(
+        ("mass_scale", "options", "output_variables"),
+        [
+            (1.0, {}, []),
+            (1.0, {}, ["2z"]),
+            (1.0, {"calc_ic": False}, []),
+            (1.0, {"newton_mode": "full"}, []),
+            (1.0, {"hermite_interpolation": False}, []),
+            (10.0, {}, []),
+        ],
+    )
+    def test_sensitivities_across_a_discontinuity(
+        self, mass_scale, options, output_variables
+    ):
+        # z(0) = 0 is inconsistent, and t > 0.5 adds a t_eval point a float after it
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10, atol=1e-12, options=options, output_variables=output_variables
+        )
+        solution = solver.solve(
+            _coupled_dae(mass_scale, switch=pybamm.t > 0.5),
+            [0, 1],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+        )
+
+        assert np.nextafter(0.5, 1) in solution.t
+
+        def closed_form(t, a, b, c):
+            values = _coupled_dae_solution(t, a, b, c, mass_scale=mass_scale)
+            return {"z": values["z"]} if output_variables else values
+
+        scales = {"z": ("2z", 2)} if output_variables else None
+        self._assert_matches(solution, closed_form, self.inputs, scales=scales)
+        if output_variables:
+            # The full initial sensitivities, dz/db = y(0) = 1
+            np.testing.assert_allclose(
+                solution._y0_sensitivities["b"].ravel(), [0, 1], atol=1e-10
+            )
+
+    def test_three_points_around_a_discontinuity(self):
+        # t >= 0.5 adds a t_eval point a float before 0.5, and t > 0.5 one after
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        solution = solver.solve(
+            _coupled_dae(switch=(pybamm.t > 0.5) * (pybamm.t >= 0.5)),
+            [0, 1],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+        )
+
+        np.testing.assert_array_equal(
+            solution.t[np.abs(solution.t - 0.5) < 1e-15],
+            [np.nextafter(0.5, 0), 0.5, np.nextafter(0.5, 1)],
+        )
+        self._assert_matches(solution, _coupled_dae_solution, self.inputs)
+
+    @pytest.mark.parametrize("output_variables", [[], ["2z"]])
+    def test_start_at_a_discontinuity(self, output_variables):
+        # As for a step that starts at the switch, t_eval[1] is a float after t0
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10, atol=1e-12, output_variables=output_variables
+        )
+        solution = solver.solve(
+            _coupled_dae(switch=pybamm.t > 0.5),
+            [0.5, 1],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+        )
+
+        np.testing.assert_array_equal(solution.t[:2], [0.5, np.nextafter(0.5, 1)])
+
+        def closed_form(t, a, b, c):
+            values = _coupled_dae_solution(t, a, b, c, t0=0.5)
+            return {"z": values["z"]} if output_variables else values
+
+        scales = {"z": ("2z", 2)} if output_variables else None
+        self._assert_matches(solution, closed_form, self.inputs, scales=scales)
+
+    def test_end_just_after_a_discontinuity(self):
+        # The last t_eval point is the one a float after the switch
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        solution = solver.solve(
+            _coupled_dae(switch=pybamm.t > 0.5),
+            [0, np.nextafter(0.5, 1)],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+        )
+
+        np.testing.assert_array_equal(solution.t[-2:], [0.5, np.nextafter(0.5, 1)])
+        self._assert_matches(solution, _coupled_dae_solution, self.inputs)
+
+    @pytest.mark.parametrize(
+        "t_end", [1.0, np.nextafter(0.5, 1)], ids=["steps", "jump"]
+    )
+    def test_init_all_y_ic_sensitivities_ignore_the_previous_solve(self, t_end):
+        # IDAS's staggered IDA_Y_INIT reads ypS from workspace that the last step,
+        # or the restart a float after a jump, leaves behind
+        model = _coupled_dae(10.0, switch=pybamm.t > 0.5)
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-8, atol=1e-10, options={"init_all_y_ic": True}
+        )
+        first, second = (
+            solver.solve(
+                model,
+                [0, t_end],
+                inputs=self.inputs,
+                calculate_sensitivities=True,
+            )
+            for _ in range(2)
+        )
+
+        for parameter in self.inputs:
+            np.testing.assert_allclose(
+                second["y"].sensitivities[parameter],
+                first["y"].sensitivities[parameter],
+                rtol=1e-10,
+                atol=1e-12,
+                err_msg=parameter,
+            )
+
+    def test_interpolation_times_around_a_discontinuity(self):
+        right = np.nextafter(0.5, 1)
+        t_interp = np.array([0, 0.25, 0.5, right, 0.75, 1])
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        solution = solver.solve(
+            _coupled_dae(switch=pybamm.t > 0.5),
+            [0, 1],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+            t_interp=t_interp,
+        )
+
+        np.testing.assert_array_equal(solution.t, t_interp)
+        self._assert_matches(solution, _coupled_dae_solution, self.inputs)
+
+    def test_interpolation_just_after_a_discontinuity(self):
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        solution = solver.solve(
+            _coupled_dae(switch=pybamm.t > 0.5),
+            [0, 1],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+        )
+
+        # Midpoints of the first steps after the restart, whose start is t_R
+        first_after = np.flatnonzero(solution.t > 0.5)[0]
+        stored = solution.t[first_after : first_after + 4]
+        t = (stored[:-1] + stored[1:]) / 2
+        np.testing.assert_allclose(
+            solution["z"](t),
+            _coupled_dae_solution(t, **self.inputs)["z"],
+            rtol=1e-7,
+            atol=1e-8,
+        )
+
+    def test_singular_algebraic_jacobian_at_a_breakpoint(self, caplog):
+        # z is undetermined at t = 0.5 only, which the steps after it resolve
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        z = pybamm.Variable("z")
+        model.rhs = {y: -y}
+        model.algebraic = {z: (pybamm.t - 0.5) * (z - pybamm.InputParameter("b") * y)}
+        model.initial_conditions = {y: 1, z: 1}
+        model.variables = {"z": z}
+        pybamm.Discretisation().process_model(model)
+        # Tighter tolerances fail before t = 0.5, with or without sensitivities
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-6, atol=1e-6, options={"silence_sundials_errors": True}
+        )
+        t_eval = np.array([0, 0.25, 0.5, 0.75, 1])
+
+        def solve():
+            caplog.clear()
+            with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+                solution = solver.solve(
+                    model, t_eval, inputs={"b": 1.0}, calculate_sensitivities=True
+                )
+            failures = [m for m in caplog.messages if "consistent sensitivities" in m]
+            return solution, failures
+
+        solution, failures = solve()
+        assert solution.termination == "final time"
+        t = np.array([0.75, 1])
+        np.testing.assert_allclose(
+            solution["z"].sensitivities["b"][np.isin(solution.t, t)].ravel(),
+            np.exp(-t),
+            rtol=1e-4,
+        )
+        # The singular factorisation leaves the next solve's sub-block working
+        assert len(failures) == 1
+        assert solve()[1] == failures

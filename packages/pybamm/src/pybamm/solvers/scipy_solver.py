@@ -5,7 +5,6 @@ import warnings
 
 import casadi
 import numpy as np
-import scipy.integrate as it
 
 import pybamm
 from pybamm.solvers.base_solver import stack_inputs
@@ -89,6 +88,8 @@ class ScipySolver(pybamm.BaseSolver):
             as well as various diagnostic messages.
 
         """
+        import scipy.integrate as it
+
         # scipy solver does not support sensitivity analysis
         if model.calculate_sensitivities:
             raise NotImplementedError(
@@ -98,7 +99,7 @@ class ScipySolver(pybamm.BaseSolver):
         # Save inputs dictionary, and if necessary convert inputs to a stacked vector
         inputs_dict = inputs_dict or {}
         if model.uses_stacked_inputs:
-            inputs = stack_inputs(inputs_dict)
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
         else:
             inputs = inputs_dict
 
@@ -134,7 +135,7 @@ class ScipySolver(pybamm.BaseSolver):
 
             def event_wrapper(event):
                 def event_fn(t, y):
-                    return event(t, y, inputs)
+                    return np.asarray(event(t, y, inputs)).item()
 
                 event_fn.terminal = True
                 return event_fn

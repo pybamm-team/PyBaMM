@@ -11,7 +11,6 @@ from typing import cast
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
@@ -66,6 +65,116 @@ def _preprocess_binary(
             right = pybamm.PrimaryBroadcast(right, left._domains["primary"])
 
     return left, right
+
+
+def _sparse_column_entries(symbol: pybamm.Symbol) -> csr_matrix | None:
+    """
+    The entries of ``symbol`` if it is a sparse constant column with both stored
+    and unstored rows, else ``None``.
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The operand to inspect.
+
+    Returns
+    -------
+    :class:`scipy.sparse.csr_matrix` or None
+        The column, with duplicate entries summed.
+    """
+    if not (
+        isinstance(symbol, pybamm.Array)
+        and issparse(symbol.entries)
+        and symbol.entries.shape[1:] == (1,)
+    ):
+        return None
+    entries = csr_matrix(symbol.entries, copy=True)
+    entries.sum_duplicates()
+    # Dense costs less with no row to skip, and the core folds an all-zero operand
+    if not 0 < entries.nnz < entries.shape[0]:
+        return None
+    return entries
+
+
+def _sparse_column_product_to_rust(
+    product: BinaryOperator, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+) -> pybamm.rust.Expr | None:
+    """
+    Lower an element-wise product with a sparse constant column as a sparse matrix
+    product, or return ``None`` when neither operand is one.
+
+    Against a vector the column becomes a diagonal matrix, and against a scalar it
+    stays a column, so its unstored rows are never computed.
+
+    Parameters
+    ----------
+    product : :class:`pybamm.BinaryOperator`
+        The element-wise product to lower.
+    graph : :class:`pybamm.rust.ExprGraph`
+        The graph to allocate the nodes in.
+    rust_symbols : dict
+        The lowered symbols, by id.
+
+    Returns
+    -------
+    :class:`pybamm.rust.Expr` or None
+        The product's node.
+    """
+    for column, other in ((product.left, product.right), (product.right, product.left)):
+        entries = _sparse_column_entries(column)
+        if entries is None or other.size not in (1, entries.shape[0]):
+            continue
+        if other.size == 1:
+            matrix = column._to_rust_matmul_left(graph, rust_symbols)
+        else:
+            rows = entries.shape[0]
+            stored = np.flatnonzero(np.diff(entries.indptr))
+            diagonal = csr_matrix((entries.data, (stored, stored)), shape=(rows, rows))
+            matrix = pybamm.Array._rust_sparse_matrix(graph, diagonal)
+        return graph.matmul(matrix, other._to_rust_inner(graph, rust_symbols))
+    return None
+
+
+def _sparse_column_numerator_to_rust(
+    operator: BinaryOperator, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+) -> pybamm.rust.Expr | None:
+    """
+    Lower an operator that is zero wherever its left operand is, such as a quotient,
+    on the stored rows of a sparse constant column only, or return ``None`` when the
+    left operand is not one.
+
+    Parameters
+    ----------
+    operator : :class:`pybamm.BinaryOperator`
+        The operator to lower.
+    graph : :class:`pybamm.rust.ExprGraph`
+        The graph to allocate the nodes in.
+    rust_symbols : dict
+        The lowered symbols, by id.
+
+    Returns
+    -------
+    :class:`pybamm.rust.Expr` or None
+        The operator's node.
+    """
+    entries = _sparse_column_entries(operator.left)
+    if entries is None or operator.right.size not in (1, entries.shape[0]):
+        return None
+    # An unstored zero never meets the right operand, and the scatter leaves its
+    # row exactly zero
+    rows = entries.shape[0]
+    stored = np.flatnonzero(np.diff(entries.indptr))
+    ones, positions = np.ones(stored.size), np.arange(stored.size)
+    right = operator.right._to_rust_inner(graph, rust_symbols)
+    if operator.right.size > 1:
+        gather = csr_matrix((ones, (positions, stored)), shape=(stored.size, rows))
+        right = graph.matmul(pybamm.Array._rust_sparse_matrix(graph, gather), right)
+    left = graph.array(entries.data.astype(float))
+    scatter = csr_matrix((ones, (stored, positions)), shape=(rows, stored.size))
+    return graph.matmul(
+        pybamm.Array._rust_sparse_matrix(graph, scatter),
+        operator._rust_node(graph, left, right),
+    )
 
 
 class BinaryOperator(pybamm.Symbol):
@@ -237,6 +346,24 @@ class BinaryOperator(pybamm.Symbol):
         )
         return self._casadi_evaluate(converted_left, converted_right)
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        left, right = self._children_to_rust(graph, rust_symbols)
+        return self._rust_node(graph, left, right)
+
+    def _rust_node(
+        self,
+        graph: pybamm.rust.ExprGraph,
+        left: pybamm.rust.Expr,
+        right: pybamm.rust.Expr,
+    ) -> pybamm.rust.Expr:
+        """Allocate this operator's node in ``graph`` over its converted operands."""
+        raise NotImplementedError(
+            f"Cannot convert binary operator of type '{type(self).__name__}' "
+            f"to the Rust backend. {self._RUST_FALLBACK_HINT}"
+        )
+
     def _evaluates_on_edges(self, dimension: str) -> bool | str:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
@@ -257,6 +384,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -333,6 +462,10 @@ class Power(BinaryOperator):
         with np.errstate(invalid="ignore"):
             return left**right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.pow(left, right)
+
 
 class Addition(BinaryOperator):
     """
@@ -360,6 +493,10 @@ class Addition(BinaryOperator):
     def _binary_evaluate(self, left: ChildValue, right: ChildValue):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left + right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.add(left, right)
 
 
 class Subtraction(BinaryOperator):
@@ -389,6 +526,10 @@ class Subtraction(BinaryOperator):
     def _binary_evaluate(self, left: ChildValue, right: ChildValue):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left - right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.sub(left, right)
 
 
 class Multiplication(BinaryOperator):
@@ -434,6 +575,19 @@ class Multiplication(BinaryOperator):
             return csr_matrix(right.multiply(left))
         else:
             return left * right
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        product = _sparse_column_product_to_rust(self, graph, rust_symbols)
+        if product is None:
+            return super()._to_rust(graph, rust_symbols)
+        return product
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.mul(left, right)
 
 
 class KroneckerProduct(BinaryOperator):
@@ -595,6 +749,14 @@ class MatrixMultiplication(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left @ right
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        left = self.left._to_rust_matmul_left(graph, rust_symbols)
+        right = self.right._to_rust_inner(graph, rust_symbols)
+        return graph.matmul(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         result = try_repeated_row_matmul(self._children[0], right)
@@ -602,6 +764,8 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -646,6 +810,19 @@ class Division(BinaryOperator):
             return left * (1 / right)
         else:
             return left / right
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        quotient = _sparse_column_numerator_to_rust(self, graph, rust_symbols)
+        if quotient is None:
+            return super()._to_rust(graph, rust_symbols)
+        return quotient
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.div(left, right)
 
 
 class Inner(BinaryOperator):
@@ -701,6 +878,19 @@ class Inner(BinaryOperator):
             return right.multiply(left)
         else:
             return left * right
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        product = _sparse_column_product_to_rust(self, graph, rust_symbols)
+        if product is None:
+            return super()._to_rust(graph, rust_symbols)
+        return product
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.mul(left, right)
 
     def _binary_new_copy(
         self,
@@ -772,6 +962,10 @@ class Equality(BinaryOperator):
             return int(left == right.item())
         else:
             return int(left == right)
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.equality(left, right)
 
     def _binary_new_copy(
         self,
@@ -872,6 +1066,10 @@ class EqualHeaviside(_Heaviside):
         with np.errstate(invalid="ignore"):
             return left <= right
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.equal_heaviside(left, right)
+
     def _t_discon_next(self, value: float):
         if self.left == pybamm.t:
             # t <= x
@@ -904,6 +1102,10 @@ class NotEqualHeaviside(_Heaviside):
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left < right
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.not_equal_heaviside(left, right)
 
     def _t_discon_next(self, value: float):
         if self.left == pybamm.t:
@@ -958,6 +1160,19 @@ class Modulo(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left % right
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """See :meth:`pybamm.Symbol._to_rust()`."""
+        remainder = _sparse_column_numerator_to_rust(self, graph, rust_symbols)
+        if remainder is None:
+            return super()._to_rust(graph, rust_symbols)
+        return remainder
+
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.modulo(left, right)
 
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
@@ -1066,6 +1281,10 @@ class Minimum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.minimum(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmin(left, right)
@@ -1080,6 +1299,8 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Min(left, right)
 
 
@@ -1116,6 +1337,10 @@ class Maximum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.maximum(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmax(left, right)
@@ -1130,6 +1355,8 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Max(left, right)
 
 
@@ -1165,6 +1392,10 @@ class Hypot(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return np.hypot(left, right)
 
+    def _rust_node(self, graph, left, right):
+        """See :meth:`pybamm.BinaryOperator._rust_node()`."""
+        return graph.hypot(left, right)
+
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.hypot(left, right)
@@ -1179,6 +1410,8 @@ class Hypot(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.sqrt(left**2 + right**2)
 
 

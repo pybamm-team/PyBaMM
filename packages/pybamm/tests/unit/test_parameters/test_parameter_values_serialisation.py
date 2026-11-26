@@ -125,6 +125,50 @@ class TestRoundtripValueTypes:
             pv, pv2, "D", {"sto": _sv(0, n), "T": _sv(n, n)}, y
         )
 
+    def test_callable_with_spatial_variable_keeps_domain(self):
+        size = {
+            "primary": ["negative particle size"],
+            "secondary": ["current collector"],
+        }
+
+        def j0(c_s):
+            R = pybamm.SpatialVariable("R_n", domains=size, coord_sys="cartesian")
+            return c_s * R
+
+        pv = pybamm.ParameterValues({"j0": j0})
+        pv2 = _roundtrip(pv)
+
+        c_s = pybamm.Variable("c_s", domains=size)
+        for values in (pv, pv2):
+            out = values.process_symbol(pybamm.FunctionParameter("j0", {"c_s": c_s}))
+            (R,) = [n for n in out.pre_order() if isinstance(n, pybamm.SpatialVariable)]
+            assert R.domain == ["negative particle size"]
+            assert R.domains["secondary"] == ["current collector"]
+
+    def test_callable_with_domain_changing_operator_keeps_domains(self):
+        size = {
+            "primary": ["negative particle size"],
+            "secondary": ["current collector"],
+        }
+
+        def f(c):
+            R = pybamm.SpatialVariable("R_n", domains=size, coord_sys="cartesian")
+            return pybamm.boundary_value(R, "right") * c
+
+        pv = pybamm.ParameterValues({"f": f})
+        pv2 = _roundtrip(pv)
+
+        c = pybamm.Variable("c", domain="current collector")
+        fp = pybamm.FunctionParameter("f", {"c": c})
+
+        def nodes(values):
+            return [
+                (type(n).__name__, n.name, n.domains)
+                for n in values.process_symbol(fp).pre_order()
+            ]
+
+        assert nodes(pv2) == nodes(pv)
+
     def test_callable_with_keyword_args(self):
         def func_no_kwargs(x):
             return 2 * x
@@ -718,6 +762,71 @@ class TestConvertParameterValuesToJson:
 class TestSerializeParameterValue:
     """Per-value dispatch exposed publicly (fix for raw-mapping serialisation)."""
 
+    def test_citation_metadata_roundtrip(self):
+        metadata = [
+            "Chen2020",
+            ("Nyman2008", "Electrolyte transport"),
+            ["Nyman2008", "Another reason"],
+        ]
+        parameters = pybamm.ParameterValues({"a": 1, "citations": metadata})
+        data = json.loads(json.dumps(parameters.to_json()))
+        pybamm.citations._reset()
+        restored = pybamm.ParameterValues.from_json(data)
+        assert restored["a"] == 1
+        assert restored["citations"] == metadata
+        assert pybamm.citations._citation_tags["Chen2020"] == {"ParameterValues"}
+        assert pybamm.citations._citation_tags["Nyman2008"] == {
+            "Electrolyte transport",
+            "Another reason",
+        }
+
+    def test_handwritten_citation_pair(self):
+        pybamm.citations._reset()
+        parameters = pybamm.ParameterValues.from_json(
+            {"citations": [["Nyman2008", "Electrolyte transport"]]}
+        )
+        assert parameters["citations"] == [["Nyman2008", "Electrolyte transport"]]
+        assert pybamm.citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
+
+    def test_named_citation_roundtrip(self):
+        parameters = pybamm.ParameterValues("Chen2020")
+        data = json.loads(json.dumps(parameters.to_json()))
+        assert data.keys() == dict(parameters.items()).keys()
+        pybamm.citations._reset()
+        restored = pybamm.ParameterValues.from_json(data)
+        assert data["citations"] == parameters["citations"]
+        assert restored["citations"] == parameters["citations"]
+        assert pybamm.citations._citation_tags["Chen2020"] == {"ParameterValues"}
+
+    def test_citation_file_roundtrip(self, tmp_path):
+        parameters = pybamm.ParameterValues("Chen2020")
+        parameters["citations"].append(("Nyman2008", "Electrolyte transport"))
+        filename = tmp_path / "parameters.json"
+        pybamm.Serialise.save_parameters(parameters, filename)
+        data = json.loads(filename.read_text(encoding="utf-8"))
+        assert data.keys() == dict(parameters.items()).keys()
+        pybamm.citations._reset()
+        restored = pybamm.Serialise.load_parameters(filename).copy()
+        assert restored["citations"] == parameters["citations"]
+        assert pybamm.citations._citation_tags["Chen2020"] == {"ParameterValues"}
+        assert pybamm.citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
+
+    def test_roundtrip_nested_list(self):
+        value = ["plain", 1, None, [True, ("key", "reason"), pybamm.Scalar(2)]]
+        wire = json.loads(json.dumps(pybamm.serialize_parameter_value("a", value)))
+        restored = pybamm.deserialize_parameter_value(wire)
+        assert restored == value
+
+    @pytest.mark.parametrize("value", [{}, {"$type": "unknown.Type"}])
+    @pytest.mark.parametrize("nested", [False, True])
+    def test_invalid_serialized_dictionary(self, value, nested):
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            SerialisationError,
+        )
+
+        with pytest.raises(SerialisationError):
+            pybamm.deserialize_parameter_value([value] if nested else value)
+
     def test_roundtrip_scalar(self):
         wire = pybamm.serialize_parameter_value("a", 3.14)
         assert pybamm.deserialize_parameter_value(wire) == 3.14
@@ -796,10 +905,10 @@ class TestStressRoundtripAllParameterSets:
                 continue
 
             sig = inspect.signature(orig)
-            nargs = len([p for p in sig.parameters.values() if p.default == p.empty])
+            nargs = len([p for p in sig.parameters.values() if p.default is p.empty])
 
             svs = [_sv(i * n, n) for i in range(nargs)]
-            names = [p.name for p in sig.parameters.values() if p.default == p.empty]
+            names = [p.name for p in sig.parameters.values() if p.default is p.empty]
             inputs = dict(zip(names, svs, strict=False))
 
             y_parts = []

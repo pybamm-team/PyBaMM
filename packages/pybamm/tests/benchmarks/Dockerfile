@@ -8,7 +8,7 @@
 # Kept small for Bencher's bandwidth quota, with source last to reuse cached layers.
 
 # Pinned by digest (Dependabot bumps it)
-FROM python:3.13-slim-bookworm@sha256:a1165e272e578941b84abc79e4ab38a0305cd12803a5c4247979ac7655f4d641 AS python
+FROM python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72 AS python
 
 # Flattened into one layer: Bencher's runner can't extract a layer that re-ships
 # a hard link from a lower one, as the Python layer does when it upgrades perl-base
@@ -22,7 +22,9 @@ ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 # uncompiled path without it, making the compiled benchmarks measure nothing.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 gcc libc6-dev \
-    && rm -rf /var/lib/apt/lists/*
+    # Logs and ldconfig's cache hold the build time, which would change the layer
+    && rm -rf /var/lib/apt/lists/* /var/log/apt /var/log/alternatives.log \
+       /var/log/dpkg.log /var/cache/ldconfig/aux-cache
 
 # No telemetry (the runner has no network) and no baked-in bytecode
 ENV VIRTUAL_ENV=/opt/venv \
@@ -33,18 +35,27 @@ ENV VIRTUAL_ENV=/opt/venv \
     PYBAMM_DISABLE_TELEMETRY=true \
     UV_NO_CACHE=1
 
-# The final stage takes only the locked requirements and solver wheel
+# The final stage takes only the locked requirements and the wheels built here
 FROM base AS inputs
 COPY --from=ghcr.io/astral-sh/uv:0.9.7 /uv /bin/uv
+# pybamm compiles its Rust core; the toolchain stays in this stage, out of the image
+COPY --from=rust:1.89-slim-bookworm@sha256:d7fc7de78bb8c1469933aeecbf801314d30d7d6e9f0578bba4cfa285bfa37fe6 \
+     /usr/local/rustup /usr/local/rustup
+COPY --from=rust:1.89-slim-bookworm@sha256:d7fc7de78bb8c1469933aeecbf801314d30d7d6e9f0578bba4cfa285bfa37fe6 \
+     /usr/local/cargo /usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
 WORKDIR /src
 COPY . .
-RUN mkdir -p /inputs/wheel \
+RUN mkdir -p /inputs/wheel /inputs/pybamm \
     && uv export --frozen --package pybamm --no-default-groups --group bench \
          --no-emit-workspace --no-hashes --output-file /inputs/requirements.txt \
     && tag=$(python -c 'import sys; print("cp%d%d" % sys.version_info[:2])') \
     && for wheel in solver-wheels/*-"$tag"-*.whl; do \
          if [ -e "$wheel" ]; then cp "$wheel" /inputs/wheel/; break; fi; \
-       done
+       done \
+    && uv build --wheel --out-dir /inputs/pybamm packages/pybamm
 
 FROM base
 
@@ -53,11 +64,11 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     uv venv "$VIRTUAL_ENV" \
     && uv pip install --no-deps --requirement /tmp/requirements.txt
 
-# Install the in-repo solver wheel staged by the inputs stage, if CI built one
+# Install CI's in-repo solver wheel, if any, without uv's timestamped metadata
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     --mount=type=bind,from=inputs,source=/inputs/wheel,target=/tmp/wheel \
     for wheel in /tmp/wheel/*.whl; do \
-      if [ -e "$wheel" ]; then uv pip install --no-deps "$wheel"; fi; \
+      if [ -e "$wheel" ]; then uv pip install --no-installer-metadata --no-deps "$wheel"; fi; \
     done
 
 COPY packages/pybamm /pybamm/packages/pybamm
@@ -65,10 +76,11 @@ WORKDIR /pybamm/packages/pybamm
 
 # Local builds fall back to the PyPI solver; `uv pip check` catches a mismatched wheel
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
+    --mount=type=bind,from=inputs,source=/inputs/pybamm,target=/tmp/pybamm \
     if python -c "import importlib.metadata as m; m.version('pybammsolvers')" 2>/dev/null; then \
-      uv pip install --no-deps --editable . && uv pip check; \
+      uv pip install --no-installer-metadata --no-deps /tmp/pybamm/*.whl && uv pip check; \
     else \
-      uv pip install --editable .; \
+      uv pip install --no-installer-metadata /tmp/pybamm/*.whl; \
     fi
 
 WORKDIR /pybamm/packages/pybamm/tests/benchmarks

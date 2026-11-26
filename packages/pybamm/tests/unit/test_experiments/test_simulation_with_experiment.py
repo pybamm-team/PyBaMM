@@ -158,6 +158,28 @@ class TestSimulationExperiment:
             out[mode] = sol["Voltage [V]"](time)
         np.testing.assert_allclose(out["unified"], out["legacy"], rtol=1e-4, atol=1e-4)
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_drive_cycles_differing_in_the_middle(self, experiment_model_mode):
+        # numpy shortens the reprs of these drive cycles to the same text
+        time = np.linspace(0, 1000, 2001)
+        drive_cycle = np.column_stack([time, np.ones_like(time)])
+        changed = drive_cycle.copy()
+        changed[1000, 1] = 5
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(drive_cycle), pybamm.step.current(changed)]
+        )
+        assert len(experiment.unique_steps) == 2
+        np.testing.assert_array_equal(experiment.steps[1].input_value, changed)
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+        currents = [cycle["Current [A]"](cycle.t[0] + 500) for cycle in solution.cycles]
+        np.testing.assert_allclose(currents, [1, 5], rtol=1e-6)
+
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
             [
@@ -2852,3 +2874,493 @@ class TestSimulationExperiment:
 
         # Reusing the same Simulation must refresh experiment ICs when SOC changes.
         assert ic1 != ic2
+
+    @staticmethod
+    def _heated_body(control):
+        model = pybamm.BaseModel()
+        temperature = pybamm.Variable("Temperature [K]")
+        model.rhs = {temperature: control / 1000}
+        model.initial_conditions = {temperature: 300}
+        model.variables = {"Temperature [K]": temperature}
+        return model
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_experiment_on_model_without_summary_variables(self, experiment_model_mode):
+        current = pybamm.FunctionParameter(
+            "Current function [A]", {"Time [s]": pybamm.t}
+        )
+        model = self._heated_body(current)
+        experiment = pybamm.Experiment(
+            ["Rest for 10 seconds", "Discharge at 2 A for 10 seconds"]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Current function [A]": 1}),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+
+        temperature = solution["Temperature [K]"]
+        np.testing.assert_allclose(temperature(10), 300, rtol=1e-6)
+        np.testing.assert_allclose(temperature(20), 300.02, rtol=1e-6)
+        assert solution.summary_variables.all_variables == []
+
+    def test_experiment_on_model_that_does_not_read_the_current(self):
+        model = self._heated_body(pybamm.Parameter("Heating power [W]"))
+        experiment = pybamm.Experiment(
+            ["Rest for 10 seconds", "Discharge at 1 A for 10 seconds"] * 2
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Heating power [W]": 100}),
+            experiment=experiment,
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"steps 'Rest for 10 seconds', 'Discharge at 1 A for 10 seconds' "
+            r"set 'Current function \[A\]', which the model 'Unnamed model' does not",
+        ):
+            sim.solve()
+
+    @staticmethod
+    def _cooled_body():
+        model = pybamm.BaseModel()
+        temperature = pybamm.Variable("Temperature [K]")
+        heating = pybamm.Parameter("Heating power [W]")
+        coolant = pybamm.Parameter("Coolant temperature [K]")
+        net_power = heating - 10 * (temperature - coolant)
+        model.rhs = {temperature: net_power / 1000}
+        model.initial_conditions = {temperature: 300}
+        model.variables = {
+            "Temperature [K]": temperature,
+            "Net power [W]": net_power,
+        }
+        return model
+
+    @staticmethod
+    def _cooled_body_parameter_values():
+        return pybamm.ParameterValues(
+            {"Heating power [W]": 100, "Coolant temperature [K]": 295}
+        )
+
+    @staticmethod
+    def _net_power_residual(variables, target):
+        return variables["Net power [W]"] - target
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_control_steps(self, experiment_model_mode):
+        net_power = (self._net_power_residual, 50)
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control(
+                    {"Heating power [W]": 200, "Coolant temperature [K]": 290},
+                    duration=100,
+                ),
+                pybamm.step.control(
+                    {"Coolant temperature [K]": 300},
+                    {"Heating power [W]": net_power},
+                    duration=100,
+                ),
+                # The coolant temperature goes back to its parameter value
+                pybamm.step.control({"Heating power [W]": 0}, duration=100),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8),
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+
+        temperature_1 = 310 - 10 * np.exp(-1)
+        temperature_2 = temperature_1 + 5
+        temperature_3 = 295 + (temperature_2 - 295) * np.exp(-1)
+        np.testing.assert_allclose(
+            solution["Temperature [K]"](np.array([100, 200, 300])),
+            [temperature_1, temperature_2, temperature_3],
+            rtol=1e-7,
+        )
+        np.testing.assert_allclose(
+            solution["Heating power [W]"](np.array([50, 200, 250])),
+            [200, 50 + 10 * (temperature_2 - 300), 0],
+            rtol=1e-6,
+            atol=1e-8,
+        )
+        np.testing.assert_allclose(
+            solution["Coolant temperature [K]"](np.array([50, 150, 250])),
+            [290, 300, 295],
+            rtol=1e-7,
+        )
+        np.testing.assert_allclose(solution["Net power [W]"](150), 50, rtol=1e-6)
+
+    def test_control_steps_unified_collapse_targets(self):
+        net_power = self._net_power_residual
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control({"Heating power [W]": 50}, duration=10),
+                pybamm.step.control({"Heating power [W]": 150}, duration=10),
+                pybamm.step.control(
+                    implicit={"Heating power [W]": (net_power, 20)}, duration=10
+                ),
+                pybamm.step.control(
+                    implicit={"Heating power [W]": (net_power, 40)}, duration=10
+                ),
+                pybamm.step.control(
+                    {"Heating power [W]": lambda t: 10 * t}, duration=10
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        assert sim._experiment_step_indices == [1, 1, 2, 2, 3]
+        value_input = "Experiment step value (Heating power [W])"
+        assert sim._experiment_value_inputs == {"Heating power [W]": value_input}
+        assert sim._is_internal_experiment_input(value_input)
+        assert sim._built_experiment_model.switching_control_variables == {
+            "Heating power [W]"
+        }
+
+        steps = experiment.steps
+        inputs = sim._build_experiment_step_inputs({}, steps[1], 0, 1)
+        assert inputs[value_input] == 150
+        assert sim._AMBIENT_TEMPERATURE_INPUT not in inputs
+        inputs = sim._build_experiment_step_inputs({}, steps[3], 0, 2)
+        assert inputs[value_input] == 40
+
+        solution = sim.solve()
+        np.testing.assert_allclose(
+            solution["Heating power [W]"](np.array([5, 15, 45])),
+            [50, 150, 50],
+            rtol=1e-4,
+        )
+        np.testing.assert_allclose(
+            solution["Net power [W]"](np.array([25, 35])), [20, 40], rtol=1e-4
+        )
+
+    def test_control_steps_with_battery_current(self):
+        # A control step can also drive the current of a battery model
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        solutions = []
+        for experiment_model_mode in ["legacy", "unified"]:
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                experiment=pybamm.Experiment(
+                    [
+                        pybamm.step.control({"Current function [A]": 1}, duration=600),
+                        "Hold at 4.0 V for 10 minutes",
+                    ]
+                ),
+                experiment_model_mode=experiment_model_mode,
+            )
+            solutions.append(sim.solve())
+        for solution in solutions:
+            np.testing.assert_allclose(solution["Current [A]"](300), 1, rtol=1e-6)
+            assert "Current function [A]" not in solution.all_models[0].variables
+        np.testing.assert_allclose(
+            solutions[0]["Voltage [V]"](np.array([300, 900])),
+            solutions[1]["Voltage [V]"](np.array([300, 900])),
+            rtol=1e-4,
+        )
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_control_steps_rest_battery_models(self, experiment_model_mode):
+        # A control step that does not drive the current of a battery model rests
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=pybamm.Experiment(
+                [
+                    pybamm.step.control(
+                        {"Upper voltage cut-off [V]": 4.3}, duration=60
+                    ),
+                    "Discharge at 1C for 1 minute",
+                ]
+            ),
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+        np.testing.assert_allclose(
+            solution["Current [A]"](np.array([30, 90])), [0, 5], atol=1e-8
+        )
+
+    def test_control_steps_unified_substitutes_set_controls(self):
+        # Controls that every step sets to a value add no algebraic equations
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control({"Heating power [W]": 200}, duration=10),
+                pybamm.step.control({"Coolant temperature [K]": 290}, duration=10),
+                pybamm.step.control(
+                    {"Heating power [W]": lambda t: 10 * t}, duration=10
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        solution = sim.solve()
+        model = sim._built_experiment_model
+        assert model.algebraic == {}
+        assert model.switching_control_variables == set()
+        np.testing.assert_allclose(
+            solution["Heating power [W]"](np.array([5, 15, 25])),
+            [200, 100, 50],
+            rtol=1e-6,
+        )
+        np.testing.assert_allclose(
+            solution["Coolant temperature [K]"](np.array([5, 15, 25])),
+            [295, 290, 295],
+            rtol=1e-6,
+        )
+
+    def test_control_steps_unified_initial_guess_with_padding_rest(self):
+        # The padding rest runs first and holds the control at its parameter value
+        net_power = (self._net_power_residual, 50)
+        start_time = datetime(2026, 1, 1)
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control(
+                    {"Heating power [W]": 200}, duration=10, start_time=start_time
+                ),
+                pybamm.step.control(
+                    implicit={"Heating power [W]": net_power}, duration=10
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        model = sim._built_experiment_model
+        (variable,) = model.algebraic
+        # The initial condition is in units of the scale, the parameter value
+        guess = (
+            model.initial_conditions[variable].evaluate() * variable.scale.evaluate()
+        )
+        np.testing.assert_allclose(guess, 100)
+
+        # Without a padding rest, the first step's value is the guess
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control({"Heating power [W]": 200}, duration=10),
+                pybamm.step.control(
+                    implicit={"Heating power [W]": net_power}, duration=10
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+        model = sim._built_experiment_model
+        (variable,) = model.algebraic
+        # The initial condition is in units of the scale, the parameter value
+        guess = (
+            model.initial_conditions[variable].evaluate() * variable.scale.evaluate()
+        )
+        np.testing.assert_allclose(guess, 200)
+
+    def test_control_steps_internal_inputs(self):
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=pybamm.Experiment(
+                [pybamm.step.control({"Heating power [W]": 200}, duration=10)]
+            ),
+        )
+        assert sim._is_internal_experiment_input("Experiment step value")
+        assert sim._is_internal_experiment_input(
+            "Experiment step value (Heating power [W])"
+        )
+        # A user input with a similar name is not internal
+        assert not sim._is_internal_experiment_input("Experiment step value (other)")
+
+    def test_control_steps_errors(self):
+        experiment = pybamm.Experiment(
+            [pybamm.step.control({"Unread parameter": 1}, duration=10)]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"set 'Unread parameter', which the model 'Unnamed model' "
+            r"does not read",
+        ):
+            sim.solve()
+
+        # In unified mode, a control that a step does not drive needs a value
+        parameter_values = pybamm.ParameterValues({"Heating power [W]": 100})
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control({"Coolant temperature [K]": 290}, duration=10),
+                pybamm.step.control({"Heating power [W]": 0}, duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=parameter_values,
+            experiment=experiment,
+            experiment_model_mode="unified",
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"does not drive 'Coolant temperature \[K\]', which has no value",
+        ):
+            sim.solve()
+
+        # Control steps are restricted from being input parameters
+        parameter_values = self._cooled_body_parameter_values()
+        parameter_values["Heating power [W]"] = "[input]"
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=parameter_values,
+            experiment=experiment,
+        )
+        with pytest.raises(pybamm.ModelError, match=r"Cannot use 'Heating power"):
+            sim.solve(inputs={"Heating power [W]": 1})
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_control_steps_with_start_times(self, experiment_model_mode):
+        # The padding rest holds the controls at their parameter values
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control(
+                    {"Heating power [W]": 200},
+                    duration=10,
+                    start_time=datetime(2026, 1, 1, 0, 0, 0),
+                ),
+                pybamm.step.control(
+                    {"Heating power [W]": 0},
+                    duration=10,
+                    start_time=datetime(2026, 1, 1, 0, 0, 20),
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+        np.testing.assert_allclose(
+            solution["Heating power [W]"](np.array([5, 15, 25])),
+            [200, 100, 0],
+            rtol=1e-6,
+            atol=1e-8,
+        )
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    @pytest.mark.parametrize("start_times", [False, True])
+    def test_control_steps_upsample_the_model_upsampling_variable(
+        self, experiment_model_mode, start_times
+    ):
+        start_time = {"start_time": datetime(2026, 1, 1)} if start_times else {}
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control(
+                    {"Heating power [W]": 200}, duration=100, **start_time
+                ),
+                pybamm.step.control({"Heating power [W]": 0}, duration=100),
+            ]
+        )
+        model = self._cooled_body()
+        model.upsampling_variable = "Temperature [K]"
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-6}),
+        )
+        solution = sim.solve()
+        assert len(solution.t_additive) > 0
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_control_steps_upsampling_without_a_variable(
+        self, experiment_model_mode, caplog
+    ):
+        experiment = pybamm.Experiment(
+            [pybamm.step.control({"Heating power [W]": 200}, duration=100)]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-6}),
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            solution = sim.solve()
+        assert "has no 'Voltage [V]' variable" in caplog.text
+        assert solution.t_additive is None
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_experiment_on_model_that_reads_only_the_ambient_temperature(
+        self, experiment_model_mode
+    ):
+        model = pybamm.BaseModel()
+        temperature = pybamm.Variable("Temperature [K]")
+        ambient_temperature = pybamm.Parameter("Ambient temperature [K]")
+        model.rhs = {temperature: (ambient_temperature - temperature) / 10}
+        model.initial_conditions = {temperature: 300}
+        model.variables = {"Temperature [K]": temperature}
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Rest for 100 seconds", temperature="30 oC"),
+                pybamm.step.string("Rest for 100 seconds", temperature="40 oC"),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Ambient temperature [K]": 300}),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+
+        temperature = solution["Temperature [K]"]
+        np.testing.assert_allclose(temperature(100), 303.15, rtol=1e-5)
+        np.testing.assert_allclose(temperature(200), 313.15, rtol=1e-5)
+
+    def test_experiment_temperature_step_on_model_that_reads_neither(self):
+        model = self._heated_body(pybamm.Parameter("Heating power [W]"))
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.string("Rest for 10 seconds", temperature="30 oC"),
+                "Rest for 20 seconds",
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=pybamm.ParameterValues({"Heating power [W]": 100}),
+            experiment=experiment,
+        )
+        with pytest.raises(
+            pybamm.ModelError,
+            match=r"steps 'Rest for 10 seconds' set 'Current function \[A\]' and "
+            r"'Ambient temperature \[K\]', neither of which the model 'Unnamed "
+            r"model' reads, so they would have no effect on it\. The experiment "
+            r"steps 'Rest for 20 seconds' set 'Current function \[A\]', which",
+        ):
+            sim.solve()

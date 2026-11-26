@@ -3,13 +3,17 @@
 #
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sympy
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
@@ -62,6 +66,8 @@ class IndependentVariable(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -121,8 +127,15 @@ class Time(IndependentVariable):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        return graph.time()
+
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         return sympy.Symbol("t")
 
 

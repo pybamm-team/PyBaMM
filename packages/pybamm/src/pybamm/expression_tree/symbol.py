@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Self, cast
 
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
@@ -501,6 +500,10 @@ class Symbol:
     # Static slots that are stored but do not define identity (e.g. callables,
     # raw arrays whose string form is hashed instead). Subclasses extend this.
     _id_excluded_fields: tuple[str, ...] = ()
+    # The fix every Rust conversion error suggests
+    _RUST_FALLBACK_HINT = (
+        "Use a CasADi-backed model (set `model.convert_to_format = 'casadi'`) instead."
+    )
 
     @property
     def leaves(self) -> Sequence[Symbol]:
@@ -1143,7 +1146,7 @@ class Symbol:
         elif any(variable == x for x in self.pre_order()) or (
             variable == pybamm.t
             and self.has_symbol_of_classes(
-                (pybamm.VariableBase, pybamm.StateVectorBase)
+                (pybamm.VariableBase, pybamm.StateVectorBase, pybamm.CoupledVariable)
             )
         ):
             return self._diff(variable)
@@ -1459,6 +1462,62 @@ class Symbol:
             for child in self._children
         ]
 
+    def to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict | None = None
+    ) -> pybamm.rust.Expr:
+        """
+        Allocate this expression into a Rust expression graph.
+
+        Parameters
+        ----------
+        graph : :class:`pybamm.rust.ExprGraph`
+            The graph to allocate nodes into.
+        rust_symbols : dict, optional
+            Id-to-handle cache; share one across calls on a graph to reuse subgraphs.
+
+        Returns
+        -------
+        :class:`pybamm.rust.Expr`
+            Handle to the root node.
+        """
+        if rust_symbols is None:
+            rust_symbols = {}
+        return self._to_rust_inner(graph, rust_symbols)
+
+    def _to_rust_inner(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        cached = rust_symbols.get(self.id, None)
+        if cached is not None:
+            return cached
+        result = self._to_rust(graph, rust_symbols)
+        rust_symbols[self.id] = result
+        return result
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        raise NotImplementedError(
+            f"Cannot convert symbol of type '{type(self).__name__}' to the Rust "
+            f"backend. {self._RUST_FALLBACK_HINT}"
+        )
+
+    def _to_rust_matmul_left(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        """
+        Allocate this expression as the left operand of a matrix product.
+
+        By default the operand is allocated as a value. :class:`pybamm.Array`
+        overrides this to allocate a sparse matrix node when its entries are sparse.
+        """
+        return self._to_rust_inner(graph, rust_symbols)
+
+    def _children_to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> list[pybamm.rust.Expr]:
+        return [child._to_rust_inner(graph, rust_symbols) for child in self.children]
+
     def _children_for_copying(
         self, children: list[Symbol] | None = None
     ) -> list[Symbol]:
@@ -1594,6 +1653,8 @@ class Symbol:
         self._print_name = prettify_print_name(name)
 
     def to_equation(self):
+        import sympy
+
         return sympy.Symbol(str(self.name))
 
     def to_json(self):

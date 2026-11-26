@@ -16,6 +16,8 @@ from numpy import testing
 
 import pybamm
 
+pytest_plugins = ["tests.conftest_rust"]
+
 
 class TestBaseModel:
     def test_rhs_set_get(self):
@@ -127,6 +129,15 @@ class TestBaseModel:
         assert variables == model.variables
         assert model.variable_names() == list(variables.keys())
 
+    def test_summary_variables_set_get(self):
+        model = pybamm.BaseModel()
+        assert model.summary_variables == []
+        model.variables = {"var": pybamm.Scalar(1)}
+        model.summary_variables = ["var"]
+        assert model.summary_variables == ["var"]
+        with pytest.raises(KeyError, match=r"No cycling variable defined"):
+            model.summary_variables = ["bad var"]
+
     def test_jac_set_get(self):
         model = pybamm.BaseModel()
         model.jacobian = "test"
@@ -226,6 +237,43 @@ class TestBaseModel:
         assert parameter_info["b"][1] == "InputParameter in ['test']"
         assert symbols in parameter_info
         assert parameter_info["g"][1] == "Parameter"
+
+    def test_get_parameter_info_geometry(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.Parameter("a")
+        model.rhs = {u: -a * u}
+        model.initial_conditions = {u: 1}
+        x = pybamm.SpatialVariable("x", "domain")
+        model._default_geometry = pybamm.Geometry(
+            {
+                "domain": {
+                    x: {"min": a, "max": pybamm.Parameter("length")},
+                    "tabs": {"width": pybamm.InputParameter("width")},
+                }
+            }
+        )
+
+        parameter_info = model.get_parameter_info()
+        assert set(parameter_info) == {"a", "length", "width"}
+        assert parameter_info["length"][1] == "Parameter"
+        assert parameter_info["width"][1] == "InputParameter"
+        assert {p.name for p in model.parameters} == {"a"}
+
+    @pytest.mark.parametrize(
+        "particle_size, electrodes",
+        [
+            ("distribution", ["Negative", "Positive"]),
+            (("single", "distribution"), ["Positive"]),
+        ],
+    )
+    def test_get_parameter_info_size_distribution(self, particle_size, electrodes):
+        model = pybamm.lithium_ion.DFN({"particle size": particle_size})
+        parameter_info = model.get_parameter_info()
+        for electrode in electrodes:
+            for bound in ["minimum", "maximum"]:
+                name = f"{electrode} {bound} particle radius [m]"
+                assert parameter_info[name][1] == "Parameter"
 
     @pytest.mark.parametrize(
         "sub, key, parameter_value",
@@ -1792,7 +1840,7 @@ class TestBaseModel:
 
     def test_convert_to_format_validated(self):
         model = pybamm.BaseModel()
-        for valid in ("python", "casadi", "jax"):
+        for valid in ("python", "casadi", "jax", "rust"):
             model.convert_to_format = valid
             assert model.convert_to_format == valid
         with pytest.raises(
@@ -1813,6 +1861,7 @@ class TestBaseModel:
         model = pybamm.BaseModel()
         for convert_to_format, stacked in [
             ("casadi", True),
+            ("rust", True),
             ("python", False),
             ("jax", False),
         ]:
@@ -1845,6 +1894,9 @@ class TestBaseModel:
         assert "convert_to_format" not in vars(restored)
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
         np.testing.assert_allclose(solution["u"](1.0), np.exp(-1.0), rtol=1e-3)
+
+    def test_rust_backend_fixture_drives_default(self, rust_backend):
+        assert pybamm.BaseModel().convert_to_format == "rust"
 
 
 class TestModelSolutionObservability:

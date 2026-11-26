@@ -1,0 +1,41 @@
+name: Check style and changelog
+description: Run pre-commit hooks and verify the PR's changelog fragment numbers.
+inputs:
+  preflight:
+    description: Set up Python and uv, then run the checks that do not need Rust.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      if: inputs.preflight == 'true'
+      with:
+        python-version: 3.12
+    - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      if: inputs.preflight == 'true'
+      with:
+        version: "latest"
+        enable-cache: false
+
+    # comment-slop needs the remote-tracking ref to inspect the PR diff.
+    - name: Fetch the pull request base branch
+      if: github.base_ref != ''
+      shell: bash
+      run: |
+        git fetch --depth=1 origin \
+          "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+
+    - name: Check style
+      shell: bash
+      env:
+        SKIP: ${{ inputs.preflight == 'true' && 'cargo-fmt,cargo-clippy' || 'cargo-clippy' }}
+      run: uvx pre-commit run --all-files
+
+    - name: Check changelog fragments are named after this PR
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: >-
+        python scripts/check_changelog_fragments.py
+        --pr "$PR_NUMBER" --base HEAD^1

@@ -3,21 +3,16 @@
 #
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable, Sequence
 from typing import TypeVar
 
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
-from scipy import special
 
 import pybamm
 from pybamm.expression_tree.symbol import _EMPTY_DOMAINS
-
-# CasADi 3.8 stopped dispatching scipy's erf ufunc onto symbolic values, so the
-# generic Function path needs the CasADi equivalent spelled out.
-_CASADI_EQUIVALENTS = {special.erf: casadi.erf}
 
 
 def _array_sqrt(value):
@@ -91,8 +86,17 @@ class Function(pybamm.Symbol):
             partial_derivatives: list[pybamm.Symbol | None] = [None] * len(children)
             for i, child in enumerate(self._children):
                 # if variable appears in the function, differentiate
-                # function, and apply chain rule
-                if variable in child.pre_order():
+                # function, and apply chain rule; states depend on time
+                if variable in child.pre_order() or (
+                    variable == pybamm.t
+                    and child.has_symbol_of_classes(
+                        (
+                            pybamm.VariableBase,
+                            pybamm.StateVectorBase,
+                            pybamm.CoupledVariable,
+                        )
+                    )
+                ):
                     partial_derivatives[i] = self._function_diff(
                         children, i
                     ) * child.diff(variable)
@@ -172,9 +176,11 @@ class Function(pybamm.Symbol):
     def _casadi_evaluate(self, *converted_children):
         """CasADi analog of :meth:`_function_evaluate`. Override in subclasses where the
         CasADi function differs from the numpy one."""
-        equivalent = _CASADI_EQUIVALENTS.get(self.function)
-        if equivalent is not None:
-            return equivalent(*converted_children)
+        # CasADi 3.8 stopped dispatching scipy's erf ufunc onto symbolic values.
+        # A node holding that ufunc implies scipy.special is already imported.
+        special = sys.modules.get("scipy.special")
+        if special is not None and self.function is special.erf:
+            return casadi.erf(*converted_children)
         return self._function_evaluate(converted_children)
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
@@ -183,6 +189,23 @@ class Function(pybamm.Symbol):
             t, y, y_dot, inputs, casadi_symbols
         )
         return self._casadi_evaluate(*converted_children)
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        return self._rust_node(graph, *converted_children)
+
+    def _rust_node(
+        self, graph: pybamm.rust.ExprGraph, *children: pybamm.rust.Expr
+    ) -> pybamm.rust.Expr:
+        """Allocate this function's node in ``graph`` over its converted children."""
+        raise NotImplementedError(
+            f"Cannot convert function '{self.name}' of type "
+            f"'{type(self).__name__}' to the Rust backend: generic Python "
+            f"callables cannot be lowered. {self._RUST_FALLBACK_HINT} To add "
+            "native support, override _rust_node in the subclass."
+        )
 
     def create_copy(
         self,
@@ -227,6 +250,8 @@ class Function(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -296,6 +321,8 @@ class SpecificFunction(Function):
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
+        import sympy
+
         class_name = self.__class__.__name__.lower()
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)
@@ -306,6 +333,15 @@ class SpecificFunction(Function):
         """See :meth:`pybamm.Function._casadi_evaluate()`. Subclasses must override."""
         raise NotImplementedError(
             f"{self.__class__} does not implement _casadi_evaluate."
+        )
+
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`. Subclasses override."""
+        raise NotImplementedError(
+            f"Cannot convert function '{self.name}' of type "
+            f"'{type(self).__name__}' to the Rust backend: no native Rust "
+            f"implementation exists for this function. {self._RUST_FALLBACK_HINT} "
+            "To add native support, override _rust_node in the subclass."
         )
 
     def to_json(self):
@@ -364,12 +400,18 @@ class Arcsinh(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.arcsinh(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.arcsinh(*children)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return 1 / sqrt(children[0] ** 2 + 1)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
+        import sympy
+
         return sympy.asinh(child)
 
 
@@ -485,8 +527,23 @@ class Arcsinh2(Function):
         b_eff = sign_b * casadi.hypot(b, self.eps)
         return casadi.arcsinh(a / b_eff)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        a, b = children
+        zero = graph.scalar(0.0)
+        one = graph.scalar(1.0)
+        two = graph.scalar(2.0)
+        eps = graph.scalar(self.eps)
+        # sign(b) with sign(0) = 1; equal_heaviside(0, b) is 1 when b >= 0
+        b_ge_zero = graph.equal_heaviside(zero, b)
+        sign_b = graph.sub(graph.mul(two, b_ge_zero), one)
+        b_eff = graph.mul(sign_b, graph.hypot(b, eps))
+        return graph.arcsinh(graph.div(a, b_eff))
+
     def _sympy_operator(self, *children):
         """Convert to SymPy expression."""
+        import sympy
+
         a, b = children
         # sign(b) but treat sign(0) as non-zero
         sign_b = sympy.Piecewise((1, b >= 0), (-1, True))
@@ -566,12 +623,18 @@ class Arctan(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.arctan(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.arctan(*children)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
+        import sympy
+
         return sympy.atan(child)
 
 
@@ -598,6 +661,10 @@ class Cos(SpecificFunction):
     def _casadi_evaluate(self, child):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.cos(child)
+
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.cos(*children)
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
@@ -628,6 +695,10 @@ class Cosh(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.cosh(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.cosh(*children)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return sinh(children[0])
@@ -644,11 +715,15 @@ class Erf(SpecificFunction):
     __slots__ = ()
 
     def __init__(self, child):
+        from scipy import special
+
         super().__init__(special.erf, child)
 
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        from scipy import special
+
         snippet["function"] = special.erf
         instance = super()._from_json(snippet)
         return instance
@@ -656,6 +731,10 @@ class Erf(SpecificFunction):
     def _casadi_evaluate(self, child):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.erf(child)
+
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.erf(*children)
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
@@ -691,6 +770,10 @@ class Exp(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.exp(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.exp(*children)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return exp(children[0])
@@ -719,6 +802,10 @@ class Log(SpecificFunction):
     def _casadi_evaluate(self, child):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.log(child)
+
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.log(*children)
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -784,6 +871,10 @@ class Max(_ScalarReduction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.mmax(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.max_reduce(*children)
+
 
 def max(child: pybamm.Symbol):
     """
@@ -811,6 +902,10 @@ class Min(_ScalarReduction):
     def _casadi_evaluate(self, child):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.mmin(child)
+
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.min_reduce(*children)
 
 
 def min(child: pybamm.Symbol):
@@ -845,6 +940,10 @@ class Sin(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.sin(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.sin(*children)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cos(children[0])
@@ -874,6 +973,10 @@ class Sinh(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.sinh(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.sinh(*children)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cosh(children[0])
@@ -902,6 +1005,10 @@ class Sqrt(SpecificFunction):
     def _casadi_evaluate(self, child):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.sqrt(child)
+
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.sqrt(*children)
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -1006,6 +1113,13 @@ class RegPower(Function):
     def _function_evaluate(self, evaluated_children):
         """See :meth:`pybamm.Function._function_evaluate()`."""
         return self._reg_power_evaluate(*evaluated_children)
+
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        base, exponent, scale = children
+        return self._decomposition(
+            base, exponent, scale, graph.sqrt, graph.pow, graph.scalar
+        )
 
     def _function_diff(self, children, idx):
         """
@@ -1127,6 +1241,8 @@ class RegPower(Function):
 
     def _sympy_operator(self, *children):
         """Convert to SymPy expression."""
+        import sympy
+
         base, exponent, scale = children
         x = base / scale
         x2_d2 = x**2 + self.delta**2
@@ -1208,6 +1324,10 @@ class Tanh(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.tanh(child)
 
+    def _rust_node(self, graph, *children):
+        """See :meth:`pybamm.Function._rust_node()`."""
+        return graph.tanh(*children)
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return sech(children[0]) ** 2
@@ -1261,4 +1381,6 @@ def normal_cdf(
     pybamm.Symbol
         The value of the normal distribution at x
     """
+    from scipy import special
+
     return 0.5 * (1 + special.erf((x - mu) / (sigma * np.sqrt(2))))

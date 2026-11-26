@@ -3,7 +3,6 @@
 #
 import casadi
 import numpy as np
-from scipy import optimize
 from scipy.sparse import issparse
 
 import pybamm
@@ -105,9 +104,11 @@ class AlgebraicSolver(pybamm.BaseSolver):
             A Solution object containing the times and values of the solution,
             as well as various diagnostic messages.
         """
+        from scipy import optimize
+
         inputs_dict = inputs_dict or {}
         if model.uses_stacked_inputs:
-            inputs = stack_inputs(inputs_dict)
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
         else:
             inputs = inputs_dict
 

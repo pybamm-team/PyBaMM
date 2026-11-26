@@ -3,15 +3,19 @@
 #
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from pybammsolvers import idaklu
 from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sympy
 
 
 class Array(pybamm.Symbol):
@@ -135,6 +139,75 @@ class Array(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(to_casadi_dm(self.evaluate(t, y, y_dot, inputs)))
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        entries = self.evaluate()
+        # The Rust sparse node is only valid as a matmul's left operand, so a sparse
+        # column goes dense; a matrix would cost rows * cols and cannot compile
+        if issparse(entries):
+            sparse = cast(csr_matrix, entries)
+            rows, columns = sparse.shape
+            if columns > 1:
+                raise NotImplementedError(
+                    f"Rust conversion keeps a sparse matrix only as the left operand "
+                    f"of a matrix product, so the {rows}x{columns} sparse matrix "
+                    f"'{self.name}' cannot be lowered here. {self._RUST_FALLBACK_HINT}"
+                )
+            entries = sparse.toarray()
+        entries = np.asarray(entries, dtype=float)
+        if entries.ndim == 2 and entries.shape[1] > 1:
+            return graph.dense_matrix(
+                np.ascontiguousarray(entries).ravel(),
+                entries.shape[0],
+                entries.shape[1],
+            )
+        return graph.array(entries.flatten())
+
+    def _to_rust_matmul_left(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        entries = self.evaluate()
+        if not issparse(entries):
+            return self._to_rust_inner(graph, rust_symbols)
+        # Keyed apart from the dense value of the same symbol
+        key = (self.id, "matmul left")
+        cached = rust_symbols.get(key)
+        if cached is None:
+            cached = self._rust_sparse_matrix(graph, entries)
+            rust_symbols[key] = cached
+        return cached
+
+    @staticmethod
+    def _rust_sparse_matrix(
+        graph: pybamm.rust.ExprGraph, entries: csr_matrix
+    ) -> pybamm.rust.Expr:
+        """
+        Allocate a sparse matrix node, each row stored in ascending column order.
+
+        Parameters
+        ----------
+        graph : :class:`pybamm.rust.ExprGraph`
+            The graph to allocate the node in.
+        entries : :class:`scipy.sparse.csr_matrix`
+            The matrix, in any stored order.
+
+        Returns
+        -------
+        :class:`pybamm.rust.Expr`
+            The sparse matrix node.
+        """
+        # Rows sum in stored order; in column order a stencil's rounding telescopes
+        csr = csr_matrix(entries, copy=True)
+        csr.sum_duplicates()
+        return graph.sparse_matrix(
+            csr.indptr.tolist(),
+            csr.indices.tolist(),
+            csr.data.astype(float),
+            csr.shape[0],
+            csr.shape[1],
+        )
+
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size
@@ -170,6 +243,8 @@ class Array(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Array:
         """Returns the value returned by the node when evaluated."""
+        import sympy
+
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 

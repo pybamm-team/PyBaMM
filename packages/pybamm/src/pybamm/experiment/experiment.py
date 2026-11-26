@@ -82,7 +82,7 @@ class Experiment:
 
         # Shallow copies so repeated steps keep their own start/end times
         self.steps = [
-            copy.copy(processed_steps[repr(step)]) for step in steps_unprocessed
+            copy.copy(processed_steps[_step_key(step)]) for step in steps_unprocessed
         ]
         self.steps = self._set_next_start_time(self.steps)
 
@@ -106,7 +106,8 @@ class Experiment:
     def process_steps(unprocessed_steps, period, temp):
         processed_steps = {}
         for step in unprocessed_steps:
-            if repr(step) in processed_steps:
+            key = _step_key(step)
+            if key in processed_steps:
                 continue
             elif isinstance(step, str):
                 processed_step = pybamm.step.string(step)
@@ -122,7 +123,7 @@ class Experiment:
             if processed_step.temperature is None:
                 processed_step.temperature = temp
 
-            processed_steps[repr(step)] = processed_step
+            processed_steps[key] = processed_step
 
         return processed_steps
 
@@ -279,3 +280,11 @@ class Experiment:
                 end_time = next_start_time
 
         return steps
+
+
+def _step_key(step: str | BaseStep) -> str | tuple[str, str]:
+    """Key that identifies an unprocessed step, including the contents of arrays."""
+    # repr shortens large arrays, so add the step's identity, which hashes them
+    if isinstance(step, BaseStep):
+        return repr(step), step.basic_repr()
+    return repr(step)

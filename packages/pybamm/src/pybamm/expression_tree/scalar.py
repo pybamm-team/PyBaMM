@@ -8,7 +8,6 @@ from typing import Literal
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 
 import pybamm
 from pybamm.type_definitions import Numeric
@@ -89,6 +88,11 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        return graph.scalar(float(self.value))
+
     def _jac(self, variable: pybamm.Variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
@@ -112,6 +116,8 @@ class Scalar(pybamm.Symbol):
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:

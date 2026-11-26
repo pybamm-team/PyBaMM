@@ -9,7 +9,6 @@ import casadi
 import numpy as np
 from pybammsolvers import idaklu
 from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
@@ -329,6 +328,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     """
 
     uses_rhs_jacobian = False
+    supports_state_derivative_events = True
 
     class StateID(IntEnum):
         ALGEBRAIC = 0
@@ -626,19 +626,30 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         num_of_events = len(model.terminate_events_eval)
 
-        # rootfn needs to return an array of length num_of_events
+        # rootfn needs to return an array of length num_of_events; like the events,
+        # it takes the state derivatives, IDA's yp, as a fourth input
+        y_dot_casadi = casadi.MX.sym("y_dot", model.len_rhs_and_alg)
+        root_inputs = [t_casadi, y_casadi, p_casadi_stacked, y_dot_casadi]
         rootfn = casadi.Function(
             "rootfn",
-            [t_casadi, y_casadi, p_casadi_stacked],
+            root_inputs,
             [
-                casadi.vertcat(
-                    *[
-                        event(t_casadi, y_casadi, p_casadi_stacked)
-                        for event in model.terminate_events_eval
-                    ]
+                casadi.densify(
+                    casadi.vertcat(
+                        *[event(*root_inputs) for event in model.terminate_events_eval]
+                    )
                 )
             ],
         )
+
+        # Which events read yp. This needs the symbolic rootfn: CasADi cannot see
+        # inside a compiled one, and reports every event as reading it
+        events_read_yp = [
+            bool(reads)
+            for reads in rootfn.which_depends(
+                rootfn.name_in(3), [rootfn.name_out(0)], 1, True
+            )
+        ]
 
         # get ids of rhs and algebraic variables
         ids = np.concatenate(
@@ -732,6 +743,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "jac_times_cjmass_rowvals": jac_times_cjmass_rowvals,
             "jac_times_cjmass_nnz": jac_times_cjmass_nnz,
             "num_of_events": num_of_events,
+            "events_read_yp": events_read_yp,
             "ids": ids,
             "atol": atol,
             "sensitivity_names": sensitivity_names,
@@ -795,6 +807,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             alg_res=self._setup["alg_res"],
             alg_jac=self._setup["alg_jac"],
             upsampling_fcn=self._setup["upsampling_fcn"],
+            events_read_yp=self._setup["events_read_yp"],
         )
 
         # C++ solver group now owns each casadi::Function via shared_ptr;
@@ -952,14 +965,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return bool(self._options["calc_ic"])
 
     def _check_event_violation_on_initialisation(self, *args, **kwargs):
-        if self._internal_initialisation:
-            return
-        return self._check_event_violation(*args, **kwargs)
-
-    def _check_event_violation_post_solve(self, *args, **kwargs):
-        if not self._internal_initialisation:
-            return
-        return self._check_event_violation(*args, **kwargs)
+        # The solver checks events at t0 itself, after its consistent initialisation
+        return
 
     def _post_process_solution(self, sol, model, integration_time, inputs_dict, t_eval):
         number_of_sensitivity_parameters = self._setup[
@@ -969,20 +976,33 @@ class IDAKLUSolver(pybamm.BaseSolver):
         number_of_timesteps = sol.t.size
         number_of_states = model.len_rhs_and_alg
         save_outputs_only = self.output_variables
+        # The state the solve stopped in, after any reinitialisation there
+        y_event = sol.y_term
         if save_outputs_only:
             # Substitute empty vectors for state vector 'y'
             y_out = np.zeros((number_of_timesteps * number_of_states, 0))
-            y_event = sol.y_term
         else:
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
-            y_event = y_out[-1]
 
-        # If there is only one step and an event was found, the event was
-        # triggered at t0 after consistent initialization. y_event is the
-        # post-IC state: sol.y_term (outputs-only) or y_out[-1] (full),
-        # both stored after IC. This check identifies *which* event fired.
-        if number_of_timesteps == 1 and sol.flag == _IDA_ROOT_RETURN:
-            self._check_event_violation_post_solve(t_eval, model, y_event, inputs_dict)
+        event_values = None
+        if sol.flag == _IDA_ROOT_RETURN and self._setup["num_of_events"] > 0:
+            rootfn = self._setup["rootfn_casadi"]
+            event_values = np.asarray(
+                rootfn(
+                    float(sol.t[-1]),
+                    np.asarray(y_event).reshape(-1),
+                    flatten_inputs(inputs_dict),
+                    sol.yp_term,
+                )
+            ).reshape(-1)
+        # One step and an event: it was triggered at t0. The solver checks the
+        # events not reading yp first, before its first step gives yp
+        if number_of_timesteps == 1 and event_values is not None:
+            reads_yp = np.array(self._setup["events_read_yp"], dtype=bool)
+            fired = (event_values <= 0) & ~reads_yp
+            if not fired.any():
+                fired = event_values <= 0
+            self._raise_events_at_initial_conditions(model, fired, inputs_dict)
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -1058,15 +1078,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # Set closest_event_idx so BaseSolver.get_termination_reason doesn't
         # re-walk every event's symbolic expression on the Python side.
-        if sol.flag == _IDA_ROOT_RETURN and self._setup["num_of_events"] > 0:
-            event_values = np.asarray(
-                self._setup["rootfn_casadi"](
-                    float(sol.t[-1]),
-                    np.asarray(y_event).reshape(-1),
-                    flatten_inputs(inputs_dict),
-                )
-            ).reshape(-1)
-            newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
+        if event_values is not None:
+            # Prefer a triggered event: one violated at a restart can be far from zero
+            fired = event_values <= 0
+            distance = np.abs(event_values)
+            if fired.any():
+                distance = np.where(fired, distance, np.inf)
+            newsol.closest_event_idx = int(np.nanargmin(distance))
 
         newsol.integration_time = integration_time
         newsol.solver_statistics = pybamm.SolverStatistics(
@@ -1174,7 +1192,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         inputs_dict = inputs_dict or {}
         if model.uses_stacked_inputs:
-            input_eval = stack_inputs(inputs_dict)
+            input_eval = stack_inputs(inputs_dict, model.convert_to_format)
         else:
             input_eval = inputs_dict
 
@@ -1189,6 +1207,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # M^-1 is the identity matrix, so we can just use rhs
             ydot0[: model.len_rhs] = rhs0
         else:
+            from scipy.sparse.linalg import spsolve
+
             # M^-1 is not the identity matrix, so we need to use the mass matrix
             M_ode = model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
             ydot0[: model.len_rhs] = spsolve(M_ode, rhs0)

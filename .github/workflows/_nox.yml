@@ -9,9 +9,9 @@
 # list only the gated one in test_on_push.yml's `ci_gate.needs`.
 #
 # Naming: a check is "<caller job name> / <this job's name>", so a caller without
-# `name:` leaks its job id, e.g. "run_unit_tests / ubuntu-latest / Python 3.13".
+# `name:` leaks its job id, e.g. "run_unit_tests / linux-x64 / Python 3.13".
 #
-# The caller must build the solver wheels first (build_solver) — this workflow
+# The caller must build the solver wheels first (_build_solver_wheels.yml) — this workflow
 # downloads the per-platform artifact rather than building from source.
 name: Run nox sessions (reusable)
 
@@ -22,8 +22,12 @@ on:
         description: 'Nox session(s) to run, space-separated and in order (e.g. "doctests docs").'
         required: true
         type: string
-      legs:
-        description: 'JSON array of runner/Python pairs, e.g. [{"os": "ubuntu-latest", "python": "3.13"}].'
+      target:
+        description: "linux-x64, linux-arm64, windows-x64, macos-arm64 or macos-x64."
+        required: true
+        type: string
+      pythons:
+        description: 'JSON array of Python versions, one leg each, e.g. ["3.11", "3.15"].'
         required: true
         type: string
       fetch_depth:
@@ -43,6 +47,16 @@ on:
         default: 360
         required: false
         type: number
+      max_parallel:
+        description: "Most legs to run at once, to leave runners for other workflows."
+        default: 256
+        required: false
+        type: number
+      install_latex:
+        description: "Install LaTeX on Linux, so the latexify test renders for real."
+        default: false
+        required: false
+        type: boolean
     secrets:
       CODECOV_TOKEN:
         description: "Codecov upload token; only needed when upload_coverage is true."
@@ -56,16 +70,23 @@ env:
 
 jobs:
   nox:
-    runs-on: ${{ matrix.leg.os }}
+    # The same map as _build_solver_wheels.yml's resolve job and _target.yml's rust job.
+    runs-on: >-
+      ${{ (inputs.target == 'linux-x64' && (vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
+      || (inputs.target == 'linux-arm64' && (vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))
+      || (inputs.target == 'windows-x64' && (vars.RUNNER_WINDOWS_X64 || 'windows-2025'))
+      || (inputs.target == 'macos-arm64' && (vars.RUNNER_MACOS_ARM64 || 'macos-latest'))
+      || (inputs.target == 'macos-x64' && (vars.RUNNER_MACOS_X64 || 'macos-15-intel')) }}
     timeout-minutes: ${{ inputs.timeout_minutes }}
     permissions:
       contents: read
 
     strategy:
       fail-fast: false
+      max-parallel: ${{ inputs.max_parallel }}
       matrix:
-        leg: ${{ fromJSON(inputs.legs) }}
-    name: ${{ matrix.leg.os }} / Python ${{ matrix.leg.python }}
+        python: ${{ fromJSON(inputs.pythons) }}
+    name: ${{ inputs.target }} / Python ${{ matrix.python }}
 
     env:
       # noxfile install_locked installs the matching prebuilt solver wheel from
@@ -79,19 +100,29 @@ jobs:
           fetch-depth: ${{ inputs.fetch_depth }}
           persist-credentials: false
 
+      - uses: $/.github/actions/check-target-runner
+        with:
+          target: ${{ inputs.target }}
+
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
-        if: startsWith(matrix.leg.os, 'ubuntu')
+        if: runner.os == 'Linux'
         with:
           packages: graphviz pandoc libosmesa6 libegl1
           execute_install_scripts: true
 
       - name: Register graphviz plugins
-        if: startsWith(matrix.leg.os, 'ubuntu')
+        if: runner.os == 'Linux'
         run: sudo dot -c
 
+      - name: Install LaTeX
+        if: inputs.install_latex && runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
+
       - name: Install macOS system dependencies
-        if: startsWith(matrix.leg.os, 'macos')
+        if: runner.os == 'macOS'
         env:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
@@ -103,22 +134,27 @@ jobs:
           brew install graphviz
 
       - name: Install Windows system dependencies
-        if: startsWith(matrix.leg.os, 'windows')
+        if: runner.os == 'Windows'
         run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
 
       # VTK save_gif needs OSMesa on headless Windows runners (osmesa.dll on PATH).
       - name: Setup headless OpenGL on Windows
-        if: startsWith(matrix.leg.os, 'windows')
+        if: runner.os == 'Windows'
         uses: pyvista/setup-headless-display-action@10e6efb97af3cd1523828f0e22c39f0e4567f3e4 # v5.2.0
         with:
           pyvista: "false"
           mesa3d-release: "24.3.0"
           install-mesa3d-offscreen: "true"
 
-      - name: Set up Python ${{ matrix.leg.python }}
+      - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: ${{ matrix.leg.python }}
+          python-version: ${{ matrix.python }}
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: packages/pybamm-rust
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -134,7 +170,7 @@ jobs:
       - name: Download in-repo solver wheels
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ matrix.leg.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.leg.os == 'ubuntu-24.04-arm' && 'wheels_manylinux_aarch64' || matrix.leg.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.leg.os) }}
+          name: wheels-${{ inputs.target }}
           path: solver-wheels
 
       - name: Run nox -s ${{ inputs.sessions }}

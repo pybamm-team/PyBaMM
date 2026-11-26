@@ -18,7 +18,7 @@ requires-python = ">=3.11,<3.16"
 license-files = ["LICENSE"]
 readme = "README.md"
 # version.py stays the source of truth; a pre-commit hook mirrors it here.
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
     "casadi==3.8.1",
     "numpy>=2.0.0",
@@ -47,6 +47,7 @@ wheel.packages = ["src/pybammsolvers"]
 wheel.exclude = ["pybammsolvers/idaklu.cpp", "pybammsolvers/idaklu_source/**"]
 editable.mode = "redirect"
 editable.rebuild = true
+editable.verbose = false
 
 # SUNDIALS/SuiteSparse are NOT vendored (would add ~400MB); source installs
 # need either system packages or `git submodule update --init`.

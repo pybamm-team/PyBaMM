@@ -12,7 +12,6 @@ from typing import Any
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import issparse, vstack
 
 import pybamm
@@ -194,6 +193,8 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
+        import sympy
+
         concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:
@@ -260,6 +261,12 @@ class NumpyConcatenation(Concatenation):
             t, y, y_dot, inputs, casadi_symbols
         )
         return casadi.vertcat(*converted_children)
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        return graph.concat(converted_children)
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
@@ -437,27 +444,51 @@ class DomainConcatenation(Concatenation):
 
         return vector
 
+    def _ordered_child_pieces(
+        self, children: Sequence[Any], take: Callable[[Any, int, int], Any]
+    ) -> list[Any]:
+        """
+        Cut the converted children into the pieces this concatenation interleaves.
+
+        Parameters
+        ----------
+        children : sequence
+            The converted children, in the order of :attr:`children`.
+        take : callable
+            ``take(child, start, stop)`` returns entries ``start`` to ``stop`` of a
+            converted child.
+
+        Returns
+        -------
+        list
+            The pieces, in the order they appear in the concatenated vector.
+        """
+        pieces = []
+        for i in range(self.secondary_dimensions_npts):
+            row = []
+            for child, slices in zip(children, self._children_slices, strict=True):
+                for child_dom, child_slice in slices.items():
+                    piece = take(child, child_slice[i].start, child_slice[i].stop)
+                    row.append((self._slices[child_dom][i].start, piece))
+            row.sort(key=itemgetter(0))
+            pieces.extend(piece for _, piece in row)
+        return pieces
+
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         converted_children = self._children_to_casadi(
             t, y, y_dot, inputs, casadi_symbols
         )
-        all_child_vectors = []
-        for i in range(self.secondary_dimensions_npts):
-            child_vectors = []
-            for child_var, slices in zip(
-                converted_children, self._children_slices, strict=True
-            ):
-                for child_dom, child_slice in slices.items():
-                    child_vectors.append(
-                        (
-                            self._slices[child_dom][i].start,
-                            child_var[child_slice[i].start : child_slice[i].stop],
-                        )
-                    )
-            child_vectors.sort(key=itemgetter(0))
-            all_child_vectors.extend(v for _, v in child_vectors)
-        return casadi.vertcat(*all_child_vectors)
+        pieces = self._ordered_child_pieces(
+            converted_children, lambda child, start, stop: child[start:stop]
+        )
+        return casadi.vertcat(*pieces)
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        return graph.concat(self._ordered_child_pieces(converted_children, graph.index))
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
@@ -556,6 +587,12 @@ class SparseStack(Concatenation):
         )
         return casadi.vertcat(*converted_children)
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        return graph.concat(converted_children)
+
     def _concatenation_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""
         return SparseStack(*children)
@@ -608,6 +645,11 @@ class ConcatenationVariable(Concatenation):
         print_name = print_name.removesuffix("_")
 
         self.print_name = print_name
+
+    def _diff(self, variable: pybamm.Symbol):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # The derivatives are not variables, so they make a plain concatenation
+        return concatenation(*[child.diff(variable) for child in self.children])
 
     bounds = pybamm.expression_tree.legacy_mutation.bounds_property
 

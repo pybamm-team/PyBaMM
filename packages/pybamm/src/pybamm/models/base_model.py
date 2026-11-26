@@ -19,6 +19,7 @@ import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
+from pybamm.util import _is_flux_boundary_condition
 
 _SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
@@ -105,7 +106,7 @@ class BaseModel:
     """
 
     _DEFAULT_CONVERT_TO_FORMAT = "casadi"
-    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
+    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax", "rust")
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -121,8 +122,8 @@ class BaseModel:
             if isinstance(override, property):
                 setattr(cls, name, _prefer_restored(override, f"_{name}"))
 
-    # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are
-    # CasADi functions or pybamm.EvaluatorPython/EvaluatorJax, by convert_to_format.
+    # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are CasADi
+    # functions, pybamm.EvaluatorPython/EvaluatorJax or RustEvaluators, by convert_to_format.
     len_rhs: int
     len_alg: int
     schema_version: str
@@ -301,6 +302,7 @@ class BaseModel:
             - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
             - "casadi": convert to CasADi expression tree for Jacobian calculation.
             - "jax": convert to JAX expression tree.
+            - "rust": convert to a compiled Rust expression graph.
 
         Default is "casadi". ``None`` is deprecated: it evaluates as "python" and
         raises a ``DeprecationWarning`` when set.
@@ -327,8 +329,8 @@ class BaseModel:
     @property
     def uses_stacked_inputs(self) -> bool:
         """Whether the converted evaluators take the inputs stacked into one
-        column vector rather than as a dict."""
-        return self._convert_to_format == "casadi"
+        vector (a CasADi column, or a flat array for "rust") rather than as a dict."""
+        return self._convert_to_format in ("casadi", "rust")
 
     @property
     def rhs(self):
@@ -416,6 +418,20 @@ class BaseModel:
                     f"name '{name}'. Names must match."
                 )
         self._variables = pybamm.FuzzyDict(variables)
+
+    @property
+    def summary_variables(self):
+        """Names of the variables to summarise per cycle when solving an experiment."""
+        return self._summary_variables
+
+    @summary_variables.setter
+    def summary_variables(self, value):
+        for var in value:
+            if var not in self.variables:
+                raise KeyError(
+                    f"No cycling variable defined for summary variable '{var}'"
+                )
+        self._summary_variables = value
 
     def get_processed_variables_dict(self) -> dict[str, pybamm.Symbol]:
         """
@@ -552,6 +568,8 @@ class BaseModel:
         def resolve(node, new_leaves):
             if not isinstance(node, pybamm.CoupledVariable):
                 return pybamm.rebuild(node, new_leaves)
+            if isinstance(node, pybamm.CoupledVariableDot):
+                return resolve(node.get_coupled_variable(), new_leaves).diff(pybamm.t)
             if node.name not in self._variables:
                 raise ValueError(
                     f"CoupledVariable '{node.name}' not found in model.variables"
@@ -1042,11 +1060,13 @@ class BaseModel:
                 parameter_info[submodel_name] = submodel_info
 
         else:
-            parameters = self._find_symbols(pybamm.Parameter)
+            parameters = self._find_symbols(pybamm.Parameter, include_geometry=True)
             for param in parameters:
                 parameter_info[param.name] = (param, "Parameter")
 
-            input_parameters = self._find_symbols(pybamm.InputParameter)
+            input_parameters = self._find_symbols(
+                pybamm.InputParameter, include_geometry=True
+            )
             for input_param in input_parameters:
                 if not input_param.domain:
                     parameter_info[input_param.name] = (input_param, "InputParameter")
@@ -1056,7 +1076,9 @@ class BaseModel:
                         f"InputParameter in {input_param.domain}",
                     )
 
-            function_parameters = self._find_symbols(pybamm.FunctionParameter)
+            function_parameters = self._find_symbols(
+                pybamm.FunctionParameter, include_geometry=True
+            )
             for func_param in function_parameters:
                 if func_param.name not in parameter_info:
                     input_names = "', '".join(func_param.input_names)
@@ -1233,8 +1255,10 @@ class BaseModel:
         self,
         typ: type[_SymbolT] | tuple[type[_SymbolT], ...],
         fixed_input_parameters=None,
+        include_geometry=False,
     ) -> list[_SymbolT]:
-        """Find all the instances of `typ` in the model"""
+        """Find all the instances of `typ` in the model (and, optionally, in its
+        default geometry)"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
         all_items = chain(
@@ -1250,6 +1274,10 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
+        if include_geometry:
+            all_items = chain(
+                all_items, pybamm.Geometry(self.default_geometry).parameters
+            )
         symbols = pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items)
         # The unpacker only returns instances of `typ`
         return cast(list[_SymbolT], list(symbols))
@@ -2247,7 +2275,7 @@ class BaseModel:
         >>> isinstance(param_dict, dict)
         True
         >>> model.to_json("model.json")  # Save and return dict
-        {'schema_version': '1.1', ...}
+        {'schema_version': '2.0', ...}
         """
         model_json = Serialise.serialise_custom_model(self, compress=compress)
         if filename is not None:
@@ -2262,7 +2290,10 @@ class BaseModel:
             raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
         try:
             with open(filename, "w") as f:
-                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+                # compact, like Serialise.save_custom_model
+                json.dump(
+                    data, f, separators=(",", ":"), default=Serialise._json_encoder
+                )
         except OSError as file_err:
             file_err.add_note(f"Failed to write {label} to file '{filename}'")
             raise
@@ -2325,6 +2356,12 @@ class BaseModel:
         # Build a pristine reference with the same options.
         model_cls = type(self)
         options = model_config.get("options", {})
+        if model_config.get("options_format") == "legacy":
+            from pybamm.models.full_battery_models.battery_model_options import (
+                LegacyOptions,
+            )
+
+            options = LegacyOptions(options)
         # Only models whose constructor takes options have them in their config
         ref = model_cls(options=options) if options else model_cls()  # pyrefly: ignore[unexpected-keyword]
 
@@ -2398,9 +2435,16 @@ class BaseModel:
             model_config: dict = {
                 "type": type(self).__name__,
                 "module": mod_name,
+                "pybamm_version": pybamm.__version__,
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
+                if isinstance(self, pybamm.BaseBatteryModel):
+                    from pybamm.models.full_battery_models.battery_model_options import (
+                        saved_options_format,
+                    )
+
+                    model_config["options_format"] = saved_options_format(self.options)
 
             # Detect user modifications to variables and events.
             # A fresh reference model is instantiated with the same options
@@ -2535,13 +2579,24 @@ class BaseModel:
             model_cls = getattr(mod, type_name, None)
             if model_cls is None:
                 raise ValueError(f"Model '{type_name}' not found in pybamm.{mod_name}")
-            options = data.get("options", {})
-            # JSON has no tuples; convert lists back to tuples
-            if options:
-                options = {
-                    k: tuple(v) if isinstance(v, list) else v
-                    for k, v in options.items()
-                }
+            # JSON has no tuples; convert (nested) lists back to tuples
+            options = Serialise._convert_options(data.get("options", {}))
+            if options and issubclass(model_cls, pybamm.BaseBatteryModel):
+                from pybamm.models.full_battery_models.battery_model_options import (
+                    UNVERSIONED_CONFIG_OPTIONS,
+                    restore_saved_options,
+                )
+
+                version = data.get("pybamm_version")
+                # without a version, only a full to_config dump is a saved config;
+                # a partial one is hand-written and checked as given
+                options_format = data.get("options_format")
+                if (
+                    options_format is not None
+                    or version is not None
+                    or UNVERSIONED_CONFIG_OPTIONS <= set(options)
+                ):
+                    options = restore_saved_options(options, version, options_format)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)
             return model
@@ -2711,9 +2766,12 @@ class BoundaryConditionsDict(dict):
                     eqn, typ = bc
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
-                if bc[1] not in ["Dirichlet", "Neumann"]:
+                if bc[1] not in [
+                    "Dirichlet",
+                    "Neumann",
+                ] and not _is_flux_boundary_condition(bc[1]):
                     raise pybamm.ModelError(
-                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
+                        f"boundary condition types must be Dirichlet, Neumann or ('Flux', pybamm.Symbol), not '{bc[1]}'"
                     )
 
         return boundary_conditions
