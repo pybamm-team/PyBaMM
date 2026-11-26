@@ -22,6 +22,9 @@ class BaseKinetics(BaseInterface):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool, optional
+        Whether the reaction sees x-averaged potentials, concentrations and
+        temperature, so that it is uniform in x. Default is False.
     """
 
     def get_fundamental_variables(self):
@@ -60,9 +63,9 @@ class BaseKinetics(BaseInterface):
                 "Lithium metal interface surface potential difference [V]"
             ]
         else:
-            delta_phi = variables[
-                f"{Domain} electrode surface potential difference [V]"
-            ]
+            delta_phi = self._local_or_x_averaged(
+                variables, f"{Domain} electrode surface potential difference [V]"
+            )
             # If delta_phi was broadcast, take only the orphan.
             if isinstance(delta_phi, pybamm.Broadcast):
                 delta_phi = delta_phi.orphans[0]
@@ -99,14 +102,16 @@ class BaseKinetics(BaseInterface):
             domain_options["particle size"] == "distribution"
             and self.options.electrode_types[domain] == "porous"
         ):
-            ocp = variables[
+            ocp = self._local_or_x_averaged(
+                variables,
                 f"{Domain} electrode {reaction_name}"
-                "open-circuit potential distribution [V]"
-            ]
+                "open-circuit potential distribution [V]",
+            )
         else:
-            ocp = variables[
-                f"{Domain} electrode {reaction_name}open-circuit potential [V]"
-            ]
+            ocp = self._local_or_x_averaged(
+                variables,
+                f"{Domain} electrode {reaction_name}open-circuit potential [V]",
+            )
         # If ocp was broadcast, and the reaction is lithium metal plating OR
         # delta_phi's secondary domain is "current collector", then take only the
         # orphan.
@@ -144,9 +149,9 @@ class BaseKinetics(BaseInterface):
             j_tot.print_name = "j_tot"
 
             eta_sei = -j_tot * L_sei * R_sei
-            if self.size_distribution and eta_r.domains["secondary"] != [
-                f"{domain} electrode"
-            ]:
+            if (self.size_distribution or self.x_average) and eta_r.domains[
+                "secondary"
+            ] != [f"{domain} electrode"]:
                 eta_sei = pybamm.x_average(eta_sei)
         else:
             eta_sei = pybamm.Scalar(0)
