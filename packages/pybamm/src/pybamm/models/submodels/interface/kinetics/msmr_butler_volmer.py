@@ -46,17 +46,20 @@ class MSMRButlerVolmer(BaseKinetics):
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
 
-        c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
-        T = variables[f"{Domain} electrode temperature [K]"]
+        c_e = self._local_or_x_averaged(
+            variables, f"{Domain} electrolyte concentration [mol.m-3]"
+        )
+        T = self._local_or_x_averaged(variables, f"{Domain} electrode temperature [K]")
 
         if self.reaction == "lithium-ion main":
             # For "particle-size distribution" submodels, take distribution version
             # of c_s_surf that depends on particle size.
             domain_options = getattr(self.options, domain)
             if domain_options["particle size"] == "distribution":
-                ocp = variables[
-                    f"{Domain} electrode open-circuit potential distribution [V]"
-                ]
+                ocp = self._local_or_x_averaged(
+                    variables,
+                    f"{Domain} electrode open-circuit potential distribution [V]",
+                )
                 # If all variables were broadcast (in "x"), take only the orphans,
                 # then re-broadcast c_e
                 if (
@@ -76,7 +79,9 @@ class MSMRButlerVolmer(BaseKinetics):
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
 
             else:
-                ocp = variables[f"{Domain} electrode open-circuit potential [V]"]
+                ocp = self._local_or_x_averaged(
+                    variables, f"{Domain} electrode open-circuit potential [V]"
+                )
                 # If all variables were broadcast, take only the orphans
                 if (
                     isinstance(ocp, pybamm.Broadcast)

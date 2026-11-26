@@ -22,10 +22,16 @@ class BaseInterface(pybamm.BaseSubModel):
         :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool, optional
+        Whether the interface sees x-averaged potentials, concentrations and
+        temperature. Default is False.
     """
 
-    def __init__(self, param, domain, reaction, options=None, phase="primary"):
+    def __init__(
+        self, param, domain, reaction, options=None, phase="primary", x_average=False
+    ):
         super().__init__(param, domain, options=options, phase=phase)
+        self.x_average = x_average
         if reaction in ["lithium-ion main", "lithium metal plating"]:
             self.reaction_name = ""
         elif reaction == "lead-acid main":
@@ -49,6 +55,27 @@ class BaseInterface(pybamm.BaseSubModel):
         domain_options = getattr(self.options, domain)
         self.size_distribution = domain_options["particle size"] == "distribution"
 
+    def _local_or_x_averaged(self, variables, name):
+        """
+        Get a local variable, or its x-average if the interface is x-averaged.
+
+        Parameters
+        ----------
+        variables : dict
+            The variables in the full model.
+        name : str
+            The name of the local variable, e.g.
+            "Negative electrolyte concentration [mol.m-3]".
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The local variable, or its x-average.
+        """
+        if self.x_average:
+            name = f"X-averaged {name[0].lower()}{name[1:]}"
+        return variables[name]
+
     def _get_intercalation_concentrations(self, variables):
         """
         Get the electrolyte concentration, particle surface concentration and
@@ -67,16 +94,19 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
-        T = variables[f"{Domain} electrode temperature [K]"]
+        c_e = self._local_or_x_averaged(
+            variables, f"{Domain} electrolyte concentration [mol.m-3]"
+        )
+        T = self._local_or_x_averaged(variables, f"{Domain} electrode temperature [K]")
 
         # For "particle-size distribution" submodels, take distribution version
         # of c_s_surf that depends on particle size.
         if self.size_distribution:
-            c_s_surf = variables[
+            c_s_surf = self._local_or_x_averaged(
+                variables,
                 f"{Domain} {phase_name}particle surface "
-                "concentration distribution [mol.m-3]"
-            ]
+                "concentration distribution [mol.m-3]",
+            )
             # If all variables were broadcast (in "x"), take only the orphans,
             # then re-broadcast c_e
             if (
@@ -94,9 +124,10 @@ class BaseInterface(pybamm.BaseSubModel):
             c_e = pybamm.PrimaryBroadcast(c_e, [f"{domain} {phase_name}particle size"])
             T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
         else:
-            c_s_surf = variables[
-                f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-            ]
+            c_s_surf = self._local_or_x_averaged(
+                variables,
+                f"{Domain} {phase_name}particle surface concentration [mol.m-3]",
+            )
             # If all variables were broadcast, take only the orphans
             if (
                 isinstance(c_s_surf, pybamm.Broadcast)
