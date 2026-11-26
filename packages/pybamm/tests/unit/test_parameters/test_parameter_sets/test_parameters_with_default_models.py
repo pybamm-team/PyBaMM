@@ -36,6 +36,16 @@ class TestParameterValuesWithModel:
                     "thermal": "lumped",
                 }
             ),
+            "MolicelP45B_AboutEnergy2026": pybamm.lithium_ion.DFN(
+                {
+                    "particle phases": ("2", "1"),
+                    "open-circuit potential": (
+                        ("single", "one-state hysteresis"),
+                        "single",
+                    ),
+                    "contact resistance": "true",
+                }
+            ),
             "Ecker2015": pybamm.lithium_ion.DFN(),
             "Ecker2015_graphite_halfcell": pybamm.lithium_ion.DFN(
                 {"working electrode": "positive"}

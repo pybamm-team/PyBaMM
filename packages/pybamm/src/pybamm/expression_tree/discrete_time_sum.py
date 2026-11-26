@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -124,4 +126,9 @@ class DiscreteTimeSum(pybamm.UnaryOperator):
 
     def _unary_evaluate(self, child):
         # return result of evaluating the child, we'll only implement the sum once the model is solved (in pybamm.ProcessedVariable)
+        return child
+
+    def _rust_node(self, graph, child):
+        """See :meth:`pybamm.UnaryOperator._rust_node()`."""
+        # Pass-through: actual summation happens in ProcessedVariable
         return child

@@ -163,11 +163,17 @@ class Conditional(pybamm.Symbol):
         full-bandwidth.
         """
         selector = self.selector._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
-        shared = [*(s for s in (t, y, y_dot) if s is not None), *inputs.values()]
         converted_branches = [
             branch._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
             for branch in self.branches
         ]
+        shared = [*(s for s in (t, y, y_dot) if s is not None), *inputs.values()]
+        if not all(isinstance(s, casadi.MX) and s.is_valid_input() for s in shared):
+            # Function arguments must be purely symbolic, which inputs sliced from
+            # one vector are not, so the branches take the symbols they depend on
+            shared = casadi.symvar(
+                casadi.vertcat(*(casadi.vec(branch) for branch in converted_branches))
+            )
         union = converted_branches[0].sparsity()
         for converted in converted_branches[1:]:
             union = union.unite(converted.sparsity())
@@ -193,6 +199,15 @@ class Conditional(pybamm.Symbol):
         on_boundary = casadi.eq(floored, shifted)
         index = casadi.if_else(on_boundary, -1, floored - 1)
         return switch(index, *shared)
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        converted_selector = self.selector._to_rust_inner(graph, rust_symbols)
+        converted_branches = [
+            branch._to_rust_inner(graph, rust_symbols) for branch in self.branches
+        ]
+        return graph.conditional(converted_selector, converted_branches)
 
     def to_equation(self):
         import sympy

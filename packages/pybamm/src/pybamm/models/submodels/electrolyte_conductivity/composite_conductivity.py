@@ -233,4 +233,4 @@ class Composite(BaseElectrolyteConductivity):
         self.initial_conditions[macinnes] = pybamm.Scalar(0)
 
         phi_e_p_av = variables["X-averaged positive electrolyte potential [V]"]
-        self.initial_conditions[phi_e_p_av] = pybamm.Scalar(0)
+        self.initial_conditions[phi_e_p_av] = -self.param.n.prim.U_init
