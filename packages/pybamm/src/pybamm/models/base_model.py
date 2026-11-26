@@ -106,7 +106,7 @@ class BaseModel:
     """
 
     _DEFAULT_CONVERT_TO_FORMAT = "casadi"
-    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
+    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax", "rust")
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -122,8 +122,8 @@ class BaseModel:
             if isinstance(override, property):
                 setattr(cls, name, _prefer_restored(override, f"_{name}"))
 
-    # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are
-    # CasADi functions or pybamm.EvaluatorPython/EvaluatorJax, by convert_to_format.
+    # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are CasADi
+    # functions, pybamm.EvaluatorPython/EvaluatorJax or RustEvaluators, by convert_to_format.
     len_rhs: int
     len_alg: int
     schema_version: str
@@ -302,6 +302,7 @@ class BaseModel:
             - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
             - "casadi": convert to CasADi expression tree for Jacobian calculation.
             - "jax": convert to JAX expression tree.
+            - "rust": convert to a compiled Rust expression graph.
 
         Default is "casadi". ``None`` is deprecated: it evaluates as "python" and
         raises a ``DeprecationWarning`` when set.
@@ -328,8 +329,8 @@ class BaseModel:
     @property
     def uses_stacked_inputs(self) -> bool:
         """Whether the converted evaluators take the inputs stacked into one
-        column vector rather than as a dict."""
-        return self._convert_to_format == "casadi"
+        vector (a CasADi column, or a flat array for "rust") rather than as a dict."""
+        return self._convert_to_format in ("casadi", "rust")
 
     @property
     def rhs(self):
@@ -2274,7 +2275,7 @@ class BaseModel:
         >>> isinstance(param_dict, dict)
         True
         >>> model.to_json("model.json")  # Save and return dict
-        {'schema_version': '1.1', ...}
+        {'schema_version': '2.0', ...}
         """
         model_json = Serialise.serialise_custom_model(self, compress=compress)
         if filename is not None:
@@ -2289,7 +2290,10 @@ class BaseModel:
             raise ValueError(f"Filename '{filename}' must end with '.json' extension.")
         try:
             with open(filename, "w") as f:
-                json.dump(data, f, indent=2, default=Serialise._json_encoder)
+                # compact, like Serialise.save_custom_model
+                json.dump(
+                    data, f, separators=(",", ":"), default=Serialise._json_encoder
+                )
         except OSError as file_err:
             file_err.add_note(f"Failed to write {label} to file '{filename}'")
             raise

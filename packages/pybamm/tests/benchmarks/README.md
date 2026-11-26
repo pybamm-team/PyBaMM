@@ -81,8 +81,8 @@ Bencher's free plan caps each job at 5 minutes; the core suite takes about 4.
   to record the baseline every PR is compared against. On a weekday schedule it runs the
   `slow_bench` sweeps instead.
 - **`benchmarks_pr.yml`** — on non-draft PRs that touch pybamm's source, the benchmarks,
-  the solver or the dependencies. Builds the image and uploads it as an artifact,
-  and runs the memray memory benchmarks (which assert fixed limits, so they gain
+  the solver or the dependencies. For PRs into `main`, builds the image and uploads it
+  as an artifact. Runs the memray memory benchmarks (which assert fixed limits, so they gain
   nothing from bare metal). Holds no secrets, because it runs fork code.
 - **`benchmarks_track.yml`** — on `benchmarks_pr.yml` completing. Pushes the
   artifact image and reports results against the PR's base branch. Split out from `benchmarks_pr.yml` so the
@@ -90,12 +90,22 @@ Bencher's free plan caps each job at 5 minutes; the core suite takes about 4.
 
 #### Registry bandwidth
 
-Bencher implements an image bandwidth quota, so the image is kept small to fit it:
+Bencher's registry allows each organisation 10 GiB of image traffic a day. Once it is
+used up, both CI's pushes and the runner's pulls fail with a 429. The runner pulls the
+whole image on every run, so the quota covers roughly 50 runs a day. To fit it:
 
-- It installs only pybamm's runtime dependencies and the `bench` group, with
-  zstd-compressed layers (about 210 MiB).
-- pybamm's source is the last layer and the layers below it are cached, so a commit that
-  leaves `uv.lock` and the solver alone uploads about 2 MiB.
+- The image installs only pybamm's runtime dependencies and the `bench` group, with
+  zstd-compressed layers (about 200 MiB).
+- A rebuilt layer is byte-identical to the one in the registry, so the push skips it.
+  CI pins file times with `SOURCE_DATE_EPOCH` and `rewrite-timestamp=true`, and the
+  Dockerfile drops apt's logs and uv's timestamped metadata for local wheels. A
+  BuildKit release or a Debian package update still changes the layers.
+- PyBaMM's source and wheel are the final layers, so a commit that leaves `uv.lock` and
+  the solver alone uploads a few MiB.
+- Only PRs into `main` run on Bencher. A PR retargeted to `main` is benchmarked on its
+  next push.
+- A tracking run skips a commit once a newer push, a retarget, a switch to draft, or
+  closing the PR has superseded it.
 
 Add new benchmark-only dependencies to the `bench` group, not `dev`, or the image can't
 import them.
