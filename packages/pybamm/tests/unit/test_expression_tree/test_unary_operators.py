@@ -778,6 +778,18 @@ class TestUnaryOperators:
             r"\nabla a^{\mathtt{\text{left}}}"
         )
 
+        # A child that already has a superscript is grouped, to avoid a double
+        # superscript in the LaTeX
+        assert pybamm.BoundaryValue(c**2, "left").to_equation() == sympy.Symbol(
+            r"{c^{2.0}}^{\mathtt{\text{left}}}"
+        )
+        assert pybamm.BoundaryGradient(c**2, "left").to_equation() == sympy.Symbol(
+            r"\nabla {c^{2.0}}^{\mathtt{\text{left}}}"
+        )
+        assert pybamm.BoundaryValue(a**2, "right").to_equation() == sympy.Symbol(
+            r"{a^{2.0}}^{surf}"
+        )
+
         # Test Integral
         xn = pybamm.SpatialVariable("xn", ["negative electrode"])
         assert pybamm.Integral(d, xn).to_equation() == sympy.Integral(

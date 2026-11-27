@@ -1236,6 +1236,16 @@ class DeltaFunction(SpatialOperator):
         return np.outer(child_eval, vec).reshape(-1, 1)
 
 
+def _add_superscript(latex, superscript):
+    """
+    Add a superscript to a LaTeX expression, grouping the expression first if it
+    already has a superscript, since e.g. ``a^{b}^{c}`` is invalid LaTeX.
+    """
+    if "^" in latex:
+        latex = "{" + latex + "}"
+    return latex + "^{" + superscript + "}"
+
+
 class BoundaryOperator(SpatialOperator):
     """
     A node in the expression tree which gets the boundary value of a variable on its
@@ -1333,15 +1343,15 @@ class BoundaryValue(BoundaryOperator):
             if str(child) == "1":
                 return child
             else:
-                latex_child = sympy.latex(child) + r"^{surf}"
-                return sympy.Symbol(latex_child)
+                return sympy.Symbol(_add_superscript(sympy.latex(child), "surf"))
 
         elif self.side == "positive tab":
             return child
 
         else:
-            latex_child = sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
-            return sympy.Symbol(latex_child)
+            return sympy.Symbol(
+                _add_superscript(sympy.latex(child), sympy.latex(self.side))
+            )
 
 
 class BoundaryMeshSize(BoundaryOperator):
@@ -1424,10 +1434,9 @@ class BoundaryGradient(BoundaryOperator):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
         import sympy
 
-        latex_child = (
-            r"\nabla " + sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
+        return sympy.Symbol(
+            r"\nabla " + _add_superscript(sympy.latex(child), sympy.latex(self.side))
         )
-        return sympy.Symbol(latex_child)
 
 
 class EvaluateAt(SpatialOperator):
