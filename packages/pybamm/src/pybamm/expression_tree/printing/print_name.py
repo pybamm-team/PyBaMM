@@ -1,6 +1,8 @@
 #
 # Prettify print_name
 #
+import re
+
 PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
     "current_density_with_time": r"i_{\mathrm{cell}}",
@@ -35,6 +37,16 @@ GREEK_LETTERS = [
 ]
 
 
+def _has_tag(name, tag):
+    """Whether ``name`` contains ``_tag`` as a whole part, e.g. ``_p`` but not ``_plus``"""
+    return re.search(rf"_{re.escape(tag)}(?=_|$)", name) is not None
+
+
+def _remove_tag(name, tag):
+    """Remove each ``_tag`` that is a whole part of ``name``"""
+    return re.sub(rf"_{re.escape(tag)}(?=_|$)", "", name)
+
+
 def prettify_print_name(name):
     """Prettify print_name using regex"""
 
@@ -54,9 +66,9 @@ def prettify_print_name(name):
         # it will be set to True again
         processing = False
         for superscript in ["init", "ref", "typ", "max", "0", "surf"]:
-            if f"_{superscript}_" in name or name.endswith(f"_{superscript}"):
+            if _has_tag(name, superscript):
                 superscripts.append(superscript)
-                name = name.replace(f"_{superscript}", "")
+                name = _remove_tag(name, superscript)
                 processing = True
                 break
         # "0" might also appear without a preceding underscore
@@ -67,15 +79,15 @@ def prettify_print_name(name):
                 processing = True
                 break
         for subscript in ["cc", "dl", "R", "e", "s", "n", "p", "amb"]:
-            if f"_{subscript}_" in name or name.endswith(f"_{subscript}"):
+            if _has_tag(name, subscript):
                 subscripts.append(subscript)
-                name = name.replace(f"_{subscript}", "")
+                name = _remove_tag(name, subscript)
                 processing = True
                 break
         for av in ["av", "xav"]:
-            if f"_{av}_" in name or name.endswith(f"_{av}"):
+            if _has_tag(name, av):
                 average = True
-                name = name.replace(f"_{av}", "")
+                name = _remove_tag(name, av)
                 processing = True
                 break
 
@@ -90,6 +102,14 @@ def prettify_print_name(name):
     if name == "eps_c":
         name = r"(\epsilon c)"
 
+    # Split off the parts of the name after an underscore (e.g. j in X_j), so that they
+    # join the other subscripts, since e.g. X_j_{n} is invalid LaTeX
+    name_subscripts = []
+    if re.fullmatch(r"\w+", name) and "_" in name:
+        parts = [part for part in name.split("_") if part]
+        if parts:
+            name, name_subscripts = parts[0], parts[1:]
+
     # Greek letters (delta --> \delta)
     if name.lower() in GREEK_LETTERS:
         name = "\\" + name
@@ -97,8 +117,11 @@ def prettify_print_name(name):
     # Add subscripts and superscripts
     if average:
         name = r"\overline{" + name + "}"
-    if subscripts:
-        name += r"_{\mathrm{" + ",".join(subscripts) + "}}"
+    if len(name_subscripts) == 1 and not subscripts:
+        # A single subscript of the name's own, e.g. U_j, is kept as it is
+        name += "_" + name_subscripts[0]
+    elif name_subscripts or subscripts:
+        name += r"_{\mathrm{" + ",".join(name_subscripts + subscripts) + "}}"
     if superscripts:
         name += r"^{\mathrm{" + ",".join(superscripts) + "}}"
 
