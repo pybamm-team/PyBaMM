@@ -1731,12 +1731,31 @@ class Solution(SolutionBase):
         new_sol.solver_statistics = _sum_solver_statistics(sols)
 
         # output_variables path: reproduce __add__'s pairwise left-fold.
-        if any(s.variables_returned for s in segments):
+        if new_sol.variables_returned:
+            first_computed = next(
+                i for i, s in enumerate(segments) if s.variables_returned
+            )
             keys = set().union(*[s._variables.keys() for s in segments])
             merged = {}
+            full_prefix = None
             for v in keys:
                 acc = segments[0][v]
-                for s in segments[1:]:
+                start = 1
+                if (
+                    first_computed > 1
+                    and isinstance(acc, pybamm.ProcessedVariable)
+                    and acc.dimensions == 0
+                    and acc.time_integral is not None
+                    and acc.time_integral.method == "continuous"
+                    and acc.time_integral.post_sum_node is None
+                ):
+                    # The binary fold integrates the full-state prefix as one
+                    # solution before its first conversion into computed outputs.
+                    if full_prefix is None:
+                        full_prefix = cls.from_sub_solutions(segments[:first_computed])
+                    acc = full_prefix[v]
+                    start = first_computed
+                for s in segments[start:]:
                     acc = acc.update(s[v], new_sol)
                 merged[v] = acc
             new_sol._variables = merged
