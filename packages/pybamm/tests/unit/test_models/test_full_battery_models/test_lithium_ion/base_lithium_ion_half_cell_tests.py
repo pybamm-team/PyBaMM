@@ -65,6 +65,37 @@ class BaseUnitTestLithiumIonHalfCell:
             with pytest.raises(pybamm.OptionError, match=r"lithium metal electrode"):
                 self.check_well_posedness(options)
 
+    @pytest.mark.parametrize(
+        "ocp",
+        [
+            "current sigmoid",
+            "one-state hysteresis",
+            "one-state differential capacity hysteresis",
+        ],
+    )
+    def test_well_posed_scalar_open_circuit_potential(self, ocp):
+        self.check_well_posedness({"open-circuit potential": ocp})
+
+    def test_msmr_lithium_metal_not_supported(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+            "number of MSMR reactions": ("none", "6"),
+        }
+        if self.model is not None:
+            with pytest.raises(pybamm.OptionError, match=r"lithium metal electrode"):
+                self.check_well_posedness(options)
+
+    def test_well_posed_msmr_per_electrode(self):
+        options = {
+            "open-circuit potential": ("single", "MSMR"),
+            "particle": ("Fickian diffusion", "MSMR"),
+            "intercalation kinetics": ("symmetric Butler-Volmer", "MSMR"),
+            "number of MSMR reactions": ("none", "6"),
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_constant_sei(self):
         options = {"SEI": "constant"}
         self.check_well_posedness(options)

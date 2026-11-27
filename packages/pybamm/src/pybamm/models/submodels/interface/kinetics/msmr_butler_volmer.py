@@ -26,7 +26,22 @@ class MSMRButlerVolmer(BaseKinetics):
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
+    x_average : bool, optional
+        Whether the reaction sees x-averaged potentials, concentrations and
+        temperature, so that it is uniform in x. Default is False.
     """
+
+    def __init__(
+        self, param, domain, reaction, options, phase="primary", x_average=False
+    ):
+        if reaction == "lithium metal plating":
+            raise pybamm.OptionError(
+                "MSMR kinetics need a host lattice, so they cannot be used for the "
+                "lithium metal electrode of a half-cell. Set 'intercalation kinetics' "
+                "per electrode instead, e.g. ('symmetric Butler-Volmer', 'MSMR') for "
+                "a positive working electrode"
+            )
+        super().__init__(param, domain, reaction, options, phase, x_average)
 
     def _get_exchange_current_density_by_reaction(self, variables, index):
         """ "
