@@ -3,10 +3,14 @@
 #
 
 import contextlib
+import json
 
 import pytest
 
 import pybamm
+from pybamm.models.full_battery_models.lithium_ion.electrode_soh import (
+    get_esoh_default_solver,
+)
 
 
 # Fixture for TestElectrodeSOHMSMR, TestCalculateTheoreticalEnergy and TestGetInitialOCPMSMR class.
@@ -22,6 +26,31 @@ def options():
 
 
 class TestElectrodeSOH:
+    def test_default_solver_rejects_large_native_residual(self):
+        model = pybamm.BaseModel()
+        state = pybamm.Variable("x")
+        model.algebraic = {state: 1e12 * (state**2 - 2)}
+        model.initial_conditions = {state: pybamm.Scalar(1)}
+        simulation = pybamm.Simulation(model, solver=get_esoh_default_solver())
+
+        with pytest.raises(pybamm.SolverError, match=r"maximum residual"):
+            simulation.solve([0])
+        assert simulation.solution is None
+
+    def test_default_solver_accepts_batched_roots(self):
+        model = pybamm.BaseModel()
+        state = pybamm.Variable("x")
+        model.algebraic = {state: state - pybamm.InputParameter("target")}
+        model.initial_conditions = {state: pybamm.Scalar(0)}
+        model.variables = {"x": state}
+        simulation = pybamm.Simulation(model, solver=get_esoh_default_solver())
+
+        solutions = simulation.solve([0], inputs=[{"target": 1.0}, {"target": 2.0}])
+
+        assert [solution["x"].data[0] for solution in solutions] == pytest.approx(
+            [1.0, 2.0]
+        )
+
     def test_known_solution(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -83,9 +112,9 @@ class TestElectrodeSOH:
         assert sol["Up(y_0) - Un(x_0)"] == pytest.approx(Vmin, abs=1e-05)
         assert sol["Q"] == pytest.approx(Q, abs=1e-05)
 
+    @pytest.mark.filterwarnings("error::scipy.optimize.OptimizeWarning")
     def test_difficult_solver_conditions(self):
-        # Test that the solve is successful, but the feasability checks
-        # are not satisfied.
+        # Compare a feasible voltage window with upper and lower limits.
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Ai2020")
 
@@ -96,20 +125,10 @@ class TestElectrodeSOH:
         Q_n = parameter_values.evaluate(param.n.Q_init)
         Q_p = parameter_values.evaluate(param.p.Q_init)
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
-        parameter_values.update(
-            {
-                "Open-circuit voltage at 0% SOC [V]": 0,
-                "Open-circuit voltage at 100% SOC [V]": 5,
-            }
-            # need to update both the target voltages at 0 and 100% SOC
-        )
-        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
-            parameter_values, direction=None, param=param
-        )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        # large voltage limits. difficult but not impossible to satisfy
-        sol0 = esoh_solver.solve(inputs)
-        esoh_solver._check_esoh_feasible(sol0, direction=None)
+        solution = esoh_solver.solve(inputs)
+        assert solution["Up(y_0) - Un(x_0)"] == pytest.approx(3.0, abs=1e-5)
+        assert solution["Up(y_100) - Un(x_100)"] == pytest.approx(4.2, abs=1e-5)
 
         # upper voltage limit
         parameter_values.update(
@@ -124,9 +143,9 @@ class TestElectrodeSOH:
             parameter_values, direction=None, param=param
         )
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        sol1 = esoh_solver.solve(inputs)
         with pytest.raises(ValueError, match=r"upper bound of the voltage, 5.5807V"):
-            esoh_solver._check_esoh_feasible(sol1, direction=None)
+            esoh_solver.solve(inputs)
+        assert set(inputs) == {"Q_n", "Q_p", "Q_Li"}
 
         # lower voltage limit
         parameter_values.update(
@@ -431,6 +450,93 @@ class TestElectrodeSOHComposite:
                 - param.n.prim.U(results["x_init_1"], param.T_ref)
             ) == pytest.approx(V_target, abs=1e-05)
 
+    @pytest.mark.parametrize("initial_soc", [0.0, -0.001])
+    def test_chen2020_composite_low_soc(self, initial_soc):
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+        param = pybamm.LithiumIonParameters(options)
+        warning_context = (
+            pytest.warns(UserWarning, match=r"is less than 0")
+            if initial_soc < 0
+            else contextlib.nullcontext()
+        )
+        with warning_context:
+            result = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                initial_soc, parameter_values, param=param, options=options
+            )
+
+        voltage_at_zero_soc = parameter_values.evaluate(
+            param.p.prim.U(result["y_0_1"], param.T_ref)
+            - param.n.prim.U(result["x_0_1"], param.T_ref)
+        )
+        assert voltage_at_zero_soc == pytest.approx(
+            parameter_values.evaluate(param.ocp_soc_0), abs=1e-5
+        )
+
+    def test_chen2020_composite_custom_solver_rejects_non_root(self):
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+        param = pybamm.LithiumIonParameters(options)
+        model = pybamm.lithium_ion.ElectrodeSOHComposite(
+            options, initialization_method="SOC"
+        )
+        simulation = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.AlgebraicSolver(method="lsq"),
+        )
+        solver = simulation.solver
+
+        result = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            0.0, parameter_values, param=param, options=options, esoh_sim=simulation
+        )
+        voltage = parameter_values.evaluate(
+            param.p.prim.U(result["y_0_1"], param.T_ref)
+            - param.n.prim.U(result["x_0_1"], param.T_ref)
+        )
+        assert voltage == pytest.approx(2.5, abs=1e-5)
+        assert simulation.solution is None
+        assert simulation.solver is solver
+
+        pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
+            0.0,
+            parameter_values,
+            param=param,
+            options=options,
+            initial_conditions=result,
+            esoh_sim=simulation,
+        )
+        assert simulation.solution is not None
+        assert simulation.solver is solver
+
+    def test_chen2020_composite_custom_solver_retries_after_non_root(self):
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+        param = pybamm.LithiumIonParameters(options)
+        model = pybamm.lithium_ion.ElectrodeSOHComposite(
+            options, initialization_method="SOC"
+        )
+        least_squares = pybamm.AlgebraicSolver(method="lsq")
+        newton = pybamm.NonlinearSolver(
+            atol=1e-6, rtol=0, step_tol=0, max_backtracks=100
+        )
+        solver = pybamm.CompositeSolver([least_squares, newton])
+        simulation = pybamm.Simulation(
+            model, parameter_values=parameter_values, solver=solver
+        )
+        result = pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
+            0.5, parameter_values, param=param, options=options, esoh_sim=simulation
+        )
+
+        voltage = parameter_values.evaluate(
+            param.p.prim.U(result["y_0_1"], param.T_ref)
+            - param.n.prim.U(result["x_0_1"], param.T_ref)
+        )
+        assert voltage == pytest.approx(2.5, abs=1e-5)
+        assert simulation.solution is not None
+        assert simulation.solver is solver
+        assert solver.sub_solvers == [least_squares, newton]
+
     def test_chen2020_composite_default_solve(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")
         options = {"particle phases": ("2", "1")}
@@ -702,6 +808,26 @@ class TestElectrodeSOHMSMR:
 
 
 class TestElectrodeSOHHalfCell:
+    def test_default_solver_config_round_trip(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.ElectrodeSOHHalfCell(options=options)
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        simulation = pybamm.Simulation(model, parameter_values=parameter_values)
+        config = json.loads(json.dumps(simulation.solver.to_config()))
+
+        restored = pybamm.BaseSolver.from_config(config)
+
+        assert restored.to_config() == config
+        assert "xtol" not in restored.sub_solvers[-1].extra_options
+        result = simulation.solve(
+            [0],
+            solver=restored,
+            inputs={"Q_w": parameter_values.evaluate(param.p.Q_init)},
+        )
+        assert result["Uw(x_100)"].data[0] == pytest.approx(4.2, abs=1e-5)
+        assert result["Uw(x_0)"].data[0] == pytest.approx(3.5, abs=1e-5)
+
     def test_known_solution(self):
         model = pybamm.lithium_ion.ElectrodeSOHHalfCell()
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
@@ -714,6 +840,52 @@ class TestElectrodeSOHHalfCell:
         sol = sim.solve([0], inputs={"Q_w": Q_w})
         assert sol["Uw(x_100)"].data[0] == pytest.approx(V_max, abs=1e-05)
         assert sol["Uw(x_0)"].data[0] == pytest.approx(V_min, abs=1e-05)
+
+    @pytest.mark.parametrize(
+        ("max_ocp", "solver_tol", "should_solve"),
+        [
+            (None, 1e-6, True),
+            (4.0, 1e-6, False),
+            (4.19998, 1e-6, False),
+            (4.19998, 5e-6, True),
+        ],
+    )
+    def test_half_cell_custom_solver_checks_voltage_root(
+        self, max_ocp, solver_tol, should_solve
+    ):
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        options = {"working electrode": "positive"}
+        if max_ocp is not None:
+            ocp = parameter_values["Positive electrode OCP [V]"]
+            parameter_values.update(
+                {
+                    "Positive electrode OCP [V]": lambda sto: pybamm.minimum(
+                        ocp(sto), max_ocp
+                    )
+                }
+            )
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.ElectrodeSOHHalfCell(options=options),
+            parameter_values=parameter_values,
+            solver=pybamm.AlgebraicSolver(method="lsq", tol=solver_tol),
+        )
+        solver = simulation.solver
+
+        if not should_solve:
+            with pytest.raises(pybamm.SolverError, match=r"maximum residual"):
+                pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                    0.0, parameter_values, options=options, esoh_sim=simulation
+                )
+            assert simulation.solution is None
+        else:
+            result = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                0.0, parameter_values, options=options, esoh_sim=simulation
+            )
+            assert result["x"] == pytest.approx(simulation.solution["x_0"].data[0])
+            assert simulation.solution["Uw(x_0)"].data[0] == pytest.approx(
+                3.5, abs=1e-5
+            )
+        assert simulation.solver is solver
 
     @staticmethod
     def _get_params_and_options_composite_half_cell():
@@ -938,6 +1110,14 @@ class TestElectrodeSOHHalfCell:
         ):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 -0.1, params, param=param, options=options
+            )
+
+        with (
+            pytest.warns(UserWarning, match=r"is less than 0"),
+            pytest.raises(pybamm.SolverError, match=r"maximum residual"),
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                -0.001, params, param=param, options=options
             )
 
         # Test invalid voltage (too low)
@@ -1186,7 +1366,10 @@ class TestGetInitialSOC:
                 1.001, parameter_values_composite, options=options_composite
             )
 
-        with pytest.warns(UserWarning, match=r"is less than 0"):
+        with (
+            pytest.warns(UserWarning, match=r"is less than 0"),
+            pytest.raises(pybamm.SolverError, match=r"maximum residual"),
+        ):
             pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
                 -0.001, parameter_values_composite, options=options_composite
             )

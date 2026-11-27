@@ -24,6 +24,9 @@ def _covered_solver_classes() -> set[type]:
 _SOLVER_EXEMPT: set[type] = {
     pybamm.DummySolver,  # no numerical config to round-trip
     pybamm.JaxSolver,  # requires optional jax/jaxlib dep; not installed in CI
+    # Private solver components covered by the default eSOH config round-trip.
+    pybamm._ElectrodeSOHAlgebraicSolver,
+    pybamm._ElectrodeSOHSimulationSolver,
 }
 
 # A submesh is round-trippable only if it (or an ancestor below the bare SubMesh
