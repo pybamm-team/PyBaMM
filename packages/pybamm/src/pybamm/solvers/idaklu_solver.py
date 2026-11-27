@@ -19,7 +19,7 @@ from pybamm.solvers.base_solver import (
     stack_inputs,
     validate_rust_sensitivity_widths,
 )
-from pybamm.solvers.observation import OutputAssembly
+from pybamm.solvers.observation import ObserverCache, OutputAssembly
 from pybamm.solvers.rust_lowering import RustModelLowering
 
 _UNSET = object()
@@ -361,6 +361,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     uses_rhs_jacobian = False
     supports_state_derivative_events = True
     _integrates_via_compiled_model = True
+    _observes_via_compiled_model = True
 
     class StateID(IntEnum):
         ALGEBRAIC = 0
@@ -621,6 +622,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         n_inputs = lowering.n_inputs
         rust_model = lowering.compile()
         lowering.bind_generic_evaluators(rust_model, root_method=self.root_method)
+        if self._observes_via_compiled_model:
+            ObserverCache.of(model).bind_rust_model(rust_model)
 
         colptrs, rowinds = rust_model.csc_sparsity_pattern()
         nnz = rust_model.nnz
