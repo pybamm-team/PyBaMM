@@ -136,10 +136,32 @@ class CurrentForInverseKinetics(BaseInterface):
             f"X-averaged {domain} electrode total interfacial current density [A.m-2]"
         ]
         j_sei = variables[f"{Domain} electrode SEI interfacial current density [A.m-2]"]
+        # `SEI on cracks` is a separate side reaction that also consumes
+        # lithium from the main intercalation flux, but only exists when
+        # `"SEI on cracks": "true"` is enabled (the "no SEI on cracks"
+        # submodel does not register the variable). `j_sei_cracks` is
+        # expressed per unit crack area `a_cr = (roughness - 1) * a`,
+        # while `j_tot` and `j_sei` are expressed per unit primary
+        # surface area `a`. Multiply `j_sei_cracks` by `(roughness - 1)`
+        # so the per-area current densities are on the same basis as
+        # `j_tot` before subtracting, otherwise the SPM lithium budget
+        # ignores SEI-on-cracks Li loss while DFN's surface-form
+        # mass-balance accounts for it through charge conservation -- the
+        # reported `Loss of capacity to {domain} SEI on cracks [A.h]`
+        # then is not reflected in simulated cell capacity. See #5263.
+        j_sei_cracks_key = (
+            f"{Domain} electrode SEI on cracks interfacial current density [A.m-2]"
+        )
+        if j_sei_cracks_key in variables:
+            j_sei_cracks = variables[j_sei_cracks_key]
+            roughness = variables[f"{Domain} electrode roughness ratio"]
+            j_sei_cracks_eff = j_sei_cracks * (roughness - 1)
+        else:
+            j_sei_cracks_eff = pybamm.Scalar(0)
         j_stripping = variables[
             f"{Domain} electrode lithium plating interfacial current density [A.m-2]"
         ]
-        j = j_tot - j_sei - j_stripping
+        j = j_tot - j_sei - j_sei_cracks_eff - j_stripping
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(
