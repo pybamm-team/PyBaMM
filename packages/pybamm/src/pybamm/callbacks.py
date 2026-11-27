@@ -1,8 +1,11 @@
 import inspect
+import logging
+import os
 
 import numpy as np
 
 import pybamm
+from pybamm.logger import LOG_FORMATTER
 
 
 def setup_callbacks(callbacks):
@@ -129,6 +132,14 @@ for name, func in inspect.getmembers(CallbackList, inspect.isfunction):
 ########################################################################################
 
 
+class _ClosingFileHandler(logging.FileHandler):
+    """File handler that holds the file open only while writing a record."""
+
+    def emit(self, record):
+        super().emit(record)
+        self.close()
+
+
 class LoggingCallback(Callback):
     """
     Logging callback, implements methods to log progress of the simulation.
@@ -145,17 +156,21 @@ class LoggingCallback(Callback):
             # Use pybamm's logger, which prints to command line
             self.logger = pybamm.logger
         else:
-            # Use a custom logger, this will have its own level so set it to the same
-            # level as the pybamm logger (users can override this)
-            self.logger = pybamm.get_new_logger(__name__, logfile)
+            # One logger per file, so callbacks never share or duplicate handlers
+            path = os.path.abspath(logfile)
+            self.logger = logging.getLogger(f"{__name__}.LoggingCallback[{path}]")
+            if not self.logger.handlers:
+                handler = _ClosingFileHandler(path, delay=True)
+                handler.setFormatter(LOG_FORMATTER)
+                self.logger.addHandler(handler)
+            # Users can override this level, which starts at the pybamm logger's
             self.logger.setLevel(pybamm.logger.level)
 
     def on_experiment_start(self, logs):
-        # Clear the log file
-        self.logger.info("Start running experiment")
         if self.logfile is not None:
             with open(self.logfile, "w") as f:
                 f.write("")
+        self.logger.info("Start running experiment")
 
     def on_cycle_start(self, logs):
         cycle_num, num_cycles = logs["cycle number"]
