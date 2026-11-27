@@ -127,3 +127,43 @@ class TestSubmeshSerialiseCompatibility:
             from_item = pybamm.MeshGenerator.from_config(submesh_info)
             assert loaded[domain].submesh_type is from_item.submesh_type
             assert loaded[domain].submesh_params == from_item.submesh_params
+
+
+class TestPrebuiltSubMeshToConfig:
+    """A prebuilt UnstructuredSubMesh in submesh_types carries its own data."""
+
+    @staticmethod
+    def _submesh():
+        from pybamm.meshes.unstructured_submesh import _hex_grid
+
+        submesh = pybamm.UnstructuredSubMesh(
+            *_hex_grid([0.0, 0.5, 1.0], [0.0, 1.0], [0.0, 1.0, 2.0])
+        )
+        submesh.detect_box_boundaries()
+        return submesh
+
+    def test_serialise_submesh_item_encodes_mesh_data(self):
+        submesh = self._submesh()
+        data = Serialise.serialise_submesh_item(submesh)
+        assert data["$type"] == "pybamm.meshes.unstructured_submesh.UnstructuredSubMesh"
+        assert data["elements"] == submesh.elements.tolist()
+
+    def test_load_submesh_types_rebuilds_prebuilt_submesh(self):
+        import json
+
+        import numpy as np
+
+        submesh = self._submesh()
+        submesh_types = {
+            "negative electrode": submesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+        }
+        data = json.loads(json.dumps(Serialise.serialise_submesh_types(submesh_types)))
+        loaded = Serialise.load_submesh_types(data)
+
+        restored = loaded["negative electrode"]
+        assert isinstance(restored, pybamm.UnstructuredSubMesh)
+        np.testing.assert_array_equal(restored.vertices, submesh.vertices)
+        for name, faces in submesh.boundary_faces.items():
+            np.testing.assert_array_equal(restored.boundary_faces[name], faces)
+        assert loaded["negative particle"].submesh_type is pybamm.Uniform1DSubMesh

@@ -109,6 +109,74 @@ class UnstructuredSubMesh(SubMesh):
         self.internal_boundaries = []
         self.interface_data = {}
 
+    def to_json(self):
+        """
+        Return a JSON-serialisable dict that reconstructs this submesh.
+
+        Boundary faces are stored as the vertex indices of each face rather
+        than as face indices, so they survive any change of face numbering.
+        Interface data is not stored: it couples two submeshes, and
+        :class:`pybamm.Mesh` recomputes it from the boundary faces.
+
+        Returns
+        -------
+        dict
+            The vertices, elements, coordinate system and boundary faces.
+        """
+        return {
+            "vertices": self.vertices.tolist(),
+            "elements": self.elements.tolist(),
+            "coord_sys": self.coord_sys,
+            "boundary_faces": {
+                name: self.faces[np.asarray(face_indices, dtype=int)].tolist()
+                for name, face_indices in self.boundary_faces.items()
+            },
+        }
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """
+        Reconstruct a submesh from the dict returned by :meth:`to_json`.
+
+        Parameters
+        ----------
+        snippet : dict
+            The serialised submesh.
+
+        Returns
+        -------
+        UnstructuredSubMesh
+            The reconstructed submesh.
+
+        Raises
+        ------
+        pybamm.GeometryError
+            If a stored boundary face is not a face of the reconstructed mesh.
+        """
+        submesh = cls(
+            np.array(snippet["vertices"], dtype=float),
+            np.array(snippet["elements"], dtype=int),
+            coord_sys=snippet["coord_sys"],
+        )
+        face_index = {
+            tuple(face): index
+            for index, face in enumerate(np.sort(submesh.faces, axis=1).tolist())
+        }
+        boundary_faces = {}
+        for name, faces in snippet["boundary_faces"].items():
+            keys = [tuple(sorted(face)) for face in faces]
+            missing = [key for key in keys if key not in face_index]
+            if missing:
+                raise pybamm.GeometryError(
+                    f"Boundary '{name}' has {len(missing)} face(s) that are not "
+                    f"faces of the mesh, e.g. vertices {list(missing[0])}."
+                )
+            boundary_faces[name] = np.array(
+                [face_index[key] for key in keys], dtype=int
+            )
+        submesh.boundary_faces = boundary_faces
+        return submesh
+
     # ------------------------------------------------------------------
     # Cell geometry
     # ------------------------------------------------------------------
