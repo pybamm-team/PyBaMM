@@ -1,3 +1,7 @@
+import subprocess
+import sys
+import textwrap
+
 import numpy as np
 import pytest
 
@@ -169,6 +173,36 @@ class TestJaxSolver:
         t_eval = np.linspace(0, 10, 100)
         with pytest.raises(RuntimeError, match=r"Terminate events not supported"):
             solver.solve(model, t_eval)
+
+    def test_failed_solve_raises_instead_of_hanging(self):
+        # a hang inside compiled code cannot be interrupted, so the solve runs in
+        # its own process with a timeout
+        script = textwrap.dedent(
+            """
+            import numpy as np
+
+            import pybamm
+
+            model = pybamm.BaseModel()
+            model.convert_to_format = "jax"
+            y = pybamm.Variable("y")
+            z = pybamm.Variable("z")
+            model.rhs = {y: -y}
+            # no real z satisfies this after t = 1
+            model.algebraic = {z: z**2 - (1 - pybamm.t)}
+            model.initial_conditions = {y: 1.0, z: 1.0}
+            pybamm.Discretisation().process_model(model)
+            pybamm.JaxSolver().solve(model, np.linspace(0, 2, 5))
+            """
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        assert "SolverError: JaxSolver failed for input sets [0]" in result.stderr
 
     def test_model_solver_with_inputs(self):
         # Create model
