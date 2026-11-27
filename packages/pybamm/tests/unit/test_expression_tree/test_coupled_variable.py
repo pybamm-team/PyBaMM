@@ -466,3 +466,17 @@ class TestCoupledVariable:
 
         with pytest.raises(pybamm.ModelError, match=r"Circular .* 'w1?'"):
             pybamm.ParameterValues({}).process_model(model)
+
+    def test_resolve_keeps_plain_number_equations(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -pybamm.CoupledVariable("w")}
+        model.variables = {"u": u, "w": 2 * u}
+        # a copy's equation dicts are plain dicts, so numbers are stored as is
+        model = model.new_copy()
+        model.initial_conditions.update({u: 1})
+
+        resolved = model._resolve_coupled_variables_in_equations(inplace=False)
+
+        assert resolved.initial_conditions[u] == 1
+        assert resolved.rhs[u] == -(2 * u)
