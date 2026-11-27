@@ -48,6 +48,9 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          # Unpruned per-PR uv caches (~300 MB each) evict the gating jobs' caches.
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       # The editable build writes the compile_commands.json clang-tidy reads.
       - name: Build the solver from source

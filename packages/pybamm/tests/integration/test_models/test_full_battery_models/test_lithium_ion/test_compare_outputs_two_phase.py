@@ -207,8 +207,23 @@ class TestCompareOutputsTwoPhase:
         # the default rtol lets a temperature state near 300 K drift by ~0.03 K,
         # which is comparable to the one- and two-phase differences being tested
         solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8)
+        # both models share a mesh, so a coarse one tests the same identity
+        coarse_points = {
+            "x_n": 10,
+            "x_s": 10,
+            "x_p": 10,
+            "r_n": 10,
+            "r_p": 10,
+            "r_n_prim": 10,
+            "r_n_sec": 10,
+            "z": 5,
+        }
+        model = model_class(options)
         sol = pybamm.Simulation(
-            model_class(options), parameter_values=parameter_values, solver=solver
+            model,
+            parameter_values=parameter_values,
+            solver=solver,
+            var_pts={**model.default_var_pts, **coarse_points},
         ).solve(t_eval=t_eval, t_interp=t_interp)
 
         parameter_values_two_phase = parameter_values.copy()
@@ -230,10 +245,12 @@ class TestCompareOutputsTwoPhase:
             )
             del parameter_values_two_phase[parameter]
 
+        model_two_phase = model_class({"particle phases": ("2", "1"), **options})
         sol_two_phase = pybamm.Simulation(
-            model_class({"particle phases": ("2", "1"), **options}),
+            model_two_phase,
             parameter_values=parameter_values_two_phase,
             solver=solver,
+            var_pts={**model_two_phase.default_var_pts, **coarse_points},
         ).solve(t_eval=t_eval, t_interp=t_interp)
 
         for variable in [

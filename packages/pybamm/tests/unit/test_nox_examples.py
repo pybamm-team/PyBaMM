@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 
 NOXFILE = Path(__file__).parents[4] / "noxfile.py"
+# Posargs follow the worker count, so a caller's own `-n` takes precedence
+PYTEST_NBMAKE = ("pytest", "--nbmake", "-n", "auto", "-v")
 
 
 class RecordingSession:
@@ -66,7 +68,7 @@ class TestNotebookSessions:
 
         getattr(noxfile, session)(recorder)
 
-        assert recorder.runs == [("pytest", "--nbmake", notebook)]
+        assert recorder.runs == [(*PYTEST_NBMAKE, notebook)]
 
     def test_pytest_flags_keep_the_default_notebooks(self, noxfile):
         recorder = RecordingSession(["--collect-only", "-q"])
@@ -74,7 +76,7 @@ class TestNotebookSessions:
         noxfile.run_examples(recorder)
 
         expected = ("--collect-only", "-q", str(noxfile.EXAMPLES_DIR))
-        assert recorder.runs == [("pytest", "--nbmake", *expected)]
+        assert recorder.runs == [(*PYTEST_NBMAKE, *expected)]
 
     def test_selected_notebook_runs_without_the_smoke_notebooks(
         self, noxfile, tmp_path, monkeypatch
@@ -85,14 +87,14 @@ class TestNotebookSessions:
 
         noxfile.run_examples(recorder)
 
-        assert recorder.runs == [("pytest", "--nbmake", "notebook.ipynb")]
+        assert recorder.runs == [(*PYTEST_NBMAKE, "notebook.ipynb")]
 
     def test_examples_defaults_to_every_notebook(self, noxfile):
         recorder = RecordingSession([])
 
         noxfile.run_examples(recorder)
 
-        assert recorder.runs == [("pytest", "--nbmake", str(noxfile.EXAMPLES_DIR))]
+        assert recorder.runs == [(*PYTEST_NBMAKE, str(noxfile.EXAMPLES_DIR))]
 
     def test_examples_smoke_defaults_to_smoke_notebooks(self, noxfile):
         recorder = RecordingSession([])
@@ -100,4 +102,4 @@ class TestNotebookSessions:
         noxfile.run_examples_smoke(recorder)
 
         expected = tuple(str(path) for path in noxfile.SMOKE_NOTEBOOKS)
-        assert recorder.runs == [("pytest", "--nbmake", *expected)]
+        assert recorder.runs == [(*PYTEST_NBMAKE, *expected)]

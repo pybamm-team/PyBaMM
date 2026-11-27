@@ -248,6 +248,18 @@ class TestSerialise:
         newest_solver = newest_model.default_solver
         newest_solver.solve(newest_model, [0, 3600])
 
+    def test_save_model_encoding_failure_keeps_existing_file(self, mocker, tmp_path):
+        existing = tmp_path / "model.json"
+        existing.write_text("previous contents")
+        mocker.patch.object(
+            Serialise, "serialise_model", return_value={"value": object()}
+        )
+
+        with pytest.raises(TypeError, match=r"not JSON serializable"):
+            Serialise().save_model(pybamm.BaseModel(), filename=str(tmp_path / "model"))
+
+        assert existing.read_text() == "previous contents"
+
     @pytest.mark.parametrize("convert_to_format", ["python", "jax", "rust"])
     def test_discretised_model_round_trips_convert_to_format(self, convert_to_format):
         model = pybamm.BaseModel()
