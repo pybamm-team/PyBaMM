@@ -15,124 +15,69 @@
 #define PYBAMM_ERROR_NO_EVENTS     (-9)
 #define PYBAMM_ERROR_NO_UPSAMPLING (-10)
 
-/* ABI contract version: must equal RUST_ABI_VERSION in ffi.rs, checked at resolve time. */
-#define PYBAMM_RUST_ABI_VERSION 1
+/* Major ABI version: must equal RUST_ABI_VERSION in ffi.rs, checked for every evaluator. */
+#define PYBAMM_RUST_ABI_VERSION 2
+
+/* A capsule holding an evaluator nothing has claimed, and the name its owner renames it to. */
+#define PYBAMM_RUST_EVALUATOR_CAPSULE "pybamm.rust.evaluator"
+#define PYBAMM_RUST_CLAIMED_EVALUATOR_CAPSULE "pybamm.rust.evaluator.claimed"
 
 #ifdef __cplusplus
-
-#if defined(_WIN32)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-// PSAPI_VERSION 2 binds EnumProcessModules to kernel32, so psapi.lib is not needed.
-#ifndef PSAPI_VERSION
-#define PSAPI_VERSION 2
-#endif
-#include <windows.h>
-#include <psapi.h>
-#else
-#include <dlfcn.h>
+extern "C" {
 #endif
 
-#include <algorithm>
-#include <stdexcept>
-#include <string>
-#include <vector>
+typedef struct PybammRustEvaluator PybammRustEvaluator;
 
 /*
- * The Rust entry points live in PyBaMM's `pybamm.rust._core` extension, which pybammsolvers
- * cannot link against, so they are resolved at runtime and idaklu loads without it. On Linux
- * that extension must be imported RTLD_GLOBAL for dlsym to see them (`pybamm/rust/__init__.py`).
+ * Mirrors `FfiTable` in ffi.rs. `abi_version` and `size` lead every version's table; entries
+ * are only appended within a version, so `size` must cover every entry a consumer reads.
  */
+typedef struct PybammRustFfi {
+    uint32_t abi_version;
+    uint32_t size;
+    void (*release)(PybammRustEvaluator*);
+    int (*n_states)(const void*);
+    int (*n_inputs)(const void*);
+    int (*jac_nnz)(const void*);
+    int (*n_sens_params)(const void*);
+    int (*eval_rhs)(double, const double*, const double*, double*, void*);
+    int (*jac_assemble)(double, const double*, const double*, double, double*, void*);
+    int (*jac_action)(double, const double*, const double*, const double*, double*, void*);
+    int (*jac_action_batch)(
+        double, const double*, const double*, int, const double*, double*, void*);
+    int (*mass_action)(const double*, double*, void*);
+    int (*sens_eval_all)(double, const double*, const double*, double*, void*);
+    int (*output_sens_project)(
+        double, const double*, const double*, const double*, double*, void*);
+    int (*n_outputs)(const void*);
+    int (*output_len)(const void*, int);
+    int (*output_eval_batch)(const double*, const double*, int, const double*, double*, void*);
+    int (*n_algebraic)(const void*);
+    int (*alg_jac_nnz)(const void*);
+    int (*alg_res)(double, const double*, const double*, double*, void*);
+    int (*alg_jac_assemble)(double, const double*, const double*, double*, void*);
+    int (*total_event_len)(const void*);
+    int (*events_eval)(double, const double*, const double*, const double*, double*, void*);
+    int (*upsampling_len)(const void*);
+    int (*upsampling_eval)(double, const double*, const double*, double*, void*);
+} PybammRustFfi;
 
-/* Every ffi.rs export, each called (the drift test checks both); all are resolved eagerly. */
-using rust_count_t = int (*)(const void*);
-using rust_eval_rhs_t = int (*)(double, const double*, const double*, double*, void*);
-using rust_jac_assemble_t = int (*)(double, const double*, const double*, double, double*, void*);
-using rust_jac_action_t = int (*)(double, const double*, const double*, const double*, double*, void*);
-using rust_jac_action_batch_t =
-    int (*)(double, const double*, const double*, int, const double*, double*, void*);
-using rust_mass_action_t = int (*)(const double*, double*, void*);
-using rust_sens_eval_all_t = int (*)(double, const double*, const double*, double*, void*);
-using rust_output_sens_project_t =
-    int (*)(double, const double*, const double*, const double*, double*, void*);
-using rust_output_len_t = int (*)(const void*, int);
-using rust_output_eval_batch_t =
-    int (*)(const double*, const double*, int, const double*, double*, void*);
-using rust_alg_res_t = int (*)(double, const double*, const double*, double*, void*);
-using rust_alg_jac_assemble_t = int (*)(double, const double*, const double*, double*, void*);
-using rust_events_eval_t = int (*)(double, const double*, const double*, double*, void*);
-using rust_upsampling_eval_t = int (*)(double, const double*, const double*, double*, void*);
-using rust_abi_version_t = uint32_t (*)();
-
-struct RustFfi {
-    rust_count_t n_states;
-    rust_count_t n_inputs;
-    rust_count_t jac_nnz;
-    rust_count_t n_sens_params;
-    rust_eval_rhs_t eval_rhs;
-    rust_jac_assemble_t jac_assemble;
-    rust_jac_action_t jac_action;
-    rust_jac_action_batch_t jac_action_batch;
-    rust_mass_action_t mass_action;
-    rust_sens_eval_all_t sens_eval_all;
-    rust_output_sens_project_t output_sens_project;
-    rust_count_t n_outputs;
-    rust_output_len_t output_len;
-    rust_output_eval_batch_t output_eval_batch;
-    rust_count_t n_algebraic;
-    rust_count_t alg_jac_nnz;
-    rust_alg_res_t alg_res;
-    rust_alg_jac_assemble_t alg_jac_assemble;
-    rust_count_t total_event_len;
-    rust_events_eval_t events_eval;
-    rust_count_t upsampling_len;
-    rust_upsampling_eval_t upsampling_eval;
-    rust_abi_version_t abi_version;
+/* Mirrors `EvaluatorHandle` in ffi.rs; `ffi` leads in every version. */
+struct PybammRustEvaluator {
+    const PybammRustFfi* ffi;
+    /* The `user_data` every entry point takes. */
+    void* model;
 };
 
+#ifdef __cplusplus
+}
+
+#include <cstring>
+#include <memory>
+#include <stdexcept>
+#include <string>
+
 namespace pybamm_rust_detail {
-
-/* Exported symbol from any loaded module, or nullptr; Windows has no process-global lookup. */
-inline void* find_symbol(const char* name) {
-#if defined(_WIN32)
-    HANDLE process = GetCurrentProcess();
-    DWORD bytes_needed = 0;
-    if (K32EnumProcessModules(process, nullptr, 0, &bytes_needed) == 0) {
-        return nullptr;
-    }
-    std::vector<HMODULE> modules(bytes_needed / sizeof(HMODULE));
-    if (K32EnumProcessModules(process, modules.data(), bytes_needed, &bytes_needed) == 0) {
-        return nullptr;
-    }
-    // The list can change between the size query and the fill; only the filled prefix is valid.
-    modules.resize(std::min<size_t>(modules.size(), bytes_needed / sizeof(HMODULE)));
-    for (HMODULE module : modules) {
-        if (FARPROC sym = GetProcAddress(module, name)) {
-            return reinterpret_cast<void*>(sym);
-        }
-    }
-    return nullptr;
-#else
-    return dlsym(RTLD_DEFAULT, name);
-#endif
-}
-
-template <typename Fn>
-inline Fn load_symbol(const char* name) {
-    void* sym = find_symbol(name);
-    if (sym == nullptr) {
-        throw std::runtime_error(
-            std::string("pybammsolvers: Rust FFI symbol '") + name +
-            "' could not be resolved. Import `pybamm.rust` before constructing a "
-            "Rust-backed IDAKLU solver: it loads pybamm.rust._core and, on Linux, "
-            "adds RTLD_GLOBAL so these symbols reach dlsym(RTLD_DEFAULT).");
-    }
-    return reinterpret_cast<Fn>(sym);
-}
 
 inline const char* status_name(int status) {
     switch (status) {
@@ -177,62 +122,61 @@ inline int checked_value(const char* name, Fn fn, Args... args) {
     return value;
 }
 
+/*
+ * Throw unless this build can call every entry of the table `handle` points to. Only the fields
+ * every version leads with are read, byte-wise, since another version's layout may differ.
+ */
+inline void check_abi(const void* handle) {
+    const unsigned char* table = nullptr;
+    std::memcpy(static_cast<void*>(&table), handle, sizeof(table));
+    uint32_t abi_version = 0;
+    uint32_t size = 0;
+    std::memcpy(&abi_version, table, sizeof(abi_version));
+    std::memcpy(&size, table + sizeof(abi_version), sizeof(size));
+    if (abi_version != PYBAMM_RUST_ABI_VERSION) {
+        throw std::runtime_error(
+            "pybammsolvers: this Rust evaluator has ABI version " + std::to_string(abi_version) +
+            ", but pybammsolvers was built for version " +
+            std::to_string(PYBAMM_RUST_ABI_VERSION) +
+            ". Install pybamm and pybammsolvers releases that share a Rust ABI version.");
+    }
+    if (size < sizeof(PybammRustFfi)) {
+        throw std::runtime_error(
+            "pybammsolvers: this Rust evaluator's function table is " + std::to_string(size) +
+            " bytes, older than the " + std::to_string(sizeof(PybammRustFfi)) +
+            " bytes pybammsolvers reads. Upgrade the package that built the Rust core (pybamm).");
+    }
+}
+
 }  // namespace pybamm_rust_detail
 
-/* Checked call to `RustFfi::entry`; see `pybamm_rust_detail::checked_call`. */
-#define PYBAMM_RUST_CALL(entry, ...) \
-    ::pybamm_rust_detail::checked_call(#entry, ::rust_ffi().entry, __VA_ARGS__)
+/* Releases an evaluator through the table of the build that made it. */
+struct RustEvaluatorRelease {
+    void operator()(PybammRustEvaluator* handle) const noexcept {
+        handle->ffi->release(handle);
+    }
+};
 
-/* Checked read of a count-returning `RustFfi::entry`. */
-#define PYBAMM_RUST_VALUE(entry, ...) \
-    ::pybamm_rust_detail::checked_value(#entry, ::rust_ffi().entry, __VA_ARGS__)
+/* An evaluator C++ owns. */
+using RustEvaluatorPtr = std::unique_ptr<PybammRustEvaluator, RustEvaluatorRelease>;
 
-/* Resolve the Rust FFI table once (thread-safe function-local static) and cache it. */
-inline const RustFfi& rust_ffi() {
-    using pybamm_rust_detail::load_symbol;
-    static const RustFfi table = [] {
-        RustFfi t{};
-        // The probe goes first: a build of another version also differs in its exports, so a
-        // missing symbol would otherwise mask the mismatch this check exists to report.
-        t.abi_version = load_symbol<rust_abi_version_t>("pybamm_rust_abi_version");
-        if (t.abi_version() != PYBAMM_RUST_ABI_VERSION) {
-            throw std::runtime_error(
-                std::string("pybammsolvers: Rust FFI ABI version mismatch. "
-                            "pybammsolvers was built for version ") +
-                std::to_string(PYBAMM_RUST_ABI_VERSION) +
-                " but the loaded PyBaMM Rust core reports version " +
-                std::to_string(t.abi_version()) +
-                ". Rebuild pybammsolvers and the PyBaMM Rust extension from the "
-                "same source tree.");
-        }
-        t.n_states = load_symbol<rust_count_t>("pybamm_rust_n_states");
-        t.n_inputs = load_symbol<rust_count_t>("pybamm_rust_n_inputs");
-        t.jac_nnz = load_symbol<rust_count_t>("pybamm_rust_jac_nnz");
-        t.n_sens_params = load_symbol<rust_count_t>("pybamm_rust_n_sens_params");
-        t.eval_rhs = load_symbol<rust_eval_rhs_t>("pybamm_rust_eval_rhs");
-        t.jac_assemble = load_symbol<rust_jac_assemble_t>("pybamm_rust_jac_assemble");
-        t.jac_action = load_symbol<rust_jac_action_t>("pybamm_rust_jac_action");
-        t.jac_action_batch = load_symbol<rust_jac_action_batch_t>("pybamm_rust_jac_action_batch");
-        t.mass_action = load_symbol<rust_mass_action_t>("pybamm_rust_mass_action");
-        t.sens_eval_all = load_symbol<rust_sens_eval_all_t>("pybamm_rust_sens_eval_all");
-        t.output_sens_project =
-            load_symbol<rust_output_sens_project_t>("pybamm_rust_output_sens_project");
-        t.n_outputs = load_symbol<rust_count_t>("pybamm_rust_n_outputs");
-        t.output_len = load_symbol<rust_output_len_t>("pybamm_rust_output_len");
-        t.output_eval_batch =
-            load_symbol<rust_output_eval_batch_t>("pybamm_rust_output_eval_batch");
-        t.n_algebraic = load_symbol<rust_count_t>("pybamm_rust_n_algebraic");
-        t.alg_jac_nnz = load_symbol<rust_count_t>("pybamm_rust_alg_jac_nnz");
-        t.alg_res = load_symbol<rust_alg_res_t>("pybamm_rust_alg_res");
-        t.alg_jac_assemble = load_symbol<rust_alg_jac_assemble_t>("pybamm_rust_alg_jac_assemble");
-        t.total_event_len = load_symbol<rust_count_t>("pybamm_rust_total_event_len");
-        t.events_eval = load_symbol<rust_events_eval_t>("pybamm_rust_events_eval");
-        t.upsampling_len = load_symbol<rust_count_t>("pybamm_rust_upsampling_len");
-        t.upsampling_eval = load_symbol<rust_upsampling_eval_t>("pybamm_rust_upsampling_eval");
-        return t;
-    }();
-    return table;
+/* An evaluator borrowed from its owner: the table to call, and the model every call takes. */
+struct RustModelRef {
+    const PybammRustFfi* ffi;
+    void* model;
+};
+
+inline RustModelRef borrow(const RustEvaluatorPtr& evaluator) {
+    return RustModelRef{evaluator->ffi, evaluator->model};
 }
+
+/* Checked call to `entry` of `rust`, a RustModelRef; see `checked_call`. */
+#define PYBAMM_RUST_CALL(rust, entry, ...) \
+    ::pybamm_rust_detail::checked_call(#entry, (rust).ffi->entry, __VA_ARGS__)
+
+/* Checked read of the count-returning `entry` of `rust`. */
+#define PYBAMM_RUST_VALUE(rust, entry, ...) \
+    ::pybamm_rust_detail::checked_value(#entry, (rust).ffi->entry, __VA_ARGS__)
 
 #endif /* __cplusplus */
 
