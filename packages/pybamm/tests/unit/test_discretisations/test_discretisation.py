@@ -356,6 +356,26 @@ class TestDiscretise:
         with pytest.raises(NotImplementedError):
             disc.process_symbol(sym)
 
+    def test_process_variable_with_spatial_scale_and_reference(self):
+        mesh = get_mesh_for_testing()
+        disc = pybamm.Discretisation(mesh, {"macroscale": pybamm.FiniteVolume()})
+        x = pybamm.SpatialVariable(
+            "x", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        scale = pybamm.x_average(x)
+        variable = pybamm.Variable(
+            "variable",
+            domain=["negative electrode"],
+            scale=scale,
+            reference=2 * scale,
+        )
+        disc.set_variable_slices([variable])
+
+        discretised_variable = disc.process_symbol(variable)
+        values = np.ones((mesh["negative electrode"].npts, 1))
+
+        np.testing.assert_allclose(discretised_variable.evaluate(y=values), 0.5)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")

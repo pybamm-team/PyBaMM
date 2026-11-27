@@ -38,24 +38,6 @@ class SPM(BaseModel):
 
         super().__init__(options, name)
 
-        if (
-            not isinstance(self, pybamm.lithium_ion.SPMe)
-            and any(
-                getattr(self.options, domain)["particle size"] == "distribution"
-                for domain, electrode_type in self.options.electrode_types.items()
-                if electrode_type == "porous"
-            )
-            and "true"
-            in [
-                self.options["SEI porosity change"],
-                self.options["lithium plating porosity change"],
-            ]
-        ):
-            raise pybamm.OptionError(
-                "SEI and lithium plating porosity change are not yet supported for "
-                f"{self.__class__.__name__} with particle-size distributions."
-            )
-
         self.set_submodels(build)
 
         if not isinstance(self, pybamm.lithium_ion.MPM):

@@ -958,12 +958,12 @@ class Discretisation:
 
         processed_eqn = self.process_symbol(eqn)
         if ics and (reference := getattr(name, "reference", 0)) != 0:
-            processed_eqn = processed_eqn - reference
+            processed_eqn = processed_eqn - self.process_symbol(reference)
 
         # Calculate scale if the key has a scale
         scale = getattr(name, "scale", 1)
         if scale != 1:
-            processed_eqn = processed_eqn / scale
+            processed_eqn = processed_eqn / self.process_symbol(scale)
 
         return processed_eqn
 
@@ -1020,7 +1020,11 @@ class Discretisation:
             if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
                 self.bcs[key_id] = self.check_tab_conditions(symbol, self.bcs[key_id])
         handler = self._handler_for(type(symbol))
-        discretised_symbol = handler(self, symbol, new_leaves[: len(symbol._children)])
+        if isinstance(symbol, pybamm.Variable | pybamm.VariableDot):
+            disc_children = new_leaves
+        else:
+            disc_children = new_leaves[: len(symbol._children)]
+        discretised_symbol = handler(self, symbol, disc_children)
         discretised_symbol.test_shape()
         # a discretised node keeps its symbol's domains, and processed variables read
         # the meshes of those domains off the result
@@ -1295,14 +1299,16 @@ class Discretisation:
             raise pybamm.DiscretisationError("Invalid direction")
 
     def _disc_variable_dot(self, symbol, disc_children):
+        scale, *_ = disc_children
         # Multiply by the symbol's scale so that the state vector is of order 1;
         # the constant reference drops out of the time derivative
-        return symbol.scale * pybamm.StateVectorDot(
+        return scale * pybamm.StateVectorDot(
             *self.y_slices[symbol.get_variable()],
             domains=symbol.domains,
         )
 
     def _disc_variable(self, symbol, disc_children):
+        scale, reference, *_ = disc_children
         # check_well_posedness usually catches this, but not without debug_mode
         try:
             y_slices = self.y_slices[symbol]
@@ -1314,9 +1320,7 @@ class Discretisation:
             ) from error
         # Add symbol's reference and multiply by the symbol's scale
         # so that the state vector is of order 1
-        return symbol.reference + symbol.scale * pybamm.StateVector(
-            *y_slices, domains=symbol.domains
-        )
+        return reference + scale * pybamm.StateVector(*y_slices, domains=symbol.domains)
 
     def _disc_spatial_variable(self, symbol, disc_children):
         return self._spatial_method_of(symbol).spatial_variable(symbol)
