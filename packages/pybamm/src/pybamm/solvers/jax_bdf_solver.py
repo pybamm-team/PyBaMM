@@ -21,6 +21,7 @@ if pybamm.has_jax():
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
     ROOT_SOLVE_MAXITER = 15
+    MAX_CONSECUTIVE_REJECTIONS = 50
     MIN_FACTOR = 0.2
     MAX_FACTOR = 10
 
@@ -114,8 +115,9 @@ if pybamm.has_jax():
         y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
         def cond_fun(state):
-            _, _, i, _ = state
-            return i < len(t_eval)
+            stepper, _, i, _ = state
+            failed = stepper.consistent_y0_failed | stepper.step_failed
+            return (i < len(t_eval)) & ~failed
 
         def body_fun(state):
             stepper, t_eval, i, y_out = state
@@ -130,9 +132,11 @@ if pybamm.has_jax():
             return stepper, t_eval, index, y_out
 
         init_state = (stepper, t_eval, 0, y_out)
-        _, _, _, y_out = jax.lax.while_loop(cond_fun, body_fun, init_state)
+        stepper, _, _, y_out = jax.lax.while_loop(cond_fun, body_fun, init_state)
 
-        return y_out
+        # a failed solve returns NaN
+        failed = stepper.consistent_y0_failed | stepper.step_failed
+        return jnp.where(failed, jnp.nan, y_out)
 
     BDFState = collections.namedtuple(
         "BDFState",
@@ -162,6 +166,8 @@ if pybamm.has_jax():
             "n_lu_decompositions",
             "n_steps",
             "consistent_y0_failed",
+            "step_failed",
+            "lu_stale",
         ],
     )
 
@@ -208,7 +214,7 @@ if pybamm.has_jax():
         scale_y0 = atol + rtol * jnp.abs(y0)
         newton_tol = jnp.maximum(10 * EPS / rtol, jnp.minimum(0.03, rtol**0.5))
 
-        y0, not_converged = _select_initial_conditions(
+        y0, converged = _select_initial_conditions(
             fun, mass, t0, y0, newton_tol, scale_y0
         )
 
@@ -240,7 +246,9 @@ if pybamm.has_jax():
             rtol=rtol,
             M=mass,
             newton_tol=newton_tol,
-            consistent_y0_failed=not_converged,
+            consistent_y0_failed=jnp.logical_not(converged),
+            step_failed=jnp.array(False),
+            lu_stale=jnp.array(False),
             order=1,
             h=h,
             n_equal_steps=0,
@@ -294,7 +302,7 @@ if pybamm.has_jax():
         # if all differentiable variables then return y0 (can use normal python if
         # since M is static)
         if not onp.any(algebraic_variables):
-            return y0, False
+            return y0, True
 
         # calculate consistent initial conditions via a newton on -J_a @ delta = f_a
         # This follows this reference:
@@ -313,10 +321,6 @@ if pybamm.has_jax():
         d = jnp.zeros(y0_a.shape[0], dtype=y0.dtype)
         y_a = jnp.array(y0_a, copy=True)
 
-        # calculate neg jacobian of fun_a
-        J_a = jax.jacfwd(fun_a)(y_a)
-        LU = jax.scipy.linalg.lu_factor(-J_a)
-
         converged = False
         dy_norm_old = -1.0
         k = 0
@@ -329,6 +333,8 @@ if pybamm.has_jax():
         def while_body(while_state):
             k, converged, dy_norm_old, d, y_a = while_state
             f_eval = fun_a(y_a)
+            # a Jacobian frozen at y0 stalls or diverges when y0 is far from the root
+            LU = jax.scipy.linalg.lu_factor(-jax.jacfwd(fun_a)(y_a))
             dy = jax.scipy.linalg.lu_solve(LU, f_eval)
             dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0_a) ** 2))
             rate = dy_norm / dy_norm_old
@@ -416,11 +422,19 @@ if pybamm.has_jax():
 
     def _update_step_size_and_lu(state, factor):
         """
-        Update step size and recompute LU decomposition.
+        Update step size and mark the LU decomposition for recomputation.
         """
         state = _update_step_size(state, factor)
+        return state._replace(
+            lu_stale=True, n_lu_decompositions=state.n_lu_decompositions + 1
+        )
+
+    def _update_lu(state):
+        """
+        Recompute the LU decomposition of M - c * J.
+        """
         LU = jax.scipy.linalg.lu_factor(state.M - state.c * state.J)
-        return state._replace(LU=LU, n_lu_decompositions=state.n_lu_decompositions + 1)
+        return state._replace(LU=LU, lu_stale=False)
 
     def _update_step_size(state, factor):
         """
@@ -466,11 +480,10 @@ if pybamm.has_jax():
         following the scipy bdf implementation rather than J(t_n, y_n) as per [1]
         """
         J = jac(state.y0, state.t + state.h)
-        LU = jax.scipy.linalg.lu_factor(state.M - state.c * J)
         return state._replace(
             J=J,
             n_jacobian_evals=state.n_jacobian_evals + 1,
-            LU=LU,
+            lu_stale=True,
             n_lu_decompositions=state.n_lu_decompositions + 1,
         )
 
@@ -584,7 +597,11 @@ if pybamm.has_jax():
         """
 
         def step_iteration(while_state):
-            state, updated_jacobian = while_state
+            state, updated_jacobian, n_rejections = while_state
+
+            # Factorise here, once, rather than in the conds that change c or J:
+            # under vmap a cond with a batched predicate runs both branches
+            state = jax.lax.cond(state.lu_stale, _update_lu, lambda s: s, state)
 
             # Solve BDF equation using Newton iteration
             converged, n_iter, y, d, state = _newton_iteration(state, fun)
@@ -628,14 +645,23 @@ if pybamm.has_jax():
             )
 
             step_accepted = converged & (error_norm <= 1)
-            return (state, updated_jacobian), (step_accepted, y, d, n_iter)
+            carry = (state, updated_jacobian, n_rejections + ~step_accepted)
+            return carry, (step_accepted, y, d, n_iter)
 
-        # Iterate until step is accepted
-        (state, _), (_, y, d, n_iter) = jax.lax.while_loop(
-            lambda carry_and_aux: ~carry_and_aux[1][0],
+        def keep_trying(carry_and_aux):
+            (state, _, n_rejections), (step_accepted, _, _, _) = carry_and_aux
+            # a step too short to change t would be accepted without progress
+            can_retry = (n_rejections < MAX_CONSECUTIVE_REJECTIONS) & (
+                state.t + state.h > state.t
+            )
+            return ~step_accepted & can_retry
+
+        # Iterate until step is accepted, or fail rather than shrink h without bound
+        (state, _, _), (step_accepted, y, d, n_iter) = jax.lax.while_loop(
+            keep_trying,
             lambda carry_and_aux: step_iteration(carry_and_aux[0]),
             (
-                (state, False),
+                (state, False, 0),
                 (False, jnp.empty_like(state.y0), jnp.empty_like(state.y0), -1),
             ),
         )
@@ -644,7 +670,12 @@ if pybamm.has_jax():
         n_steps = state.n_steps + 1
         t = state.t + state.h
         n_equal_steps = state.n_equal_steps + 1
-        state = state._replace(n_equal_steps=n_equal_steps, t=t, n_steps=n_steps)
+        state = state._replace(
+            n_equal_steps=n_equal_steps,
+            t=t,
+            n_steps=n_steps,
+            step_failed=~step_accepted,
+        )
 
         # Prepare for the next step, potentially changing order
         # (see page 83 of [2])
@@ -914,7 +945,8 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     Returns
     -------
     y: ndarray with shape (n, m)
-        calculated state vector at each of the m time points
+        calculated state vector at each of the m time points, or NaN if the
+        consistent initialisation or a step fails
 
     """
     if not pybamm.has_jax():

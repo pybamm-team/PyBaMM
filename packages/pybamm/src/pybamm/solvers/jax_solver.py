@@ -25,6 +25,10 @@ class JaxSolver(pybamm.BaseSolver):
     RuntimeError
         if `model.convert_to_format != 'jax'`
 
+    :class:`pybamm.SolverError`
+        if the solution is not finite for an input set, e.g. because the consistent
+        initialisation or a step failed
+
     Parameters
     ----------
     method: str, optional (see `jax.experimental.ode.odeint` for details)
@@ -32,7 +36,7 @@ class JaxSolver(pybamm.BaseSolver):
         * 'RK45' uses jax.experimental.ode.odeint
     root_method: str, optional
         Method to use to calculate consistent initial conditions. By default, this uses
-        the newton chord method internal to the jax bdf solver, otherwise choose from
+        the Newton iteration internal to the jax bdf solver, otherwise choose from
         the set of default options defined in docs for pybamm.BaseSolver
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
@@ -304,6 +308,11 @@ class JaxSolver(pybamm.BaseSolver):
 
         # convert to a normal numpy array
         y = onp.array(y)
+
+        # jax_bdf_integrate returns NaN when a solve fails
+        failed = [k for k in range(len(inputs)) if not onp.isfinite(y[k]).all()]
+        if failed:
+            raise pybamm.SolverError(f"JaxSolver failed for input sets {failed}")
 
         termination = "final time"
         t_event = None
