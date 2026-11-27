@@ -545,6 +545,7 @@ class BaseModel:
         self,
         symbol: pybamm.Symbol,
         cache: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
+        _resolving: set[str] | None = None,
     ) -> pybamm.Symbol:
         """
         Resolve CoupledVariables by looking up their targets in self._variables.
@@ -561,9 +562,18 @@ class BaseModel:
         -------
         :class:`pybamm.Symbol`
             The resolved expression.
+
+        Raises
+        ------
+        ValueError
+            If a CoupledVariable's name is not in ``self._variables``.
+        :class:`pybamm.ModelError`
+            If a CoupledVariable's target depends on itself.
         """
         if cache is None:
             cache = {}
+        if _resolving is None:
+            _resolving = set()
 
         def resolve(node, new_leaves):
             if not isinstance(node, pybamm.CoupledVariable):
@@ -574,9 +584,92 @@ class BaseModel:
                 raise ValueError(
                     f"CoupledVariable '{node.name}' not found in model.variables"
                 )
-            return self._resolve_coupled_variables(self._variables[node.name], cache)
+            if node.name in _resolving:
+                raise pybamm.ModelError(
+                    "Circular reference in model.variables: CoupledVariable "
+                    f"'{node.name}' depends on itself"
+                )
+            _resolving.add(node.name)
+            try:
+                return self._resolve_coupled_variables(
+                    self._variables[node.name], cache, _resolving
+                )
+            finally:
+                _resolving.discard(node.name)
 
         return pybamm.tree_map(resolve, symbol, cache=cache)
+
+    def _resolve_coupled_variables_in_equations(self, inplace: bool) -> BaseModel:
+        """
+        Resolve CoupledVariables in rhs, algebraic, initial_conditions,
+        boundary_conditions (including fluxes of flux conditions) and events.
+
+        Parameters
+        ----------
+        inplace : bool
+            If False, resolve into a copy of the model and leave it unchanged.
+
+        Returns
+        -------
+        :class:`pybamm.BaseModel`
+            The model with resolved equations: the model itself if nothing needed
+            resolving or ``inplace`` is True, otherwise a copy.
+        """
+        equations = [
+            *self.rhs.values(),
+            *self.algebraic.values(),
+            *self.initial_conditions.values(),
+            *(event.expression for event in self.events),
+        ]
+        for bcs in self.boundary_conditions.values():
+            for expr, bc_type in bcs.values():
+                equations.append(expr)
+                if _is_flux_boundary_condition(bc_type):
+                    equations.append(bc_type[1])
+        # unprocessed equations may still hold plain numbers
+        symbols = [eqn for eqn in equations if isinstance(eqn, pybamm.Symbol)]
+        unpacker = pybamm.SymbolUnpacker(pybamm.CoupledVariable)
+        if not unpacker.unpack_list_of_symbols(symbols):
+            return self
+
+        cache = {}
+
+        def resolve(expr):
+            if not isinstance(expr, pybamm.Symbol):
+                return expr
+            return self._resolve_coupled_variables(expr, cache)
+
+        def resolve_bc_type(bc_type):
+            if _is_flux_boundary_condition(bc_type):
+                return (bc_type[0], resolve(bc_type[1]))
+            return bc_type
+
+        rhs = {var: resolve(expr) for var, expr in self.rhs.items()}
+        algebraic = {var: resolve(expr) for var, expr in self.algebraic.items()}
+        initial_conditions = {
+            var: resolve(expr) for var, expr in self.initial_conditions.items()
+        }
+        boundary_conditions = {
+            var: {
+                side: (resolve(expr), resolve_bc_type(bc_type))
+                for side, (expr, bc_type) in bcs.items()
+            }
+            for var, bcs in self.boundary_conditions.items()
+        }
+        events = [
+            pybamm.Event(event.name, resolve(event.expression), event.event_type)
+            for event in self.events
+        ]
+
+        model = self if inplace else self.new_copy()
+        # assign new dicts: the inner boundary condition dicts may be shared with
+        # the model this one was copied from
+        model.rhs = rhs
+        model.algebraic = algebraic
+        model.initial_conditions = initial_conditions
+        model.boundary_conditions = boundary_conditions
+        model.events = events
+        return model
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """
