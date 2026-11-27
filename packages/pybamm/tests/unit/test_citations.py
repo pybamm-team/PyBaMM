@@ -662,6 +662,21 @@ class TestCitations:
         assert "Downstream2026" not in citations._unknown_citations
         assert citations._citation_tags["Downstream2026"] == {"Before loading"}
 
+    def test_parse_citation_known_by_parse_time(self, citation_database):
+        citations = pybamm.citations
+        citations._reset()
+        key = "Downstream2026"
+        citations.register(key)
+        assert key in citations._unknown_citations
+        # Fix the order that print() leaves to set iteration: raw BibTeX first
+        citations._parse_citation("@misc{Downstream2026, title={Example}}")
+        citations._papers_to_cite.discard(key)
+
+        citations._parse_citation(key)
+
+        assert key in citations._papers_to_cite
+        assert key not in citations._unknown_citations
+
     @pytest.mark.parametrize("key_first", [True, False])
     def test_key_and_raw_bibtex_registration_order(self, citation_database, key_first):
         citations = pybamm.citations
