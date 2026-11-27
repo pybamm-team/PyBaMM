@@ -18,8 +18,8 @@ variables to configure.
 - `pybamm-python` implements `pybamm.rust`, which provides the Python API over
   the Rust code in `pybamm-core`, which compiles expressions into evaluable
   functions and sparse Jacobians.
-- `pybamm.rust` also lowers a discretised model to a `CompiledModel` for the
-  IDAKLU solver.
+- `pybamm.rust` also lowers a discretised model to a `CompiledModel`, which the
+  IDAKLU solver takes, and drives the diffsol solver.
 - pybammsolvers does **not** link against the Rust core (the package
   dependency only flows the other way). Instead, `CompiledModel.evaluator()`
   hands IDAKLU each evaluator in a Python capsule named
@@ -120,6 +120,9 @@ cd packages/pybamm-rust && cargo test --workspace
 # Rust-IDAKLU integration tests (from the repo root)
 uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_parity.py
 uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_spm.py
+
+# Diffsol solver unit tests
+uv run --group dev pytest packages/pybamm/tests/unit/test_solvers/test_diffsol_solver.py
 ```
 
 ## Checking the ABI version

@@ -199,6 +199,14 @@ pub enum CoreError {
     )]
     Y0SensLength { got: usize, expected: usize },
 
+    #[error(
+        "a batch needs one entry per input set, but got {y0} initial state(s) and {inputs} input vector(s)"
+    )]
+    BatchWidths { y0: usize, inputs: usize },
+
+    #[error("a batch of {expected} input set(s) needs {expected} dy0/dp seed(s), but got {got}")]
+    BatchSensWidth { got: usize, expected: usize },
+
     #[error("sens_atol_factor must be finite and > 0, got {got}")]
     SensAtolFactor { got: f64 },
 
@@ -220,6 +228,10 @@ pub enum CoreError {
         index: Option<usize>,
         got: f64,
     },
+
+    /// The solve's interrupt asked it to stop before it finished.
+    #[error("the solve was interrupted")]
+    Interrupted,
 
     /// The integrator or its linear algebra panicked; the message is the panic's own.
     #[error("the solver panicked: {0}")]

@@ -13,7 +13,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from packaging.utils import InvalidWheelFilename, parse_wheel_filename
 
 # One wheel per platform for CPython 3.11 and later, at a small per-FFI-call cost.
-FEATURES = "pyo3/abi3-py311"
+FEATURES = "pyo3/abi3-py311,diffsol"
 
 CRATE_MANIFEST = Path("pybamm-python") / "Cargo.toml"
 DESTINATION = Path("src") / "pybamm" / "rust"

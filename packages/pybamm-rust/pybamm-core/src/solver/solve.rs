@@ -6,6 +6,7 @@
 use std::cell::RefCell;
 use std::ops::Range;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use diffsol::matrix::sparse_faer::FaerSparseMat;
@@ -81,6 +82,31 @@ pub enum Termination {
     },
 }
 
+impl Termination {
+    /// The flag the solver boundary carries: `0` completed, `1` event root.
+    pub const fn as_flag(self) -> i32 {
+        match self {
+            Self::Completed => 0,
+            Self::Event { .. } => 1,
+        }
+    }
+
+    pub const fn event_time(self) -> Option<f64> {
+        match self {
+            Self::Completed => None,
+            Self::Event { t, .. } => Some(t),
+        }
+    }
+
+    /// The registration index of the event whose root ended the solve.
+    pub const fn event_index(self) -> Option<usize> {
+        match self {
+            Self::Completed => None,
+            Self::Event { index, .. } => Some(index),
+        }
+    }
+}
+
 /// What one solve returns, whichever payloads were asked for.
 ///
 /// On an event root, `t` ends at the root time rather than the last requested point.
@@ -116,6 +142,20 @@ fn sens_blocks(s: &FaerVec<f64>) -> Vec<Vec<f64>> {
     lanes(s).map(<[f64]>::to_vec).collect()
 }
 
+/// Asks a running solve to stop; a solve polls it before every integration step.
+///
+/// A solve that sees it set returns [`CoreError::Interrupted`], so in a batch every set
+/// still running stops too.
+pub trait Interrupt: Sync + std::fmt::Debug {
+    fn interrupted(&self) -> bool;
+}
+
+impl Interrupt for AtomicBool {
+    fn interrupted(&self) -> bool {
+        self.load(Ordering::Relaxed)
+    }
+}
+
 /// What to integrate over and which payloads to report.
 #[derive(Clone, Copy, Debug)]
 #[must_use]
@@ -130,6 +170,8 @@ pub struct SolveRequest<'a> {
     pub sensitivities: bool,
     /// Workers of the current rayon pool the sparse LU may use; 1 factorises serially.
     pub lu_threads: usize,
+    /// Polled before every step; the solve stops once it reads as interrupted.
+    pub interrupt: Option<&'a dyn Interrupt>,
 }
 
 impl<'a> SolveRequest<'a> {
@@ -141,6 +183,7 @@ impl<'a> SolveRequest<'a> {
             outputs: false,
             sensitivities: false,
             lu_threads: 1,
+            interrupt: None,
         }
     }
 
@@ -165,6 +208,12 @@ impl<'a> SolveRequest<'a> {
     /// Factorise with up to `threads` workers of the current rayon pool.
     pub const fn with_lu_threads(mut self, threads: usize) -> Self {
         self.lu_threads = threads;
+        self
+    }
+
+    /// Stop with [`CoreError::Interrupted`] once `interrupt` reads as interrupted.
+    pub const fn with_interrupt(mut self, interrupt: &'a dyn Interrupt) -> Self {
+        self.interrupt = Some(interrupt);
         self
     }
 
@@ -544,6 +593,9 @@ impl PreparedSolver {
         request: SolveRequest<'_>,
         set: InputSet<'_>,
     ) -> Result<SolveOutcome, CoreError> {
+        if interrupted(request.interrupt) {
+            return Err(CoreError::Interrupted);
+        }
         let times = TimePlan::new(request.t_eval, request.t_stop)?;
         self.validate_args(set.y0, set.inputs)?;
         if request.sensitivities {
@@ -553,11 +605,12 @@ impl PreparedSolver {
             self.validate_has_outputs()?;
         }
         let lu_par = request.lu_par();
+        let interrupt = request.interrupt;
 
         if request.sensitivities {
-            self.solve_sensitivities(times, set, request.outputs, lu_par)
+            self.solve_sensitivities(times, set, request.outputs, lu_par, interrupt)
         } else {
-            self.solve_states(times, set, request.outputs, lu_par)
+            self.solve_states(times, set, request.outputs, lu_par, interrupt)
         }
     }
 
@@ -568,6 +621,7 @@ impl PreparedSolver {
         set: InputSet<'_>,
         with_output: bool,
         lu_par: Par,
+        interrupt: Option<&dyn Interrupt>,
     ) -> Result<SolveOutcome, CoreError> {
         let started = Instant::now();
         let mut mark = started;
@@ -591,9 +645,13 @@ impl PreparedSolver {
         let ws = &problem.eqn.evaluator.workspace;
         let mut recorder = Recorder::new(self, run, ws, false, &solver.state());
         let mut restarter = BreakpointRestarter::new(self, &problem.ic_options);
-        let termination = drive_segments(&mut solver, times, &mut recorder, |solver, t_next| {
-            restarter.restart(solver, t_next)
-        })?;
+        let termination = drive_segments(
+            &mut solver,
+            times,
+            &mut recorder,
+            interrupt,
+            |solver, t_next| restarter.restart(solver, t_next),
+        )?;
         statistics.solver = solver.get_statistics().clone();
         Ok(recorder.finish(termination, &solver.state(), statistics))
     }
@@ -606,6 +664,7 @@ impl PreparedSolver {
         set: InputSet<'_>,
         with_output: bool,
         lu_par: Par,
+        interrupt: Option<&dyn Interrupt>,
     ) -> Result<SolveOutcome, CoreError> {
         let started = Instant::now();
         let mut mark = started;
@@ -627,9 +686,13 @@ impl PreparedSolver {
         let ws = &problem.eqn.evaluator.workspace;
         let mut recorder = Recorder::new(self, run, ws, true, &solver.state());
         let mut restarter = BreakpointRestarter::new(self, &problem.ic_options);
-        let termination = drive_segments(&mut solver, times, &mut recorder, |solver, t_next| {
-            restarter.restart_sens(solver, t_next)
-        })?;
+        let termination = drive_segments(
+            &mut solver,
+            times,
+            &mut recorder,
+            interrupt,
+            |solver, t_next| restarter.restart_sens(solver, t_next),
+        )?;
         statistics.solver = solver.get_statistics().clone();
         Ok(recorder.finish(termination, &solver.state(), statistics))
     }
@@ -1389,6 +1452,7 @@ fn drive_segments<'a, S: OdeSolverMethod<'a, Equations>>(
     solver: &mut S,
     times: TimePlan<'_>,
     recorder: &mut Recorder<'_>,
+    interrupt: Option<&dyn Interrupt>,
     mut restart: impl FnMut(&mut S, f64) -> Result<(), CoreError>,
 ) -> Result<Termination, CoreError> {
     let t_eval = times.eval;
@@ -1418,6 +1482,9 @@ fn drive_segments<'a, S: OdeSolverMethod<'a, Equations>>(
             grant_step_budget(solver);
             solver.set_stop_time(t_eval[last])?;
             loop {
+                if interrupted(interrupt) {
+                    return Err(CoreError::Interrupted);
+                }
                 let reason = solver.step()?;
                 let drain_until = match reason {
                     OdeSolverStopReason::InternalTimestep | OdeSolverStopReason::TstopReached => {
@@ -1450,6 +1517,11 @@ fn drive_segments<'a, S: OdeSolverMethod<'a, Equations>>(
         col = last + 1;
     }
     Ok(Termination::Completed)
+}
+
+/// Whether `interrupt` asks the solve to stop.
+fn interrupted(interrupt: Option<&dyn Interrupt>) -> bool {
+    interrupt.is_some_and(Interrupt::interrupted)
 }
 
 /// Give `solver` its whole step budget again, from the steps it has taken so far.
@@ -1918,7 +1990,7 @@ mod tests {
         let ws = &problem.eqn.evaluator.workspace;
         let mut recorder = Recorder::new(&prepared, run, ws, false, &solver.state());
         // Drops the state past the event at y = 0.4, as a jump in an algebraic state can.
-        let termination = drive_segments(&mut solver, times, &mut recorder, |solver, _| {
+        let termination = drive_segments(&mut solver, times, &mut recorder, None, |solver, _| {
             lane_mut(solver.state_mut().y)[0] = 0.3;
             Ok(())
         })
