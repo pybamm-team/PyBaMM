@@ -3,7 +3,9 @@
 
 #include "NonlinearSolver.hpp"
 #include "Expressions/Casadi/CasadiFunctions.hpp"
+#include "Expressions/Rust/pybamm_rust_ffi.h"
 #include "common.hpp"
+#include <cstdint>
 #include <memory>
 #include <utility>
 
@@ -98,6 +100,22 @@ public:
     bool use_sparse,
     sunrealtype klu_pivot_tolerance);
 
+  /** @brief Rust-backed constructor, owning the evaluator `rust_evaluator` holds. */
+  StandaloneNewtonSolver(
+    const py::object& rust_evaluator,
+    int n_rhs,
+    int n_alg,
+    const std::vector<expr_int>& jac_rows,
+    const std::vector<expr_int>& jac_cols,
+    const std::vector<sunrealtype>& atol,
+    sunrealtype rtol,
+    sunrealtype step_tol,
+    int max_iter,
+    int max_backtracks,
+    sunrealtype epsNewt,
+    bool use_sparse,
+    sunrealtype klu_pivot_tolerance);
+
   /**
    * @brief Solve F(t, y, inputs) = 0 starting from y0.
    * @return (success, y_solution) with zero-copy numpy output.
@@ -123,6 +141,8 @@ public:
     py::object logger = py::none());
 
 private:
+  // Declared first, so it outlives the expressions that borrow it.
+  RustEvaluatorPtr rust_evaluator_;
   SolverLog log_;
   StandaloneAlgebraicSystem system_;
   NonlinearSolver solver_;

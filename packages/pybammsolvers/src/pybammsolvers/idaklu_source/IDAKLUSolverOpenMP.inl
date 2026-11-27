@@ -73,16 +73,16 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   SetMatrix();
 
   // initialise solver
-  IDAInit(ida_mem, residual_eval<ExprSet>, 0, yy, yyp);
+  IDAInit(ida_mem, guarded_residual_eval<ExprSet>, 0, yy, yyp);
 
   // set tolerances
   rtol = SUN_RCONST(rel_tol);
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // Set events
-  IDARootFn events = events_eval<ExprSet>;
+  IDARootFn events = guarded_events_eval<ExprSet>;
   if (!functions->events_read_yp.empty()) {
-    events = events_with_derivatives_eval<ExprSet>;
+    events = guarded_events_with_derivatives_eval<ExprSet>;
   }
   IDARootInit(ida_mem, number_of_events, events);
 
@@ -265,20 +265,20 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
     CheckErrors(IDABBDPrecInit(
       ida_mem, number_of_states, setup_opts.precon_half_bandwidth,
       setup_opts.precon_half_bandwidth, setup_opts.precon_half_bandwidth_keep,
-      setup_opts.precon_half_bandwidth_keep, 0.0, residual_eval_approx<ExprSet>, NULL), "IDABBDPrecInit");
+      setup_opts.precon_half_bandwidth_keep, 0.0, guarded_residual_eval_approx<ExprSet>, NULL), "IDABBDPrecInit");
   }
 
   if (setup_opts.jacobian == "matrix-free") {
-    CheckErrors(IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>), "IDASetJacTimes");
+    CheckErrors(IDASetJacTimes(ida_mem, NULL, guarded_jtimes_eval<ExprSet>), "IDASetJacTimes");
   } else if (setup_opts.jacobian != "none") {
-    CheckErrors(IDASetJacFn(ida_mem, jacobian_eval<ExprSet>), "IDASetJacFn");
+    CheckErrors(IDASetJacFn(ida_mem, guarded_jacobian_eval<ExprSet>), "IDASetJacFn");
   }
 
   if (sensitivity) {
     // The simultaneous corrector fails at tight tolerances (#5999), and IDAS
     // only applies the sensitivity error test in the staggered one
     CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_STAGGERED,
-      sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
+      guarded_sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
     CheckErrors(IDASensEEtolerances(ida_mem), "IDASensEEtolerances");
     // Set once: IDASensReInit leaves it as it is
     CheckErrors(IDASetSensErrCon(ida_mem, solver_opts.sensitivity_error_control),
@@ -365,6 +365,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const int number_of_evals = t_eval.size();
 
   // setup
+  functions->callback_error = nullptr;
   InitializeSolveStorage(number_of_evals, t_interp.size());
   SetupInitialState(t_eval, y0, yp0, inputs, pbar);
 
@@ -401,6 +402,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // Progress one step before the loop to ensure IDAGetDky works at t0 for dky = 1
   int n_steps = 0;
   int retval = init_event_triggered ? IDA_ROOT_RETURN : FirstStep(t0, tf_perturbed, t_val);
+  RethrowCallbackError();
   if (retval == IDA_ROOT_RETURN && t_val == t0) {
     StoreInitialPoint(t0);
     log_.log_integration_complete(0, t0);
@@ -471,9 +473,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     t_prev = t_val;
     // A breakpoint reinitializes IDA, so the step after it is a first step
     retval = hit_teval ? FirstStep(t_prev, tf_perturbed, t_val) : Step(tf_perturbed, t_val);
+    RethrowCallbackError();
     // An event right at the restart fired on the state FirstStep restored, which
     // replaces the breakpoint saved before its reinitialisation
     if (retval == IDA_ROOT_RETURN && t_val == t_prev) {
+      // Evaluate the breakpoint's staged outputs now, so its replacement overwrites their row
+      FlushOutputBatch();
       // Knot reduction committed that breakpoint as its last knot
       i_save_ = (use_knot_reduction_ ? knot_reducer->GetOutputCount() : i_save_) - 1;
       SetStep(t_val);
@@ -521,6 +526,7 @@ int IDAKLUSolverOpenMP<ExprSet>::FirstStep(
   // Keep IDA's start state, which the step overwrites
   CheckErrors(IDAGetConsistentIC(ida_mem, y_cache, nullptr), "IDAGetConsistentIC");
   int retval = Step(tout, t_val);
+  RethrowCallbackError();
   // A step that failed before IDA took any leaves no yp at t_start
   long int number_of_steps = 0;
   IDAGetNumSteps(ida_mem, &number_of_steps);
@@ -561,9 +567,12 @@ int IDAKLUSolverOpenMP<ExprSet>::FirstStep(
   // true events there, returns the time of the crossing. Reinit resets IDA counters
   SaveStats();
   ReinitializeIntegrator(t_start);
-  CheckErrors(IDARootInit(ida_mem, number_of_events, events_eval<ExprSet>), "IDARootInit");
+  CheckErrors(IDARootInit(ida_mem, number_of_events, guarded_events_eval<ExprSet>),
+              "IDARootInit");
+  // A callback error is rethrown by the caller, once the events are restored
   retval = Step(tout, t_val);
-  CheckErrors(IDARootInit(ida_mem, number_of_events, events_with_derivatives_eval<ExprSet>),
+  CheckErrors(IDARootInit(ida_mem, number_of_events,
+                          guarded_events_with_derivatives_eval<ExprSet>),
               "IDARootInit");
   return retval;
 }
@@ -604,6 +613,9 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
 
   length_of_return_vector = ReturnVectorLength();
   i_save_ = 0;
+  stage_out_t_.clear();
+  stage_out_y_.clear();
+  stage_out_first_ = 0;
 
   // Allocate output arrays. Pre-allocate 64 elements for initial storage.
   int est = std::max(n_evals + n_interps, 64);
@@ -937,6 +949,11 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     CaptureStats();
   }
 
+  // Evaluate any tail of staged batched-output points before y is finalized.
+  if (save_outputs_only) {
+    FlushOutputBatch();
+  }
+
   // Finalize output arrays
   if (use_knot_reduction_) {
     knot_reducer->Finalize();
@@ -1169,6 +1186,13 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationDAE(
 }
 
 template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::RethrowCallbackError() {
+  if (std::exception_ptr error = std::exchange(functions->callback_error, nullptr)) {
+    std::rethrow_exception(error);
+  }
+}
+
+template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::CalcICWithIDAS(
   const sunrealtype& t_val,
   const sunrealtype& t_next,
@@ -1186,6 +1210,7 @@ void IDAKLUSolverOpenMP<ExprSet>::CalcICWithIDAS(
 
   const bool increasing = !(t_next < t_val);
   int const flag = IDACalcIC(ida_mem, icopt, perturb_time(t_next, increasing));
+  RethrowCallbackError();
   // Count IDACalcIC's work before the next reinitialization resets the counters
   SaveStats();
 
@@ -1352,6 +1377,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepFullSensitivities(
   }
 }
 
+// Points per batched output evaluation, bounding the staged state copy.
+static constexpr size_t kOutputBatchPoints = 128;
+
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
     sunrealtype &tval
@@ -1359,17 +1387,52 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
   DEBUG("IDAKLUSolver::SetStepOutput");
   // FLAT STORAGE: Write output variables to y[i_save_ * stride + j]
 
-  sunrealtype* y_dest = &y[i_save_ * length_of_return_vector];
-  size_t j = 0;
-  for (auto& var_fcn : functions->var_fcns) {
-    (*var_fcn)({&tval, y_val_, functions->inputs.data()}, {&res[0]});
-    for (size_t jj = 0; jj < var_fcn->nnz_out(); jj++) {
-      y_dest[j++] = res[jj];
+  if constexpr (ExprSet::kNativeKernels) {
+    // Outputs read only y, so they are staged even when the sensitivities below run per point.
+    if (stage_out_t_.empty()) {
+      stage_out_first_ = i_save_;
+      stage_out_t_.reserve(kOutputBatchPoints);
+      stage_out_y_.reserve(kOutputBatchPoints * number_of_states);
+    }
+    stage_out_t_.push_back(tval);
+    stage_out_y_.insert(stage_out_y_.end(), y_val_, y_val_ + number_of_states);
+    if (stage_out_t_.size() == kOutputBatchPoints) {
+      FlushOutputBatch();
+    }
+  } else {
+    sunrealtype* y_dest = &y[i_save_ * length_of_return_vector];
+    size_t j = 0;
+    for (auto& var_fcn : functions->var_fcns) {
+      (*var_fcn)({&tval, y_val_, functions->inputs.data()}, {&res[0]});
+      for (size_t jj = 0; jj < var_fcn->nnz_out(); jj++) {
+        y_dest[j++] = res[jj];
+      }
     }
   }
 
   if (sensitivity) {
-    SetStepOutputSensitivities(tval);
+    if constexpr (ExprSet::kNativeKernels) {
+      NativeSetStepOutputSensitivities(tval);
+    } else {
+      SetStepOutputSensitivities(tval);
+    }
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::FlushOutputBatch() {
+  if constexpr (ExprSet::kNativeKernels) {
+    const size_t k = stage_out_t_.size();
+    if (k == 0) {
+      return;
+    }
+    DEBUG("IDAKLUSolver::FlushOutputBatch");
+    // The staged points' y rows are contiguous from stage_out_first_.
+    functions->eval_outputs_batch(
+      stage_out_t_.data(), stage_out_y_.data(), static_cast<int>(k),
+      &y[stage_out_first_ * length_of_return_vector]);
+    stage_out_t_.clear();
+    stage_out_y_.clear();
   }
 }
 
@@ -1436,6 +1499,32 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
         // FLAT STORAGE (final layout (i, j, p)): yS[(i * stride + out) * n_params + p]
         yS[yS_base + global_out_idx * number_of_parameters + paramk] = sens;
       }
+    }
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::NativeSetStepOutputSensitivities(
+  sunrealtype &tval
+) {
+  DEBUG("IDAKLUSolver::NativeSetStepOutputSensitivities");
+  const size_t n_params = static_cast<size_t>(number_of_parameters);
+  const size_t stride = length_of_return_vector;
+  const size_t yS_base = i_save_ * n_params * stride;
+
+  yS_flat_.resize(n_params * number_of_states);
+  for (size_t p = 0; p < n_params; ++p) {
+    std::copy(yS_val_[p], yS_val_[p] + number_of_states,
+              yS_flat_.begin() + p * number_of_states);
+  }
+  out_sens_flat_.resize(n_params * stride);
+  functions->project_output_sensitivities(
+      tval, y_val_, functions->inputs.data(),
+      yS_flat_.data(), out_sens_flat_.data());
+  // The projection emits (param, output); yS is (output, param), as the CasADi path writes it.
+  for (size_t p = 0; p < n_params; ++p) {
+    for (size_t o = 0; o < stride; ++o) {
+      yS[yS_base + o * n_params + p] = out_sens_flat_[p * stride + o];
     }
   }
 }

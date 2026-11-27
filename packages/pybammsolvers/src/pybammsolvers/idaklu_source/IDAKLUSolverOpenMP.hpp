@@ -4,6 +4,8 @@
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
 #include <cmath>
+#include <exception>
+#include <utility>
 #include <vector>
 #include <memory>  // For std::make_unique
 using std::vector;
@@ -95,6 +97,10 @@ public:
   vector<sunrealtype> res_dvar_dp;
   // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
   vector<sunrealtype> dvar_dp_dense;
+  // Staged (t, y) points for batched output evaluation (Rust ExprSet only).
+  vector<sunrealtype> stage_out_t_;
+  vector<sunrealtype> stage_out_y_;
+  size_t stage_out_first_ = 0;  // i_save_ index of the first staged point
   bool const sensitivity;
   bool const save_outputs_only;
   bool save_hermite;
@@ -383,6 +389,11 @@ public:
   bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
 
   /**
+   * @brief Rethrow, and clear, an exception a guarded IDA callback caught.
+   */
+  void RethrowCallbackError();
+
+  /**
    * @brief Set a consistent initialization for ODEs
    */
   void ConsistentInitializationODE(const sunrealtype& t_val);
@@ -607,10 +618,20 @@ public:
    */
   void SetStepOutput(sunrealtype &tval);
 
+  /** @brief Evaluate and store any staged batched-output points */
+  void FlushOutputBatch();
+
   /**
    * @brief Save the output function sensitivities at the requested time
    */
   void SetStepOutputSensitivities(sunrealtype &tval);
+
+  /** @brief Save output sensitivities via native projection, into yS's (output, param) layout */
+  void NativeSetStepOutputSensitivities(sunrealtype &tval);
+
+  // Native-projection scratch: [n_params * n_states] and [n_params * length_of_return_vector].
+  std::vector<sunrealtype> yS_flat_;
+  std::vector<sunrealtype> out_sens_flat_;
 
   /**
    * @brief Save Hermite interpolation derivatives at the requested time

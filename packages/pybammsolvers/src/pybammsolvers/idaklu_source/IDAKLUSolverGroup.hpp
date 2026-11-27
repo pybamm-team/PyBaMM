@@ -13,11 +13,15 @@ public:
 
   /**
    * @brief Default constructor
+   *
+   * `number_of_inputs` is the width of each inputs row.
    */
-  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters):
+  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters,
+                    int number_of_inputs):
     m_solvers(std::move(solvers)),
     number_of_states(number_of_states),
-    number_of_parameters(number_of_parameters)
+    number_of_parameters(number_of_parameters),
+    number_of_inputs(number_of_inputs)
     {}
 
   // no copy constructor (unique_ptr cannot be copied)
@@ -57,6 +61,7 @@ public:
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
     int number_of_parameters;
+    int number_of_inputs;
 };
 
 #endif // PYBAMM_IDAKLU_SOLVER_GROUP_HPP
