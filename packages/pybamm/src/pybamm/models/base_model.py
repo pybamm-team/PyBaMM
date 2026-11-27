@@ -51,6 +51,10 @@ class ModelSolutionObservability(StrEnum):
     REDISCRETISED_MODEL = (
         "the model was re-discretised with `Discretisation.process_model()`"
     )
+    UNPROCESSED_MODEL = (
+        "the model was not processed by both `ParameterValues.process_model()` and "
+        "`Discretisation.process_model()`, so it cannot process new symbols"
+    )
 
     def __bool__(self) -> bool:
         return bool(self == ModelSolutionObservability.ENABLED)

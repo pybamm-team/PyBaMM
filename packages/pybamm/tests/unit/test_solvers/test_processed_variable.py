@@ -187,7 +187,7 @@ class TestProcessedVariable:
             ([0.9, 0.3], (2,)),
             (np.array([0.9, 0.3, 0.6]), (3,)),
             (np.array([0.0, 0.5, 1.0, 2.0]), (4,)),
-            (np.array([0.5, -0.5, 2.0]), (3,)),
+            (np.array([0.5, 2.0, 0.25]), (3,)),
         ],
     )
     def test_0D_call_interpolates_in_time(self, t_query, shape):
@@ -354,8 +354,11 @@ class TestProcessedVariable:
         )
 
         # test no sensitivity raises error
-        with pytest.raises(ValueError, match=r"Cannot compute sensitivities"):
-            print(processed_var.sensitivities)
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Variable 'test' has no sensitivities because its solve did not",
+        ):
+            _ = processed_var.sensitivities
 
     def test_0D_call_at_repeated_solution_times(self):
         # A repeated time, e.g. at a step boundary, keeps both stored values
@@ -371,11 +374,10 @@ class TestProcessedVariable:
         for t in [None, t_sol, list(t_sol)]:
             np.testing.assert_array_equal(processed_var(t), y_sol[0])
 
-    def test_0D_call_fill_value_below_the_first_time(self):
-        # Only the first queried time must not be before the solution starts
+    def test_0D_call_fill_value_after_the_last_time(self):
         processed_var = self._build_0D_var()
-        values = processed_var(np.array([0.5, -0.5, 2.0]), fill_value=-1.0)
-        np.testing.assert_array_equal(values, [2.5, -1.0, -1.0])
+        values = processed_var(np.array([0.5, 2.0, 0.25]), fill_value=-1.0)
+        np.testing.assert_array_equal(values, [2.5, -1.0, 1.25])
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D(self, hermite_interp):
@@ -2736,3 +2738,82 @@ class TestProcessedVariableUnstructuredFVM:
         assert np.isnan(in_hole).all()
         in_domain = pv(0.5, x=np.array([1 / 6]), z=np.array([1 / 6]))
         np.testing.assert_allclose(in_domain, 3.0, rtol=1e-10)
+
+
+class TestTimesBetweenSubSolutions:
+    """Two solves of ``du/dt = -u / 2`` from ``u0`` joined; the first from u = 1."""
+
+    _ROUTES = ["hermite", "linear", "output_variables"]
+
+    @staticmethod
+    def _solve(t0, t1, u0, route):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -0.5 * u}
+        model.initial_conditions = {u: pybamm.InputParameter("u0")}
+        model.variables = {"u": u}
+        output_variables = ["u"] if route == "output_variables" else None
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10, atol=1e-12, output_variables=output_variables
+        )
+        # Hermite data is stored only without t_interp
+        t_interp = None if route == "hermite" else np.linspace(t0, t1, 101)
+        return solver.solve(model, [t0, t1], t_interp=t_interp, inputs={"u0": u0})
+
+    @pytest.mark.parametrize("route", _ROUTES)
+    def test_a_time_in_a_roundoff_gap_takes_the_left_limit(self, route):
+        # PyBaMM ends and restarts a solve at t_d (1 -/+ eps) at a discontinuity
+        eps = np.finfo(float).eps
+        solution = self._solve(0, 1 - eps, 1.0, route) + self._solve(
+            1 + eps, 2, 2.0, route
+        )
+        u = solution["u"]
+
+        left_limit = np.exp(-0.5)
+        np.testing.assert_allclose(u(1.0), left_limit, rtol=1e-8)
+        later = np.array([1.25, 1.5])
+        with_gap = u(np.array([1.0, *later]))
+        np.testing.assert_allclose(with_gap[0], left_limit, rtol=1e-8)
+        np.testing.assert_array_equal(with_gap[1:], u(later))
+        np.testing.assert_allclose(u(later), 2 * np.exp(-0.5 * (later - 1)), rtol=1e-4)
+
+    @pytest.mark.parametrize("route", _ROUTES)
+    def test_a_time_in_a_longer_gap_has_no_value(self, route):
+        # As when save_at_cycles drops the cycles in between
+        solution = self._solve(0, 1, 1.0, route) + self._solve(3, 4, 1.0, route)
+        u = solution["u"]
+
+        values = u(np.array([3.5, 2.0, 0.5]))
+
+        assert np.isnan(values[1])
+        np.testing.assert_allclose(values[[0, 2]], np.exp(-0.25), rtol=1e-4)
+        assert np.isnan(u(2.0))
+
+    @pytest.mark.parametrize("route", ["hermite", "linear"])
+    def test_a_discrete_sum_takes_the_left_limit_in_a_roundoff_gap(self, route):
+        # The solve stops and restarts just either side of the switch at t = 3, a
+        # discrete time where the summand jumps from 0 to 1
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        z = pybamm.Variable("z")
+        model.rhs = {y: -y}
+        model.algebraic = {z: z - (pybamm.t > pybamm.InputParameter("p"))}
+        model.initial_conditions = {y: 1, z: 0}
+        times = np.array([1.0, 3.0, 4.0])
+        data = pybamm.DiscreteTimeData(times, np.zeros_like(times), "data")
+        model.variables = {"sum": pybamm.DiscreteTimeSum(z - data)}
+        pybamm.Discretisation().process_model(model)
+        # Hermite interpolation reads 4, which is not a solution time
+        t_interp = None if route == "hermite" else np.array([0, 1, 3, 4, 5])
+        solution = pybamm.IDAKLUSolver().solve(
+            model, [0, 5], t_interp=t_interp, inputs={"p": 3.0}
+        )
+
+        # z at t = 1, the left limit at t = 3, and t = 4
+        np.testing.assert_allclose(solution["sum"](), [0 + 0 + 1], atol=1e-8)
+
+    @pytest.mark.parametrize("route", ["hermite", "linear"])
+    def test_a_time_before_the_start_is_rejected_in_any_order(self, route):
+        solution = self._solve(1, 2, 1.0, route)
+        with pytest.raises(ValueError, match=r"greater than or equal to the initial"):
+            solution["u"](np.array([1.5, 0.5]))
