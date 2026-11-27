@@ -67,6 +67,26 @@ _NEGATIVE_ONLY_SHORTHAND = {
     "lithium plating": "none",
 }
 
+# Values that need a host lattice, with what a half cell's lithium metal electrode
+# uses instead; a scalar such value applies to the working electrode only.
+_HOST_LATTICE_ONLY = {
+    "open-circuit potential": (
+        "single",
+        frozenset(
+            {
+                "current sigmoid",
+                "one-state hysteresis",
+                "one-state differential capacity hysteresis",
+                "MSMR",
+            }
+        ),
+    ),
+    "intercalation kinetics": (
+        "symmetric Butler-Volmer",
+        frozenset({"coupled ion-electron transfer", "MSMR"}),
+    ),
+}
+
 
 def _option_location(path: OptionPath) -> str:
     """Describe an electrode/phase path for an error, e.g. ``" at negative.primary"``.
@@ -166,7 +186,8 @@ def resolve_option(
         per-phase tuple is returned unresolved.
     working_electrode : str, optional
         The ``"working electrode"`` option, which controls the negative-only
-        shorthand for side reactions. Default is ``"both"``.
+        shorthand for side reactions and, in a half cell, keeps host-lattice
+        values off the lithium metal electrode. Default is ``"both"``.
 
     Returns
     -------
@@ -181,6 +202,15 @@ def resolve_option(
         and value != positive_default
     ):
         value = (value, positive_default)
+    lithium_metal_value, host_lattice_values = _HOST_LATTICE_ONLY.get(
+        option, (None, frozenset())
+    )
+    if (
+        working_electrode == "positive"
+        and isinstance(value, str)
+        and value in host_lattice_values
+    ):
+        value = (lithium_metal_value, value)
     if isinstance(value, tuple):
         value = value[_ELECTRODES.index(domain)]
     if phase is not None and isinstance(value, tuple):
@@ -464,6 +494,18 @@ def _check_electrode_compatibility(options: pybamm.FuzzyDict) -> None:
                     "(primary, secondary) tuple, but 'particle phases' at "
                     f"{domain} is '1'. Give one value for that electrode or "
                     "set its 'particle phases' to '2'."
+                )
+    if working_electrode == "positive":
+        for option, (_, host_lattice_values) in _HOST_LATTICE_ONLY.items():
+            value = resolve_option(
+                option, options[option], "negative", working_electrode=working_electrode
+            )
+            if value in host_lattice_values:
+                raise pybamm.OptionError(
+                    f"Option '{option}' at negative is '{value}', which needs a "
+                    "host lattice, so it cannot be used for the lithium metal "
+                    "electrode of a half cell. Give a scalar value, which applies "
+                    "to the working electrode only."
                 )
     for domain in active_electrodes(working_electrode):
         number_of_phases = int(
@@ -752,6 +794,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 2021),
                 or "MSMR" (which uses the form from Baker 2018). A 2-tuple can be
                 provided for different behaviour in negative and positive electrodes.
+                In a half cell, a scalar "coupled ion-electron transfer" or "MSMR"
+                applies to the working electrode only; the lithium metal electrode
+                uses "symmetric Butler-Volmer".
             * "interface utilisation": str
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
@@ -782,7 +827,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 (default), "current sigmoid", "one-state hysteresis", "one-state differential capacity hysteresis", or "MSMR".
                 If "MSMR" then the "particle" option must also be "MSMR".
                 A 2-tuple can be provided for different behaviour in negative
-                and positive electrodes.
+                and positive electrodes. In a half cell, a scalar value applies to
+                the working electrode only; the lithium metal electrode uses
+                "single".
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
