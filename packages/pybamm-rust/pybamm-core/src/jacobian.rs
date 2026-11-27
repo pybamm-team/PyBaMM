@@ -17,7 +17,7 @@ use crate::row_extract::extract_scalar_rows;
 use crate::simplify::{dce, simplify_pipeline};
 use crate::sparsity::{CsrPattern, detect_sparsity_per_output, transpose};
 use crate::tangent::{DiffTarget, tangent_wrt_params, tangent_wrt_states, tangent_wrt_subset};
-use crate::tangent_batch::{self, LanePlan, MAX_LANES};
+use crate::tangent_batch::{self, LanePlan, MAX_LANES, Seeding};
 
 /// `differentiate`'s graph of `dag`, built over only the nodes its root reaches.
 ///
@@ -507,8 +507,8 @@ impl JacobianData {
         } else {
             Arc::new(SplitCompiledExpr::compile(tangent.as_ref()))
         };
-        let assembly_lanes = LanePlan::new(&assembly_jvp_expr);
-        let action_lanes = LanePlan::new(&jvp_expr);
+        let assembly_lanes = LanePlan::new(&assembly_jvp_expr, Seeding::Sparse);
+        let action_lanes = LanePlan::new(&jvp_expr, Seeding::DenseStates);
         Self {
             jvp_expr,
             assembly_jvp_expr,
@@ -1575,6 +1575,19 @@ pub(crate) mod tests {
         // ...unless sparse products, whose rows sum side by side across lanes, carry the walk.
         let (arena, root) = diffusion(2000);
         assert_eq!(plans(&arena, root, 2000), (3, 4, MAX_LANES));
+    }
+
+    #[test]
+    fn a_cheap_action_walks_scalar_rather_than_transpose_its_directions() {
+        // A scaled 60-state field: its walk alone batches, but not once it pays for its seeds
+        let n = 60;
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: n });
+        let scale = arena.alloc(Node::Scalar(1.5));
+        let root = arena.alloc(Node::Mul(scale, y));
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n, n);
+        assert!(LanePlan::new(&jac.jvp_expr, Seeding::Sparse).widest() > 1);
+        assert_eq!(jac.action_lanes, LanePlan::SCALAR);
     }
 
     /// The bench fixtures' tapes batch, so real models take the lane-batched sweep.

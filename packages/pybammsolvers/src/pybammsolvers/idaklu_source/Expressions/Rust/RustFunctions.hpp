@@ -4,6 +4,7 @@
 #include "../Base/Expression.hpp"
 #include "../Base/ExpressionSet.hpp"
 #include "../../Options.hpp"
+#include <pybind11/critical_section.h>
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
@@ -15,12 +16,60 @@
 
 namespace pybamm_rust_detail {
 
+/* Own the evaluator in `capsule`, renaming the capsule so it no longer frees it; GIL held. */
+inline RustEvaluatorPtr claim_evaluator(py::handle capsule) {
+    PyObject* object = capsule.ptr();
+    // Check and rename as one step, so two free-threaded callers cannot both claim it.
+    py::scoped_critical_section guard(capsule);
+    if (!PyCapsule_IsValid(object, PYBAMM_RUST_EVALUATOR_CAPSULE)) {
+        if (PyCapsule_IsValid(object, PYBAMM_RUST_CLAIMED_EVALUATOR_CAPSULE)) {
+            throw std::invalid_argument(
+                "pybammsolvers: this Rust evaluator was already claimed by a solver; give each "
+                "solver a new one from CompiledModel.evaluator().");
+        }
+        throw std::invalid_argument(
+            std::string("pybammsolvers: expected a '") + PYBAMM_RUST_EVALUATOR_CAPSULE +
+            "' capsule, got " + Py_TYPE(object)->tp_name + ".");
+    }
+    void* handle = PyCapsule_GetPointer(object, PYBAMM_RUST_EVALUATOR_CAPSULE);
+    // Unclaimed until renamed, so a refused evaluator is still freed by its capsule.
+    check_abi(handle);
+    if (PyCapsule_SetName(object, PYBAMM_RUST_CLAIMED_EVALUATOR_CAPSULE) != 0) {
+        throw py::error_already_set();
+    }
+    return RustEvaluatorPtr(static_cast<PybammRustEvaluator*>(handle));
+}
+
 /* Throw unless `given`, a count C++ sizes buffers from, equals the Rust model's `rust`. */
 inline void check_dim(const char* name, int64_t given, int64_t rust) {
     if (given != rust) {
         throw std::invalid_argument(
             std::string("pybammsolvers: ") + name + " is " + std::to_string(given) +
             " but the Rust model has " + std::to_string(rust) + ".");
+    }
+}
+
+/* Throw unless CSC `(colptrs, rowvals)` holds `nnz` entries of an `n` x `n` matrix. */
+inline void check_csc_pattern(const std::vector<int64_t>& colptrs,
+                              const std::vector<int64_t>& rowvals, int nnz, int n) {
+    if (colptrs.size() != static_cast<size_t>(n) + 1 || colptrs.front() != 0 ||
+        colptrs.back() != nnz || rowvals.size() != static_cast<size_t>(nnz)) {
+        throw std::invalid_argument(
+            "pybammsolvers: the Jacobian pattern's " + std::to_string(colptrs.size()) +
+            " column pointers and " + std::to_string(rowvals.size()) +
+            " row indices do not fit a " + std::to_string(n) + " x " + std::to_string(n) +
+            " matrix with nnz = " + std::to_string(nnz) + ".");
+    }
+    if (!std::is_sorted(colptrs.begin(), colptrs.end())) {
+        throw std::invalid_argument(
+            "pybammsolvers: the Jacobian pattern's column pointers must be non-decreasing.");
+    }
+    for (size_t k = 0; k < rowvals.size(); ++k) {
+        if (rowvals[k] < 0 || rowvals[k] >= n) {
+            throw std::invalid_argument(
+                "pybammsolvers: Jacobian entry " + std::to_string(k) + " has row " +
+                std::to_string(rowvals[k]) + ", outside its " + std::to_string(n) + " rows.");
+        }
     }
 }
 
@@ -49,8 +98,8 @@ inline void check_coo_pattern(const std::vector<expr_int>& rows,
 /** Common base for the Rust FFI adapters; `m_rows`/`m_cols` stay empty unless emitting COO. */
 class RustExpression : public Expression {
 public:
-    RustExpression(void* model, int out_len, int n_args = 3, int n_res = 1)
-        : m_model(model), m_out_len(out_len) {
+    RustExpression(RustModelRef rust, int out_len, int n_args = 3, int n_res = 1)
+        : m_rust(rust), m_out_len(out_len) {
         m_arg.resize(n_args);
         m_res.resize(n_res);
     }
@@ -62,7 +111,7 @@ public:
     const std::vector<expr_int>& get_col() override { return m_cols; }
 
 protected:
-    void* m_model;
+    RustModelRef m_rust;
     int m_out_len;
     std::vector<expr_int> m_rows;
     std::vector<expr_int> m_cols;
@@ -71,89 +120,100 @@ protected:
 /** RHS; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_res[0]=output */
 class RustRhsExpression : public RustExpression {
 public:
-    RustRhsExpression(void* model, int n_states)
-        : RustExpression(model, n_states) {}
+    RustRhsExpression(RustModelRef rust, int n_states)
+        : RustExpression(rust, n_states) {}
 
     void operator()() override {
-        PYBAMM_RUST_CALL(eval_rhs, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, eval_rhs, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_rust.model);
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
-        PYBAMM_RUST_CALL(eval_rhs, *inputs[0], inputs[1], inputs[2], results[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, eval_rhs, *inputs[0], inputs[1], inputs[2], results[0],
+                         m_rust.model);
     }
 };
 
 /** Jacobian; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_arg[3]=cj, m_res[0]=jac_data */
 class RustJacExpression : public RustExpression {
 public:
-    RustJacExpression(void* model, int nnz,
+    RustJacExpression(RustModelRef rust, int nnz,
                       std::vector<expr_int> rows,
                       std::vector<expr_int> cols)
-        : RustExpression(model, nnz, 4) {
+        : RustExpression(rust, nnz, 4) {
         m_rows = std::move(rows);
         m_cols = std::move(cols);
     }
 
     void operator()() override {
-        PYBAMM_RUST_CALL(jac_assemble, *m_arg[0], m_arg[1], m_arg[2], *m_arg[3], m_res[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, jac_assemble, *m_arg[0], m_arg[1], m_arg[2], *m_arg[3], m_res[0],
+                         m_rust.model);
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
         // cj comes from the SUNDIALS callback via m_arg[3], not from `inputs`.
-        PYBAMM_RUST_CALL(jac_assemble, *inputs[0], inputs[1], inputs[2], *m_arg[3], results[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, jac_assemble, *inputs[0], inputs[1], inputs[2], *m_arg[3],
+                         results[0], m_rust.model);
     }
 };
 
 /** Jacobian action; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_arg[3]=v, m_res[0]=Jv */
 class RustJacActionExpression : public RustExpression {
 public:
-    RustJacActionExpression(void* model, int n_states)
-        : RustExpression(model, n_states, 4) {}
+    RustJacActionExpression(RustModelRef rust, int n_states)
+        : RustExpression(rust, n_states, 4) {}
 
     void operator()() override {
-        PYBAMM_RUST_CALL(jac_action, *m_arg[0], m_arg[1], m_arg[2], m_arg[3], m_res[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, jac_action, *m_arg[0], m_arg[1], m_arg[2], m_arg[3], m_res[0],
+                         m_rust.model);
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
-        PYBAMM_RUST_CALL(jac_action, *inputs[0], inputs[1], inputs[2], inputs[3], results[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, jac_action, *inputs[0], inputs[1], inputs[2], inputs[3],
+                         results[0], m_rust.model);
     }
 };
 
 /** Mass-matrix action; ABI: m_arg[0]=v, m_res[0]=Mv */
 class RustMassActionExpression : public RustExpression {
 public:
-    RustMassActionExpression(void* model, int n_states)
-        : RustExpression(model, n_states, 1) {}
+    RustMassActionExpression(RustModelRef rust, int n_states)
+        : RustExpression(rust, n_states, 1) {}
 
     void operator()() override {
-        PYBAMM_RUST_CALL(mass_action, m_arg[0], m_res[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, mass_action, m_arg[0], m_res[0], m_rust.model);
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
-        PYBAMM_RUST_CALL(mass_action, inputs[0], results[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, mass_action, inputs[0], results[0], m_rust.model);
     }
 };
 
-/** Concatenated events; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_res[0]=output */
+/**
+ * Concatenated events; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_arg[3]=yp, m_res[0]=output.
+ * yp stays null unless an event reads it.
+ */
 class RustEventsExpression : public RustExpression {
 public:
-    RustEventsExpression(void* model, int total_event_len)
-        : RustExpression(model, total_event_len) {}
+    RustEventsExpression(RustModelRef rust, int total_event_len)
+        : RustExpression(rust, total_event_len, 4) {}
 
     void operator()() override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(events_eval, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_model);
+            PYBAMM_RUST_CALL(m_rust, events_eval, *m_arg[0], m_arg[1], m_arg[3], m_arg[2], m_res[0],
+                             m_rust.model);
         }
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(events_eval, *inputs[0], inputs[1], inputs[2], results[0], m_model);
+            const sunrealtype* yp = inputs.size() > 3 ? inputs[3] : nullptr;
+            PYBAMM_RUST_CALL(m_rust, events_eval, *inputs[0], inputs[1], yp, inputs[2], results[0],
+                             m_rust.model);
         }
     }
 };
@@ -161,16 +221,18 @@ public:
 /** Upsampling output; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_res[0]=output */
 class RustUpsamplingExpression : public RustExpression {
 public:
-    explicit RustUpsamplingExpression(void* model)
-        : RustExpression(model, 1) {}
+    explicit RustUpsamplingExpression(RustModelRef rust)
+        : RustExpression(rust, 1) {}
 
     void operator()() override {
-        PYBAMM_RUST_CALL(upsampling_eval, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, upsampling_eval, *m_arg[0], m_arg[1], m_arg[2], m_res[0],
+                         m_rust.model);
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
-        PYBAMM_RUST_CALL(upsampling_eval, *inputs[0], inputs[1], inputs[2], results[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, upsampling_eval, *inputs[0], inputs[1], inputs[2], results[0],
+                         m_rust.model);
     }
 };
 
@@ -178,8 +240,8 @@ public:
 class RustSensExpression : public RustExpression {
 public:
     /// One result slot per parameter, repointed at the resvalS N_Vectors before each call.
-    RustSensExpression(void* model, int n_states, int n_sens_params)
-        : RustExpression(model, n_states, 3, n_sens_params),
+    RustSensExpression(RustModelRef rust, int n_states, int n_sens_params)
+        : RustExpression(rust, n_states, 3, n_sens_params),
           m_n_sens_params(n_sens_params),
           m_columns(static_cast<size_t>(n_states) * n_sens_params) {}
 
@@ -204,7 +266,7 @@ private:
         if (m_n_sens_params == 0) {
             return;
         }
-        PYBAMM_RUST_CALL(sens_eval_all, *t, y, inputs, m_columns.data(), m_model);
+        PYBAMM_RUST_CALL(m_rust, sens_eval_all, *t, y, inputs, m_columns.data(), m_rust.model);
         const size_t n_states = static_cast<size_t>(m_out_len);
         for (int i = 0; i < m_n_sens_params; i++) {
             std::memcpy(results[i], m_columns.data() + i * n_states,
@@ -220,7 +282,7 @@ private:
 class RustOutputExpression : public RustExpression {
 public:
     explicit RustOutputExpression(int out_len)
-        : RustExpression(nullptr, out_len) {}
+        : RustExpression(RustModelRef{}, out_len) {}
 
     void operator()() override { unreachable(); }
 
@@ -239,24 +301,27 @@ private:
 /** Algebraic residual; with `n_alg == 0` the solver falls back to the full-system IC path. */
 class RustAlgResExpression : public RustExpression {
 public:
-    RustAlgResExpression(void* model, int n_alg)
-        : RustExpression(model, n_alg) {
+    RustAlgResExpression(RustModelRef rust, int n_alg)
+        : RustExpression(rust, n_alg) {
         // Rust writes its own residual length into the IC solver's `n_alg` buffer.
         if (n_alg != 0) {
-            pybamm_rust_detail::check_dim("n_alg", n_alg, PYBAMM_RUST_VALUE(n_algebraic, model));
+            pybamm_rust_detail::check_dim("n_alg", n_alg, PYBAMM_RUST_VALUE(rust, n_algebraic,
+                                                                            rust.model));
         }
     }
 
     void operator()() override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(alg_res, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_model);
+            PYBAMM_RUST_CALL(m_rust, alg_res, *m_arg[0], m_arg[1], m_arg[2], m_res[0],
+                             m_rust.model);
         }
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(alg_res, *inputs[0], inputs[1], inputs[2], results[0], m_model);
+            PYBAMM_RUST_CALL(m_rust, alg_res, *inputs[0], inputs[1], inputs[2], results[0],
+                             m_rust.model);
         }
     }
 };
@@ -264,33 +329,35 @@ public:
 /** Algebraic Jacobian, in the COO order of the `(row, col)` passed at construction. */
 class RustAlgJacExpression : public RustExpression {
 public:
-    RustAlgJacExpression(void* model, int nnz,
+    RustAlgJacExpression(RustModelRef rust, int nnz,
                          std::vector<expr_int> rows,
                          std::vector<expr_int> cols)
-        : RustExpression(model, nnz) {
+        : RustExpression(rust, nnz) {
         m_rows = std::move(rows);
         m_cols = std::move(cols);
         // Rust writes its own non-zero count, and the IC solver reads the pattern at `nnz`; rows
         // index the algebraic block and columns the full state.
         pybamm_rust_detail::check_coo_pattern(
-            m_rows, m_cols, nnz, PYBAMM_RUST_VALUE(n_algebraic, model),
-            PYBAMM_RUST_VALUE(n_states, model));
+            m_rows, m_cols, nnz, PYBAMM_RUST_VALUE(rust, n_algebraic, rust.model),
+            PYBAMM_RUST_VALUE(rust, n_states, rust.model));
         if (nnz != 0) {
             pybamm_rust_detail::check_dim(
-                "alg_jac_nnz", nnz, PYBAMM_RUST_VALUE(alg_jac_nnz, model));
+                "alg_jac_nnz", nnz, PYBAMM_RUST_VALUE(rust, alg_jac_nnz, rust.model));
         }
     }
 
     void operator()() override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(alg_jac_assemble, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_model);
+            PYBAMM_RUST_CALL(m_rust, alg_jac_assemble, *m_arg[0], m_arg[1], m_arg[2], m_res[0],
+                             m_rust.model);
         }
     }
 
     void operator()(const std::vector<sunrealtype*>& inputs,
                     const std::vector<sunrealtype*>& results) override {
         if (m_out_len > 0) {
-            PYBAMM_RUST_CALL(alg_jac_assemble, *inputs[0], inputs[1], inputs[2], results[0], m_model);
+            PYBAMM_RUST_CALL(m_rust, alg_jac_assemble, *inputs[0], inputs[1], inputs[2],
+                             results[0], m_rust.model);
         }
     }
 };
@@ -301,9 +368,9 @@ public:
  */
 class RustNewtonExpression : public RustExpression {
 public:
-    RustNewtonExpression(void* model, int out_len, int n_rhs, int n_alg)
-        : RustExpression(model, out_len), m_n_rhs(n_rhs),
-          m_n_alg(checked_split(model, n_rhs, n_alg)),
+    RustNewtonExpression(RustModelRef rust, int out_len, int n_rhs, int n_alg)
+        : RustExpression(rust, out_len), m_n_rhs(n_rhs),
+          m_n_alg(checked_split(rust, n_rhs, n_alg)),
           m_y_full(static_cast<size_t>(n_rhs) + n_alg, 0.0) {}
 
     // Unhide the zero-argument overload the subclasses define and this one delegates to.
@@ -331,43 +398,47 @@ protected:
 private:
     // Rust reads `m_y_full` at its state count and writes its residual length, so both are
     // checked before `m_y_full` is sized.
-    static int checked_split(void* model, int n_rhs, int n_alg) {
-        pybamm_rust_detail::check_dim("n_alg", n_alg, PYBAMM_RUST_VALUE(n_algebraic, model));
+    static int checked_split(RustModelRef rust, int n_rhs, int n_alg) {
+        pybamm_rust_detail::check_dim("n_alg", n_alg, PYBAMM_RUST_VALUE(rust, n_algebraic,
+                                                                        rust.model));
         pybamm_rust_detail::check_dim("n_rhs + n_alg", static_cast<int64_t>(n_rhs) + n_alg,
-                                      PYBAMM_RUST_VALUE(n_states, model));
+                                      PYBAMM_RUST_VALUE(rust, n_states, rust.model));
         return n_alg;
     }
 };
 
 class RustNewtonResExpression : public RustNewtonExpression {
 public:
-    RustNewtonResExpression(void* model, int n_rhs, int n_alg)
-        : RustNewtonExpression(model, n_alg, n_rhs, n_alg) {}
+    RustNewtonResExpression(RustModelRef rust, int n_rhs, int n_alg)
+        : RustNewtonExpression(rust, n_alg, n_rhs, n_alg) {}
 
     void operator()() override {
         const double* inputs = gather_full_state();
-        PYBAMM_RUST_CALL(alg_res, *m_arg[0], m_y_full.data(), inputs, m_res[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, alg_res, *m_arg[0], m_y_full.data(), inputs, m_res[0],
+                         m_rust.model);
     }
 };
 
 /** Fills the COO order of `(rows, cols)`, which BuildSparseResources consumes unchanged. */
 class RustNewtonJacExpression : public RustNewtonExpression {
 public:
-    RustNewtonJacExpression(void* model, int n_rhs, int n_alg, int nnz,
+    RustNewtonJacExpression(RustModelRef rust, int n_rhs, int n_alg, int nnz,
                             std::vector<expr_int> rows,
                             std::vector<expr_int> cols)
-        : RustNewtonExpression(model, nnz, n_rhs, n_alg) {
+        : RustNewtonExpression(rust, nnz, n_rhs, n_alg) {
         m_rows = std::move(rows);
         m_cols = std::move(cols);
         // The Newton system indexes rows and columns within the algebraic block, and Rust
         // writes its own non-zero count.
         pybamm_rust_detail::check_coo_pattern(m_rows, m_cols, nnz, n_alg, n_alg);
-        pybamm_rust_detail::check_dim("alg_jac_nnz", nnz, PYBAMM_RUST_VALUE(alg_jac_nnz, model));
+        pybamm_rust_detail::check_dim("alg_jac_nnz", nnz, PYBAMM_RUST_VALUE(rust, alg_jac_nnz,
+                                                                            rust.model));
     }
 
     void operator()() override {
         const double* inputs = gather_full_state();
-        PYBAMM_RUST_CALL(alg_jac_assemble, *m_arg[0], m_y_full.data(), inputs, m_res[0], m_model);
+        PYBAMM_RUST_CALL(m_rust, alg_jac_assemble, *m_arg[0], m_y_full.data(), inputs, m_res[0],
+                         m_rust.model);
     }
 };
 
@@ -377,9 +448,12 @@ public:
  */
 class RustFunctions : public ExpressionSet<RustRhsExpression> {
 public:
-    /** `colptrs`/`rowvals` are the Jacobian's CSC pattern; `alg_rowvals`/`alg_colvals` are COO. */
+    /**
+     * `colptrs`/`rowvals` are the Jacobian's CSC pattern; `alg_rowvals`/`alg_colvals` are COO.
+     * `events_read_yp` says which events read yp, one entry each, or is empty if none does.
+     */
     RustFunctions(
-        void* rust_model,
+        RustEvaluatorPtr evaluator,
         int n_states,
         int n_inputs,
         int n_sens_params,
@@ -392,25 +466,9 @@ public:
         const std::vector<int64_t>& alg_rowvals,
         const std::vector<int64_t>& alg_colvals,
         const std::vector<int>& output_lens,
-        const SetupOptions& options
+        const SetupOptions& options,
+        const std::vector<bool>& events_read_yp_arg = {}
     ) :
-        m_n_sens_params(n_sens_params),
-        tmp_state_vector(n_states),
-        tmp_sparse_jacobian_data(nnz),
-        m_sens_directions(static_cast<size_t>(n_states) * n_sens_params),
-        m_sens_jac_actions(m_sens_directions.size()),
-        m_rhs(rust_model, n_states),
-        m_jac(rust_model, nnz,
-              convert_to_expr_int(rowvals),
-              csc_rowvals_to_coo_cols(colptrs, rowvals, nnz)),
-        m_jac_action(rust_model, n_states),
-        m_mass_action(rust_model, n_states),
-        m_events(rust_model, n_events),
-        m_sens(rust_model, n_states, n_sens_params),
-        m_alg_res(rust_model, n_alg),
-        m_alg_jac(rust_model, alg_jac_nnz,
-                  convert_to_expr_int(alg_rowvals),
-                  convert_to_expr_int(alg_colvals)),
         ExpressionSet<RustRhsExpression>(
             static_cast<Expression*>(&m_rhs),
             static_cast<Expression*>(&m_jac),
@@ -425,21 +483,39 @@ public:
             static_cast<Expression*>(&m_sens),
             static_cast<Expression*>(&m_events),
             // Checked as the base initialises, before any member is sized from these counts.
-            checked_dims(rust_model, n_states, n_inputs, nnz, n_sens_params),
-            checked_event_count(rust_model, n_events),
+            checked_dims(borrow(evaluator), n_states, n_inputs, nnz, n_sens_params),
+            checked_event_count(borrow(evaluator), n_events),
             n_sens_params,  // n_parameters (forward sensitivities)
             options,
             static_cast<Expression*>(&m_alg_res),
             static_cast<Expression*>(&m_alg_jac)
-        )
+        ),
+        m_evaluator(std::move(evaluator)),
+        m_rust(borrow(m_evaluator)),
+        m_n_sens_params(n_sens_params),
+        tmp_state_vector(n_states),
+        tmp_sparse_jacobian_data(nnz),
+        m_sens_directions(static_cast<size_t>(n_states) * n_sens_params),
+        m_sens_jac_actions(m_sens_directions.size()),
+        m_rhs(m_rust, n_states),
+        m_jac(m_rust, nnz,
+              convert_to_expr_int(rowvals),
+              csc_rowvals_to_coo_cols(colptrs, rowvals, nnz, n_states)),
+        m_jac_action(m_rust, n_states),
+        m_mass_action(m_rust, n_states),
+        m_events(m_rust, n_events),
+        m_sens(m_rust, n_states, n_sens_params),
+        m_alg_res(m_rust, n_alg),
+        m_alg_jac(m_rust, alg_jac_nnz,
+                  convert_to_expr_int(alg_rowvals),
+                  convert_to_expr_int(alg_colvals))
     {
-        m_model = rust_model;
         jac_times_cjmass_colptrs = colptrs;
         jac_times_cjmass_rowvals = rowvals;
         // The base ctor takes inputs_length but does not size `inputs` itself.
         inputs.resize(n_inputs);
 
-        check_output_lens(rust_model, output_lens);
+        check_output_lens(m_rust, output_lens);
         m_output_fcns.reserve(output_lens.size());
         for (int i = 0; i < static_cast<int>(output_lens.size()); ++i) {
             m_output_fcns.emplace_back(std::make_unique<RustOutputExpression>(output_lens[i]));
@@ -447,9 +523,19 @@ public:
         }
 
         // Left null without one, which turns IDAKLU's upsampling off.
-        if (checked_upsampling_len(rust_model) > 0) {
-            m_upsampling = std::make_unique<RustUpsamplingExpression>(rust_model);
+        if (checked_upsampling_len(m_rust) > 0) {
+            m_upsampling = std::make_unique<RustUpsamplingExpression>(m_rust);
             upsampling_fcn = static_cast<Expression*>(m_upsampling.get());
+        }
+
+        if (!events_read_yp_arg.empty() &&
+            events_read_yp_arg.size() != static_cast<size_t>(n_events)) {
+            throw std::invalid_argument("events_read_yp must have one entry per event");
+        }
+        // Kept only if an event reads yp, which picks IDAKLU's derivative-aware root function
+        if (std::find(events_read_yp_arg.begin(), events_read_yp_arg.end(), true) !=
+            events_read_yp_arg.end()) {
+            events_read_yp = events_read_yp_arg;
         }
     }
 
@@ -461,9 +547,7 @@ public:
         return tmp_sparse_jacobian_data.data();
     }
 
-    static constexpr bool kNativeOutputSensitivities = true;
-    static constexpr bool kNativeBatchedOutputs = true;
-    static constexpr bool kNativeBatchedJacActions = true;
+    static constexpr bool kNativeKernels = true;
 
     // J·yS_i for every sensitivity parameter in one call, which shares a single primal pass.
     const sunrealtype* jac_action_sensitivities(
@@ -473,26 +557,28 @@ public:
             const sunrealtype* direction = N_VGetArrayPointer(yS[i]);
             std::copy(direction, direction + n_states, m_sens_directions.begin() + i * n_states);
         }
-        PYBAMM_RUST_CALL(jac_action_batch, t, y, inputs.data(), m_n_sens_params,
-                         m_sens_directions.data(), m_sens_jac_actions.data(), m_model);
+        PYBAMM_RUST_CALL(m_rust, jac_action_batch, t, y, inputs.data(), m_n_sens_params,
+                         m_sens_directions.data(), m_sens_jac_actions.data(), m_rust.model);
         return m_sens_jac_actions.data();
     }
 
     // ts: [k]; ys: [k * n_states] and out: [k * total_output_len], each point contiguous.
     void eval_outputs_batch(
         const sunrealtype* ts, const sunrealtype* ys, int k, sunrealtype* out) {
-        PYBAMM_RUST_CALL(output_eval_batch, ts, ys, k, inputs.data(), out, m_model);
+        PYBAMM_RUST_CALL(m_rust, output_eval_batch, ts, ys, k, inputs.data(), out, m_rust.model);
     }
 
     // yS_flat: [n_sens_params * n_states]; out: [n_sens_params * total_output_len].
     void project_output_sensitivities(
         double t, sunrealtype* y, sunrealtype* inputs,
         const sunrealtype* yS_flat, sunrealtype* out) {
-        PYBAMM_RUST_CALL(output_sens_project, t, y, inputs, yS_flat, out, m_model);
+        PYBAMM_RUST_CALL(m_rust, output_sens_project, t, y, inputs, yS_flat, out, m_rust.model);
     }
 
 private:
-    void* m_model = nullptr;
+    // Declared first, so the expressions borrowing it are destroyed before it is released.
+    RustEvaluatorPtr m_evaluator;
+    RustModelRef m_rust;
     int m_n_sens_params;
 
     std::vector<sunrealtype> tmp_state_vector;
@@ -514,20 +600,20 @@ private:
     std::unique_ptr<RustUpsamplingExpression> m_upsampling;
 
     // Rust borrows every buffer sized from these at its own counts, so a mismatch would overrun.
-    static int checked_dims(void* rust_model, int n_states, int n_inputs, int nnz,
+    static int checked_dims(RustModelRef rust, int n_states, int n_inputs, int nnz,
                             int n_sens_params) {
         using pybamm_rust_detail::check_dim;
-        check_dim("number_of_states", n_states, PYBAMM_RUST_VALUE(n_states, rust_model));
-        check_dim("number_of_inputs", n_inputs, PYBAMM_RUST_VALUE(n_inputs, rust_model));
-        check_dim("jac_nnz", nnz, PYBAMM_RUST_VALUE(jac_nnz, rust_model));
+        check_dim("number_of_states", n_states, PYBAMM_RUST_VALUE(rust, n_states, rust.model));
+        check_dim("number_of_inputs", n_inputs, PYBAMM_RUST_VALUE(rust, n_inputs, rust.model));
+        check_dim("jac_nnz", nnz, PYBAMM_RUST_VALUE(rust, jac_nnz, rust.model));
         check_dim("number_of_sens_params", n_sens_params,
-                  PYBAMM_RUST_VALUE(n_sens_params, rust_model));
+                  PYBAMM_RUST_VALUE(rust, n_sens_params, rust.model));
         return n_states;
     }
 
     // IDA sizes its root buffer by `n_events`, so each Rust event must be one scalar.
-    static int checked_event_count(void* rust_model, int n_events) {
-        const int total_event_len = PYBAMM_RUST_VALUE(total_event_len, rust_model);
+    static int checked_event_count(RustModelRef rust, int n_events) {
+        const int total_event_len = PYBAMM_RUST_VALUE(rust, total_event_len, rust.model);
         if (total_event_len != n_events) {
             throw std::invalid_argument(
                 "pybammsolvers: number_of_events is " + std::to_string(n_events) +
@@ -538,8 +624,8 @@ private:
     }
 
     // IDAKLU evaluates the upsampling output into one scalar, so Rust must write at most one.
-    static int checked_upsampling_len(void* rust_model) {
-        const int len = PYBAMM_RUST_VALUE(upsampling_len, rust_model);
+    static int checked_upsampling_len(RustModelRef rust) {
+        const int len = PYBAMM_RUST_VALUE(rust, upsampling_len, rust.model);
         if (len > 1) {
             throw std::invalid_argument(
                 "pybammsolvers: the Rust model's upsampling output has " + std::to_string(len) +
@@ -549,8 +635,8 @@ private:
     }
 
     // Output buffers are sized from `output_lens`, so each must match what Rust writes.
-    static void check_output_lens(void* rust_model, const std::vector<int>& output_lens) {
-        const int n_outputs = PYBAMM_RUST_VALUE(n_outputs, rust_model);
+    static void check_output_lens(RustModelRef rust, const std::vector<int>& output_lens) {
+        const int n_outputs = PYBAMM_RUST_VALUE(rust, n_outputs, rust.model);
         if (static_cast<int>(output_lens.size()) != n_outputs) {
             throw std::invalid_argument(
                 "pybammsolvers: " + std::to_string(output_lens.size()) +
@@ -558,7 +644,7 @@ private:
                 std::to_string(n_outputs) + " output variables.");
         }
         for (int i = 0; i < n_outputs; ++i) {
-            const int len = PYBAMM_RUST_VALUE(output_len, rust_model, i);
+            const int len = PYBAMM_RUST_VALUE(rust, output_len, rust.model, i);
             if (output_lens[i] != len) {
                 throw std::invalid_argument(
                     "pybammsolvers: output_lens[" + std::to_string(i) + "] is " +
@@ -569,19 +655,17 @@ private:
     }
 
     static std::vector<expr_int> convert_to_expr_int(const std::vector<int64_t>& v) {
-        std::vector<expr_int> result;
-        result.reserve(v.size());
-        for (const auto& val : v) {
-            result.push_back(static_cast<expr_int>(val));
-        }
-        return result;
+        return std::vector<expr_int>(v.begin(), v.end());
     }
 
+    // The column of each CSC entry, after refusing a pattern that would index past `nnz`.
     static std::vector<expr_int> csc_rowvals_to_coo_cols(
         const std::vector<int64_t>& colptrs,
         const std::vector<int64_t>& rowvals,
-        int nnz
+        int nnz,
+        int n_states
     ) {
+        pybamm_rust_detail::check_csc_pattern(colptrs, rowvals, nnz, n_states);
         std::vector<expr_int> cols(nnz);
         int n_cols = static_cast<int>(colptrs.size()) - 1;
         for (int col = 0; col < n_cols; ++col) {

@@ -85,6 +85,54 @@ def exponential_decay_solver_factory():
     return make_exponential_decay_solver
 
 
+@pytest.fixture
+def solver_options():
+    return make_solver_options()
+
+
+def make_solver_options(*, num_threads=1, num_solvers=1, overrides=None):
+    """IDAKLU setup and solver options, as a solver group takes them."""
+    return {
+        # Keys the C++ SetupOptions reads
+        "jacobian": "sparse",
+        "preconditioner": "none",
+        "precon_half_bandwidth": 5,
+        "precon_half_bandwidth_keep": 5,
+        "num_threads": num_threads,
+        "num_solvers": num_solvers,
+        "linear_solver": "SUNLinSol_KLU",
+        "linsol_max_iterations": 5,
+        # Keys the C++ SolverOptions reads
+        "print_stats": False,
+        "silence_sundials_errors": True,
+        "max_order_bdf": 5,
+        "max_num_steps": 10000,
+        "dt_init": 0.01,
+        "dt_min": 0.0,
+        "dt_max": 0.1,
+        "max_error_test_failures": 100,
+        "max_nonlinear_iterations": 10,
+        "max_convergence_failures": 10,
+        "nonlinear_convergence_coefficient": 0.33,
+        "nonlinear_convergence_coefficient_ic": 0.0033,
+        "suppress_algebraic_error": False,
+        "hermite_interpolation": True,
+        "calc_ic": False,  # We provide consistent initial conditions
+        "init_all_y_ic": False,
+        "max_num_steps_ic": 5,
+        "max_num_jacobians_ic": 4,
+        "max_num_iterations_ic": 10,
+        "max_linesearch_backtracks_ic": 100,
+        "linesearch_off_ic": False,
+        "linear_solution_scaling": True,
+        "epsilon_linear_tolerance": 0.05,
+        "increment_factor": 1.0,
+        "num_steps_no_progress": 100,
+        "t_no_progress": 0.0,
+        **(overrides or {}),
+    }
+
+
 def make_exponential_decay_solver(
     idaklu_module,
     exponential_decay_model,
@@ -219,46 +267,9 @@ def make_exponential_decay_solver(
     alg_jac_func = idaklu_module.generate_function(alg_jac.serialize())
     upsampling_func = idaklu_module.generate_function(upsampling.serialize())
 
-    # Solver options
-    options = {
-        # SetupOptions
-        "jacobian": "sparse",
-        "preconditioner": "none",
-        "precon_half_bandwidth": 5,
-        "precon_half_bandwidth_keep": 5,
-        "num_threads": num_threads,
-        "num_solvers": num_solvers,
-        "linear_solver": "SUNLinSol_KLU",
-        "linsol_max_iterations": 5,
-        # SolverOptions
-        "print_stats": False,
-        "silence_sundials_errors": True,
-        "max_order_bdf": 5,
-        "max_num_steps": 10000,
-        "dt_init": 0.01,
-        "dt_min": 0.0,
-        "dt_max": 0.1,
-        "max_error_test_failures": 100,
-        "max_nonlinear_iterations": 10,
-        "max_convergence_failures": 10,
-        "nonlinear_convergence_coefficient": 0.33,
-        "nonlinear_convergence_coefficient_ic": 0.0033,
-        "suppress_algebraic_error": False,
-        "hermite_interpolation": True,
-        "calc_ic": False,  # We provide consistent initial conditions
-        "init_all_y_ic": False,
-        "max_num_steps_ic": 5,
-        "max_num_jacobians_ic": 4,
-        "max_num_iterations_ic": 10,
-        "max_linesearch_backtracks_ic": 100,
-        "linesearch_off_ic": False,
-        "linear_solution_scaling": True,
-        "epsilon_linear_tolerance": 0.05,
-        "increment_factor": 1.0,
-        "num_steps_no_progress": 100,
-        "t_no_progress": 0.0,
-        **(solver_options or {}),
-    }
+    options = make_solver_options(
+        num_threads=num_threads, num_solvers=num_solvers, overrides=solver_options
+    )
 
     # Bandwidths (for banded solvers, not used with KLU)
     jac_bandwidth_lower = 0

@@ -1,5 +1,5 @@
-//! ABI drift test: the C++ IDAKLU consumer resolves Rust FFI symbols by name via `dlsym`, so a
-//! signature change would be silent UB unless both sides are checked against each other here.
+//! ABI drift test: the C++ IDAKLU consumer reads Rust's `FfiTable` and `EvaluatorHandle` through
+//! its own C mirror, so a layout change would be silent UB unless the two are compared here.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -7,19 +7,56 @@ use std::fs;
 use pybamm_core::ffi;
 
 const FFI_RS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ffi.rs");
-const CONSUMER_HEADER: &str = concat!(
+const RUST_IDAKLU: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../pybammsolvers/src/pybammsolvers/idaklu_source/Expressions/Rust/pybamm_rust_ffi.h"
+    "/../../pybammsolvers/src/pybammsolvers/idaklu_source/Expressions/Rust"
 );
-const CONSUMER_IMPL: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../pybammsolvers/src/pybammsolvers/idaklu_source/Expressions/Rust/RustFunctions.hpp"
-);
+
+fn read(path: &str) -> String {
+    fs::read_to_string(path).unwrap_or_else(|e| panic!("cannot read {path}: {e}"))
+}
+
+fn consumer_header() -> String {
+    read(&format!("{RUST_IDAKLU}/pybamm_rust_ffi.h"))
+}
+
+/// Every C++ source of idaklu but the FFI header, which defines the call macros themselves.
+fn consumer_sources() -> Vec<(String, String)> {
+    fn walk(dir: &std::path::Path, out: &mut Vec<(String, String)>) {
+        for entry in
+            fs::read_dir(dir).unwrap_or_else(|e| panic!("cannot list {}: {e}", dir.display()))
+        {
+            let path = entry.expect("readable directory entry").path();
+            let is_source = path.extension().is_some_and(|ext| {
+                ["cpp", "hpp", "inl", "h"].contains(&ext.to_str().unwrap_or(""))
+            });
+            if path.is_dir() {
+                walk(&path, out);
+            } else if is_source && !path.ends_with("pybamm_rust_ffi.h") {
+                let path = path.to_string_lossy().into_owned();
+                out.push((path.clone(), read(&path)));
+            }
+        }
+    }
+    let mut sources = Vec::new();
+    walk(
+        std::path::Path::new(&format!("{RUST_IDAKLU}/../../..")),
+        &mut sources,
+    );
+    assert!(
+        sources
+            .iter()
+            .any(|(path, _)| path.ends_with("RustFunctions.hpp")),
+        "found no consumer sources under {RUST_IDAKLU}/../../.."
+    );
+    sources
+}
 
 /// Map a Rust or C type spelling to a canonical token, panicking on an unknown spelling.
 fn canon(raw: &str) -> String {
     let t = raw.split_whitespace().collect::<Vec<_>>().join(" ");
     let canonical = match t.as_str() {
+        "" | "void" => "void",
         "f64" | "double" => "f64",
         "u32" | "uint32_t" => "u32",
         "c_int" | "int" => "i32",
@@ -27,6 +64,8 @@ fn canon(raw: &str) -> String {
         "*mut f64" | "double*" | "double *" => "*mut f64",
         "*const c_void" | "const void*" | "const void *" => "*const void",
         "*mut c_void" | "void*" | "void *" => "*mut void",
+        "*mut EvaluatorHandle" | "PybammRustEvaluator*" => "*mut handle",
+        "&'static FfiTable" | "const PybammRustFfi*" => "*const table",
         other => panic!(
             "ABI drift test: unrecognized type spelling {other:?}. \
              Add it to `canon()` on both language sides."
@@ -35,258 +74,190 @@ fn canon(raw: &str) -> String {
     canonical.to_string()
 }
 
-/// Parse the Rust `extern "C"` exports: symbol -> (arg canon types, return canon).
-fn parse_rust_exports(src: &str) -> BTreeMap<String, (Vec<String>, String)> {
-    let mut out = BTreeMap::new();
-    let bytes = src.as_bytes();
-    let needle = "extern \"C\" fn ";
-    let mut cursor = 0;
-    while let Some(rel) = src[cursor..].find(needle) {
-        let name_start = cursor + rel + needle.len();
-        let paren = src[name_start..].find('(').expect("fn without '('");
-        let name = src[name_start..name_start + paren].trim().to_string();
+/// A struct's fields in declaration order: `(name, canonical type)`.
+type Fields = Vec<(String, String)>;
 
-        let args_start = name_start + paren + 1;
-        let mut depth = 1;
-        let mut i = args_start;
-        while depth > 0 {
-            match bytes[i] {
-                b'(' => depth += 1,
-                b')' => depth -= 1,
-                _ => {},
-            }
-            i += 1;
-        }
-        let args_str = &src[args_start..i - 1];
-
-        let brace = src[i..].find('{').expect("fn without body");
-        let ret_str = src[i..i + brace].trim();
-        let ret = ret_str
-            .strip_prefix("->")
-            .map_or_else(|| "void".to_string(), |r| canon(r.trim()));
-
-        out.insert(name, (parse_rust_args(args_str), ret));
-        cursor = i;
-    }
-    out
+/// The text between `open`, which must end in `{`, and the next `close`.
+fn body<'a>(src: &'a str, open: &str, close: &str) -> &'a str {
+    let start = src
+        .find(open)
+        .unwrap_or_else(|| panic!("no `{open}` found"))
+        + open.len();
+    let len = src[start..]
+        .find(close)
+        .unwrap_or_else(|| panic!("`{open}` without `{close}`"));
+    &src[start..start + len]
 }
 
-fn parse_rust_args(s: &str) -> Vec<String> {
-    s.split(',')
-        .filter(|p| !p.trim().is_empty())
-        .map(|p| {
-            let ty = p
-                .split_once(':')
-                .map(|(_, ty)| ty)
-                .expect("arg must be `name: type`");
-            canon(ty.trim())
+/// Split `s` on `sep` outside parentheses.
+fn split_top_level(s: &str, sep: char) -> Vec<&str> {
+    let (mut parts, mut depth, mut start) = (Vec::new(), 0_i32, 0);
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            c if c == sep && depth == 0 => {
+                parts.push(&s[start..i]);
+                start = i + 1;
+            },
+            _ => {},
+        }
+    }
+    parts.push(&s[start..]);
+    parts.into_iter().filter(|p| !p.trim().is_empty()).collect()
+}
+
+/// Canonical `fn(args)->ret` for a function-pointer type, given its args and return spelling.
+fn fn_type(args: &str, ret: &str) -> String {
+    let args: Vec<String> = split_top_level(args, ',').into_iter().map(canon).collect();
+    format!("fn({})->{}", args.join(","), canon(ret))
+}
+
+/// Fields of a Rust `#[repr(C)]` struct, skipping doc comments.
+fn rust_fields(src: &str, name: &str) -> Fields {
+    let body = body(src, &format!("pub struct {name} {{"), "\n}");
+    let code: String = body
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    split_top_level(&code, ',')
+        .into_iter()
+        .map(|field| {
+            let (field_name, ty) = field
+                .trim()
+                .strip_prefix("pub ")
+                .and_then(|f| f.split_once(':'))
+                .unwrap_or_else(|| panic!("`{name}` field must be `pub name: type`: {field}"));
+            let ty = ty.trim();
+            let ty = ty.strip_prefix("unsafe extern \"C\" fn").map_or_else(
+                || canon(ty),
+                |signature| {
+                    let close = signature.rfind(')').expect("fn type without ')'");
+                    let ret = signature[close + 1..].trim().trim_start_matches("->");
+                    fn_type(&signature.trim()[1..close], ret)
+                },
+            );
+            (field_name.trim().to_string(), ty)
         })
         .collect()
 }
 
-/// Whether `symbol`'s attributes include `#[unsafe(no_mangle)]`, without which `dlsym` misses it.
-fn is_unmangled(src: &str, symbol: &str) -> bool {
-    let definition = src
-        .find(&format!("extern \"C\" fn {symbol}("))
-        .unwrap_or_else(|| panic!("ffi.rs defines no `{symbol}`"));
-    src[..definition]
-        .lines()
-        .rev()
-        .skip(1)
-        .map(str::trim)
-        .take_while(|line| line.starts_with("#[") || line.starts_with("///"))
-        .any(|line| line == "#[unsafe(no_mangle)]")
-}
-
-/// FNV-1a 64-bit, since `DefaultHasher` is not stable across Rust versions or platforms.
-fn stable_hash(bytes: &[u8]) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
-    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
-    let mut hash = FNV_OFFSET;
-    for &byte in bytes {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
+/// Fields of a C struct, skipping comments; function pointers are `ret (*name)(args)`.
+fn c_fields(body: &str) -> Fields {
+    let mut code = String::new();
+    let mut rest = body;
+    while let Some(open) = rest.find("/*") {
+        code.push_str(&rest[..open]);
+        let close = rest[open..].find("*/").expect("unterminated comment") + open + 2;
+        rest = &rest[close..];
     }
-    hash
-}
-
-/// Order-independent fingerprint of the export set, as the `dlsym` contract is by name.
-fn compute_abi_hash(exports: &BTreeMap<String, (Vec<String>, String)>) -> u64 {
-    let mut entries: Vec<String> = exports
-        .iter()
-        .map(|(name, (args, ret))| format!("{name}({})->{ret}", args.join(",")))
-        .collect();
-    entries.sort();
-    stable_hash(entries.join("\n").as_bytes())
-}
-
-struct Consumer {
-    define_version: u32,
-    typedefs: BTreeMap<String, (Vec<String>, String)>,
-    bindings: Vec<Binding>,
-}
-
-/// One `t.<field> = load_symbol<TYPEDEF>("symbol")` statement of `rust_ffi()`.
-struct Binding {
-    field: String,
-    typedef: String,
-    symbol: String,
-}
-
-/// The `RustFfi` field assigned by the statement that `prefix` ends inside.
-fn assigned_field(prefix: &str) -> String {
-    let statement = prefix.rsplit([';', '{', '}']).next().unwrap_or(prefix);
-    let target: String = statement
-        .lines()
+    code.push_str(rest);
+    code.split(';')
         .map(str::trim)
-        .filter(|line| !line.starts_with("//"))
-        .collect();
-    target
-        .strip_prefix("t.")
-        .and_then(|rest| rest.strip_suffix('='))
-        .map_or_else(
-            || panic!("`load_symbol` must assign a `t.<field>`, not `{target}`"),
-            |field| field.trim().to_string(),
-        )
-}
-
-fn parse_consumer(src: &str) -> Consumer {
-    let define_version = src
-        .lines()
-        .find_map(|l| {
-            l.trim()
-                .strip_prefix("#define PYBAMM_RUST_ABI_VERSION")
-                .map(|rest| {
-                    rest.trim()
-                        .parse::<u32>()
-                        .expect("PYBAMM_RUST_ABI_VERSION must be a u32 literal")
-                })
+        .filter(|decl| !decl.is_empty())
+        .map(|decl| {
+            decl.find("(*").map_or_else(
+                || {
+                    let (ty, field_name) = decl.rsplit_once(' ').expect("field without a type");
+                    (field_name.to_string(), canon(ty))
+                },
+                |star| {
+                    let name_end = decl[star..].find(')').expect("`(*name` without ')'") + star;
+                    let args = &decl[name_end + 1..];
+                    let args = &args[args.find('(').expect("fn pointer without args") + 1
+                        ..args.rfind(')').expect("fn pointer without ')'")];
+                    (
+                        decl[star + 2..name_end].trim().to_string(),
+                        fn_type(args, &decl[..star]),
+                    )
+                },
+            )
         })
-        .expect("consumer header must `#define PYBAMM_RUST_ABI_VERSION N`");
-
-    // `using NAME = RET (*)(ARGS);` — may span multiple physical lines.
-    let mut typedefs = BTreeMap::new();
-    let mut rest = src;
-    while let Some(p) = rest.find("using ") {
-        let after = &rest[p + "using ".len()..];
-        let semi = after.find(';').expect("`using` without ';'");
-        let stmt = &after[..semi];
-        rest = &after[semi + 1..];
-        if let Some((name, def)) = stmt.split_once('=') {
-            let def = def.trim();
-            if let Some(star) = def.find("(*)") {
-                let ret = canon(def[..star].trim());
-                let tail = &def[star + 3..];
-                let open = tail.find('(').expect("typedef without '('");
-                let close = tail.rfind(')').expect("typedef without ')'");
-                let args = parse_c_args(&tail[open + 1..close]);
-                typedefs.insert(name.trim().to_string(), (args, ret));
-            }
-        }
-    }
-
-    // `load_symbol<TYPEDEF>("symbol")` — the authoritative typedef->symbol map.
-    let mut bindings = Vec::new();
-    let mut rest = src;
-    while let Some(p) = rest.find("load_symbol<") {
-        let field = assigned_field(&rest[..p]);
-        let after = &rest[p + "load_symbol<".len()..];
-        let gt = after.find('>').expect("load_symbol<...> without '>'");
-        let typedef = after[..gt].trim().to_string();
-        let tail = &after[gt + 1..];
-        let q1 = tail.find('"').expect("load_symbol without symbol string");
-        let q2 = tail[q1 + 1..]
-            .find('"')
-            .expect("unterminated symbol string");
-        let symbol = tail[q1 + 1..q1 + 1 + q2].to_string();
-        bindings.push(Binding {
-            field,
-            typedef,
-            symbol,
-        });
-        rest = &tail[q1 + 1 + q2..];
-    }
-
-    Consumer {
-        define_version,
-        typedefs,
-        bindings,
-    }
+        .collect()
 }
 
-fn parse_c_args(s: &str) -> Vec<String> {
-    let s = s.trim();
-    if s.is_empty() || s == "void" {
-        return Vec::new();
-    }
-    s.split(',')
-        .filter(|p| !p.trim().is_empty())
-        .map(|p| canon(p.trim()))
-        .collect()
+fn rust_table() -> Fields {
+    rust_fields(&read(FFI_RS), "FfiTable")
+}
+
+fn c_table() -> Fields {
+    c_fields(body(
+        &consumer_header(),
+        "typedef struct PybammRustFfi {",
+        "}",
+    ))
+}
+
+/// The string or integer a `#define` in the consumer header expands to.
+fn define(header: &str, name: &str) -> String {
+    header
+        .lines()
+        .find_map(|line| line.trim().strip_prefix(&format!("#define {name} ")))
+        .unwrap_or_else(|| panic!("the consumer header must `#define {name}`"))
+        .trim()
+        .trim_matches('"')
+        .to_string()
 }
 
 #[test]
-fn c_consumer_matches_rust_exports() {
-    let rust_src =
-        fs::read_to_string(FFI_RS).unwrap_or_else(|e| panic!("cannot read {FFI_RS}: {e}"));
-    let c_src = fs::read_to_string(CONSUMER_HEADER)
-        .unwrap_or_else(|e| panic!("cannot read consumer header {CONSUMER_HEADER}: {e}"));
-
-    let exports = parse_rust_exports(&rust_src);
-    let consumer = parse_consumer(&c_src);
-
+fn c_table_mirrors_the_rust_table() {
+    let (rust, c) = (rust_table(), c_table());
+    assert!(rust.len() > 2, "parsed no entries from `FfiTable`");
+    for (i, (rust_field, c_field)) in rust.iter().zip(&c).enumerate() {
+        assert_eq!(rust_field, c_field, "table field {i} differs");
+    }
     assert_eq!(
-        ffi::RUST_ABI_VERSION,
-        consumer.define_version,
-        "RUST_ABI_VERSION ({}) != PYBAMM_RUST_ABI_VERSION ({})",
-        ffi::RUST_ABI_VERSION,
-        consumer.define_version
+        rust.len(),
+        c.len(),
+        "the tables have different field counts"
     );
+    assert_eq!(
+        rust[..2],
+        [
+            ("abi_version".to_string(), "u32".to_string()),
+            ("size".to_string(), "u32".to_string()),
+        ],
+        "every version's table must lead with `abi_version` and `size`"
+    );
+}
 
-    for Binding {
-        field,
-        typedef,
-        symbol,
-    } in &consumer.bindings
-    {
-        // The count queries share one type, so only the name tells two of them apart.
-        assert_eq!(
-            symbol.strip_prefix("pybamm_rust_"),
-            Some(field.as_str()),
-            "`t.{field}` is loaded from `{symbol}`"
-        );
-        let (c_args, c_ret) = consumer
-            .typedefs
-            .get(typedef)
-            .unwrap_or_else(|| panic!("no typedef `{typedef}` for symbol `{symbol}`"));
-        let (r_args, r_ret) = exports.get(symbol).unwrap_or_else(|| {
-            panic!("consumer binds `{symbol}` but ffi.rs exports no such function")
-        });
-        assert_eq!(c_ret, r_ret, "return type mismatch for `{symbol}`");
-        assert_eq!(c_args, r_args, "argument type mismatch for `{symbol}`");
-        assert!(
-            is_unmangled(&rust_src, symbol),
-            "`{symbol}` lacks `#[unsafe(no_mangle)]`, so the consumer cannot resolve it"
-        );
-    }
+#[test]
+fn c_handle_mirrors_the_rust_handle() {
+    let rust = rust_fields(&read(FFI_RS), "EvaluatorHandle");
+    let c = c_fields(body(
+        &consumer_header(),
+        "struct PybammRustEvaluator {",
+        "}",
+    ));
+    assert_eq!(rust, c);
+    assert_eq!(
+        rust[0].0, "ffi",
+        "every version's handle must lead with `ffi`"
+    );
+}
 
-    for symbol in exports.keys() {
-        let bound = consumer
-            .bindings
-            .iter()
-            .any(|binding| binding.symbol == *symbol);
-        assert!(
-            bound,
-            "ffi.rs exports `{symbol}`, which IDAKLU never resolves; delete it or bind it"
-        );
-    }
+#[test]
+fn version_and_capsule_names_match_the_consumer_header() {
+    let header = consumer_header();
+    assert_eq!(
+        define(&header, "PYBAMM_RUST_ABI_VERSION"),
+        ffi::RUST_ABI_VERSION.to_string()
+    );
+    assert_eq!(
+        define(&header, "PYBAMM_RUST_EVALUATOR_CAPSULE"),
+        ffi::EVALUATOR_CAPSULE.to_str().unwrap()
+    );
+    assert_eq!(
+        define(&header, "PYBAMM_RUST_CLAIMED_EVALUATOR_CAPSULE"),
+        ffi::CLAIMED_EVALUATOR_CAPSULE.to_str().unwrap()
+    );
 }
 
 /// The consumer names statuses by its own `#define`s, so each must equal a Rust constant.
 #[test]
 fn status_codes_match_the_consumer_header() {
-    let header = fs::read_to_string(CONSUMER_HEADER)
-        .unwrap_or_else(|e| panic!("cannot read consumer header {CONSUMER_HEADER}: {e}"));
+    let header = consumer_header();
     let defines: BTreeMap<&str, i32> = header
         .lines()
         .filter_map(|line| {
@@ -333,36 +304,173 @@ fn status_codes_match_the_consumer_header() {
     }
 }
 
+/// Render `fields` as the `(name, type)` literals of a frozen layout below.
+fn render(fields: &Fields) -> String {
+    fields
+        .iter()
+        .map(|(name, ty)| format!("    ({name:?}, {ty:?}),"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The version whose layout is frozen below, and that layout. A consumer built for version 2
+/// reads these fields at these offsets, so within the version the handle stays as it is and
+/// the table only grows at its end. Bumping `RUST_ABI_VERSION` replaces all three.
+const FROZEN_VERSION: u32 = 2;
+const FROZEN_HANDLE: &[(&str, &str)] = &[("ffi", "*const table"), ("model", "*mut void")];
+const FROZEN_TABLE: &[(&str, &str)] = &[
+    ("abi_version", "u32"),
+    ("size", "u32"),
+    ("release", "fn(*mut handle)->void"),
+    ("n_states", "fn(*const void)->i32"),
+    ("n_inputs", "fn(*const void)->i32"),
+    ("jac_nnz", "fn(*const void)->i32"),
+    ("n_sens_params", "fn(*const void)->i32"),
+    (
+        "eval_rhs",
+        "fn(f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+    (
+        "jac_assemble",
+        "fn(f64,*const f64,*const f64,f64,*mut f64,*mut void)->i32",
+    ),
+    (
+        "jac_action",
+        "fn(f64,*const f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+    (
+        "jac_action_batch",
+        "fn(f64,*const f64,*const f64,i32,*const f64,*mut f64,*mut void)->i32",
+    ),
+    ("mass_action", "fn(*const f64,*mut f64,*mut void)->i32"),
+    (
+        "sens_eval_all",
+        "fn(f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+    (
+        "output_sens_project",
+        "fn(f64,*const f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+    ("n_outputs", "fn(*const void)->i32"),
+    ("output_len", "fn(*const void,i32)->i32"),
+    (
+        "output_eval_batch",
+        "fn(*const f64,*const f64,i32,*const f64,*mut f64,*mut void)->i32",
+    ),
+    ("n_algebraic", "fn(*const void)->i32"),
+    ("alg_jac_nnz", "fn(*const void)->i32"),
+    (
+        "alg_res",
+        "fn(f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+    (
+        "alg_jac_assemble",
+        "fn(f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+    ("total_event_len", "fn(*const void)->i32"),
+    (
+        "events_eval",
+        "fn(f64,*const f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+    ("upsampling_len", "fn(*const void)->i32"),
+    (
+        "upsampling_eval",
+        "fn(f64,*const f64,*const f64,*mut f64,*mut void)->i32",
+    ),
+];
+
 #[test]
-fn abi_export_set_hash_is_pinned() {
-    let rust_src =
-        fs::read_to_string(FFI_RS).unwrap_or_else(|e| panic!("cannot read {FFI_RS}: {e}"));
-    let exports = parse_rust_exports(&rust_src);
-    let actual = compute_abi_hash(&exports);
-    let expected = ffi::EXPECTED_ABI_HASH;
-    assert_eq!(
-        actual, expected,
-        "ABI export set changed: computed hash {actual:#018x} != EXPECTED_ABI_HASH \
-         {expected:#018x}. The Rust extern \"C\" surface changed. Update \
-         EXPECTED_ABI_HASH in ffi.rs to {actual:#018x} AND bump both RUST_ABI_VERSION \
-         and PYBAMM_RUST_ABI_VERSION in lockstep."
+fn the_versions_layout_is_only_appended_to() {
+    let src = read(FFI_RS);
+    let (handle, table) = (
+        rust_fields(&src, "EvaluatorHandle"),
+        rust_fields(&src, "FfiTable"),
     );
+    let frozen = |layout: &[(&str, &str)]| -> Fields {
+        layout
+            .iter()
+            .map(|(name, ty)| ((*name).to_string(), (*ty).to_string()))
+            .collect()
+    };
+    assert_eq!(
+        ffi::RUST_ABI_VERSION,
+        FROZEN_VERSION,
+        "RUST_ABI_VERSION changed: set FROZEN_VERSION to it, FROZEN_HANDLE to\n{}\nand \
+         FROZEN_TABLE to\n{}",
+        render(&handle),
+        render(&table)
+    );
+    assert_eq!(
+        handle,
+        frozen(FROZEN_HANDLE),
+        "`EvaluatorHandle` changed within ABI version {FROZEN_VERSION}, which a released \
+         consumer would misread; bump RUST_ABI_VERSION and PYBAMM_RUST_ABI_VERSION"
+    );
+    assert!(
+        table.starts_with(&frozen(FROZEN_TABLE)),
+        "`FfiTable` changed other than by appending entries within ABI version \
+         {FROZEN_VERSION}, which a released consumer would misread; bump RUST_ABI_VERSION and \
+         PYBAMM_RUST_ABI_VERSION. It is now:\n{}",
+        render(&table)
+    );
+}
+
+/// rustc checks only each entry's type, so same-typed entries (the counts, say) could be crossed.
+#[test]
+fn every_table_entry_points_at_its_own_function() {
+    let src = read(FFI_RS);
+    let initializer = body(&src, "pub static FFI_TABLE: FfiTable = FfiTable {", "};");
+    let entries: Vec<(&str, &str)> = split_top_level(initializer, ',')
+        .into_iter()
+        .filter_map(|entry| entry.split_once(':'))
+        .map(|(field, value)| (field.trim(), value.trim()))
+        .collect();
+    assert_eq!(
+        entries.len(),
+        rust_table().len(),
+        "FFI_TABLE must set every field"
+    );
+    let crossed: Vec<String> = entries
+        .into_iter()
+        .filter(|&(field, value)| match field {
+            "abi_version" => value != "RUST_ABI_VERSION",
+            "size" => value != "FFI_TABLE_SIZE",
+            _ => value != format!("pybamm_rust_{field}"),
+        })
+        .map(|(field, value)| format!("{field}: {value}"))
+        .collect();
+    assert!(
+        crossed.is_empty(),
+        "these FFI_TABLE entries point at another entry's function:\n  {}",
+        crossed.join("\n  ")
+    );
+}
+
+/// The entries the consumer calls through a table directly, as `ffi->entry(` with `(file, line)`.
+fn direct_calls() -> Vec<String> {
+    let mut found = Vec::new();
+    for (path, src) in consumer_sources() {
+        for (number, line) in src.lines().enumerate() {
+            let code = line.split("//").next().unwrap_or("");
+            for (at, _) in code.match_indices("ffi->") {
+                let rest = &code[at + "ffi->".len()..];
+                let name_len = rest
+                    .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                    .unwrap_or(rest.len());
+                if rest[name_len..].trim_start().starts_with('(') {
+                    found.push(format!("{path}:{}: {}", number + 1, line.trim()));
+                }
+            }
+        }
+    }
+    found
 }
 
 /// A dropped status would pass a failed call's stale output to SUNDIALS, so every call must go
 /// through `PYBAMM_RUST_CALL` or `PYBAMM_RUST_VALUE`, which raise on failure.
 #[test]
 fn consumer_checks_every_ffi_return_status() {
-    let src = fs::read_to_string(CONSUMER_IMPL)
-        .unwrap_or_else(|e| panic!("cannot read {CONSUMER_IMPL}: {e}"));
-
-    let unchecked: Vec<&str> = src
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.starts_with("//") && !line.starts_with('*'))
-        .filter(|line| line.contains("rust_ffi()."))
-        .collect();
-
+    let unchecked = direct_calls();
     assert!(
         unchecked.is_empty(),
         "these calls drop the Rust FFI status code; wrap each in PYBAMM_RUST_CALL \
@@ -371,46 +479,29 @@ fn consumer_checks_every_ffi_return_status() {
     );
 }
 
-/// `rust_ffi()` resolves its whole table eagerly, so `RustFfi` must bind only what is called.
+/// An entry nothing calls would stay in the table for the rest of its major version.
 #[test]
-fn every_bound_ffi_entry_point_is_called() {
-    // Resolved by the version handshake, not the call macros.
-    const RESOLVER_INTERNAL: [&str; 1] = ["abi_version"];
-
-    let header = fs::read_to_string(CONSUMER_HEADER)
-        .unwrap_or_else(|e| panic!("cannot read consumer header {CONSUMER_HEADER}: {e}"));
-    let impl_src = fs::read_to_string(CONSUMER_IMPL)
-        .unwrap_or_else(|e| panic!("cannot read {CONSUMER_IMPL}: {e}"));
-
-    let open = header
-        .find("struct RustFfi {")
-        .expect("consumer header must declare `struct RustFfi {`");
-    let body_start = open + "struct RustFfi {".len();
-    let body_len = header[body_start..]
-        .find('}')
-        .expect("`struct RustFfi` without closing '}'");
-    // Each field is `<function-pointer type> <name>;`.
-    let fields: Vec<&str> = header[body_start..body_start + body_len]
-        .lines()
-        .map(str::trim)
-        .filter(|l| l.ends_with(';'))
-        .filter_map(|l| l.trim_end_matches(';').split_whitespace().nth(1))
-        .collect();
-    assert!(!fields.is_empty(), "parsed no fields from `struct RustFfi`");
-
-    let uncalled: Vec<&str> = fields
+fn every_table_entry_is_called() {
+    assert!(
+        consumer_header().contains("handle->ffi->release(handle)"),
+        "the consumer header must release each evaluator it owns"
+    );
+    let sources: String = consumer_sources().into_iter().map(|(_, src)| src).collect();
+    // The entry each macro call names, which follows the evaluator it is called on.
+    let called: Vec<&str> = ["PYBAMM_RUST_CALL(", "PYBAMM_RUST_VALUE("]
         .into_iter()
-        .filter(|f| !RESOLVER_INTERNAL.contains(f))
-        .filter(|f| {
-            !impl_src.contains(&format!("PYBAMM_RUST_CALL({f},"))
-                && !impl_src.contains(&format!("PYBAMM_RUST_VALUE({f},"))
-        })
+        .flat_map(|macro_call| sources.split(macro_call).skip(1))
+        .filter_map(|args| args.split(',').nth(1).map(str::trim))
         .collect();
-
+    let uncalled: Vec<String> = c_table()
+        .into_iter()
+        .filter(|(_, ty)| ty.ends_with("->i32"))
+        .map(|(name, _)| name)
+        .filter(|name| !called.contains(&name.as_str()))
+        .collect();
     assert!(
         uncalled.is_empty(),
-        "these `RustFfi` entry points are resolved but never called; drop them \
-         from the table (and re-add when a call site lands):\n  {}",
+        "these `PybammRustFfi` entries are never called; drop them from the table:\n  {}",
         uncalled.join("\n  ")
     );
 }

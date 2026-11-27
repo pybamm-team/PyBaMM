@@ -1,17 +1,17 @@
-//! C ABI entry points exposing `ModelEvaluator` to the C++ IDAKLU solver.
+//! C ABI for the C++ IDAKLU solver: each [`EvaluatorHandle`] carries its build's [`FfiTable`].
 //!
-//! Each returns `SUCCESS` (or a count), `ERROR_NULL_POINTER` on a null, or `ERROR_PANIC` on a
-//! caught panic. All require `user_data` to point to a live `ModelEvaluator` no other call is
-//! using, `inputs` to hold `input_width` elements (or be null at width zero), each buffer to
-//! hold the count its `# Safety` names, and no output to overlap another argument. Each
-//! `unsafe` block borrows only guard-checked pointers, at those counts.
+//! Entries other than `release` return `SUCCESS` (or a count), `ERROR_NULL_POINTER` on a null,
+//! or `ERROR_PANIC` on a caught panic. All require `user_data` to be a handle's `model` no other call is using,
+//! `inputs` to hold `input_width` elements (or be null at width zero), each buffer to hold the
+//! count its `# Safety` names, and no output to overlap another argument.
 
 #![allow(unsafe_code)]
 
 use crate::model::{AlgebraicBlock, CompiledModel, ModelEvaluator, Workspace};
 use crate::observable::ObservableKind;
-use std::ffi::c_void;
+use std::ffi::{CStr, c_void};
 use std::os::raw::c_int;
+use std::ptr::NonNull;
 
 /// Success return code.
 pub const SUCCESS: c_int = 0;
@@ -43,19 +43,178 @@ pub const ERROR_NO_EVENTS: c_int = -9;
 /// Error: caller invoked an upsampling FFI on a model with no upsampling output.
 pub const ERROR_NO_UPSAMPLING: c_int = -10;
 
-/// ABI contract version, bumped with `PYBAMM_RUST_ABI_VERSION` on any exported signature change.
+/// Major version of the ABI, which a consumer must match exactly.
 ///
-/// `pybamm_rust_abi_version` must keep its no-argument `-> u32` signature: it is the probe.
-pub const RUST_ABI_VERSION: u32 = 1;
+/// Appending an [`FfiTable`] entry keeps it; any other change to the table, an entry's
+/// signature or meaning, or [`EvaluatorHandle`] bumps it, with `PYBAMM_RUST_ABI_VERSION`. The
+/// `test_ffi_abi_contract` drift test holds the layout this version froze.
+pub const RUST_ABI_VERSION: u32 = 2;
 
-/// Return the FFI ABI contract version.
-#[unsafe(no_mangle)]
-pub const extern "C" fn pybamm_rust_abi_version() -> u32 {
-    RUST_ABI_VERSION
+/// Name of a Python capsule holding an [`EvaluatorHandle`] nothing has claimed.
+pub const EVALUATOR_CAPSULE: &CStr = c"pybamm.rust.evaluator";
+
+/// The name a consumer gives that capsule as it takes the handle, after which only the
+/// consumer may release it.
+pub const CLAIMED_EVALUATOR_CAPSULE: &CStr = c"pybamm.rust.evaluator.claimed";
+
+/// One evaluator and the entry points of the build that made it.
+///
+/// `ffi` leads in every version, so a consumer can reach the version check through a handle of
+/// any version; the rest is fixed within one.
+#[repr(C)]
+#[derive(Debug)]
+pub struct EvaluatorHandle {
+    /// Entry points for `model`.
+    pub ffi: &'static FfiTable,
+    /// The `user_data` every entry point takes: a boxed `ModelEvaluator`.
+    pub model: *mut c_void,
 }
 
-/// Golden hash of the exported signatures, pinned by the `test_ffi_abi_contract` drift test.
-pub const EXPECTED_ABI_HASH: u64 = 0xc90e_a069_2afc_b96b;
+impl EvaluatorHandle {
+    /// Box `evaluator` into a handle, which only [`FfiTable::release`] frees.
+    pub fn into_raw(evaluator: ModelEvaluator) -> NonNull<Self> {
+        let model = Box::into_raw(Box::new(evaluator)).cast::<c_void>();
+        NonNull::from(Box::leak(Box::new(Self {
+            ffi: &FFI_TABLE,
+            model,
+        })))
+    }
+}
+
+/// Entry points shared by every [`EvaluatorHandle`] one build makes.
+///
+/// `abi_version` and `size` lead every version's table, so a consumer can refuse a mismatch
+/// before reading an entry. Entries are only appended within a version, and a consumer needs
+/// `size` to cover every entry it reads.
+#[repr(C)]
+#[derive(Debug)]
+pub struct FfiTable {
+    pub abi_version: u32,
+    /// `size_of::<FfiTable>()` in the build that made the handle.
+    pub size: u32,
+    pub release: unsafe extern "C" fn(*mut EvaluatorHandle),
+    pub n_states: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub n_inputs: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub jac_nnz: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub n_sens_params: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub eval_rhs: unsafe extern "C" fn(f64, *const f64, *const f64, *mut f64, *mut c_void) -> c_int,
+    pub jac_assemble:
+        unsafe extern "C" fn(f64, *const f64, *const f64, f64, *mut f64, *mut c_void) -> c_int,
+    pub jac_action: unsafe extern "C" fn(
+        f64,
+        *const f64,
+        *const f64,
+        *const f64,
+        *mut f64,
+        *mut c_void,
+    ) -> c_int,
+    pub jac_action_batch: unsafe extern "C" fn(
+        f64,
+        *const f64,
+        *const f64,
+        c_int,
+        *const f64,
+        *mut f64,
+        *mut c_void,
+    ) -> c_int,
+    pub mass_action: unsafe extern "C" fn(*const f64, *mut f64, *mut c_void) -> c_int,
+    pub sens_eval_all:
+        unsafe extern "C" fn(f64, *const f64, *const f64, *mut f64, *mut c_void) -> c_int,
+    pub output_sens_project: unsafe extern "C" fn(
+        f64,
+        *const f64,
+        *const f64,
+        *const f64,
+        *mut f64,
+        *mut c_void,
+    ) -> c_int,
+    pub n_outputs: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub output_len: unsafe extern "C" fn(*const c_void, c_int) -> c_int,
+    pub output_eval_batch: unsafe extern "C" fn(
+        *const f64,
+        *const f64,
+        c_int,
+        *const f64,
+        *mut f64,
+        *mut c_void,
+    ) -> c_int,
+    pub n_algebraic: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub alg_jac_nnz: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub alg_res: unsafe extern "C" fn(f64, *const f64, *const f64, *mut f64, *mut c_void) -> c_int,
+    pub alg_jac_assemble:
+        unsafe extern "C" fn(f64, *const f64, *const f64, *mut f64, *mut c_void) -> c_int,
+    pub total_event_len: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub events_eval: unsafe extern "C" fn(
+        f64,
+        *const f64,
+        *const f64,
+        *const f64,
+        *mut f64,
+        *mut c_void,
+    ) -> c_int,
+    pub upsampling_len: unsafe extern "C" fn(*const c_void) -> c_int,
+    pub upsampling_eval:
+        unsafe extern "C" fn(f64, *const f64, *const f64, *mut f64, *mut c_void) -> c_int,
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "the assertion below bounds the table far inside u32"
+)]
+const FFI_TABLE_SIZE: u32 = size_of::<FfiTable>() as u32;
+const _: () = assert!(size_of::<FfiTable>() < 1 << 16);
+
+// Every version's consumer reads these offsets before it knows the version.
+const _: () = {
+    assert!(std::mem::offset_of!(EvaluatorHandle, ffi) == 0);
+    assert!(std::mem::offset_of!(FfiTable, abi_version) == 0);
+    assert!(std::mem::offset_of!(FfiTable, size) == 4);
+};
+
+/// The table every handle this build makes points to.
+pub static FFI_TABLE: FfiTable = FfiTable {
+    abi_version: RUST_ABI_VERSION,
+    size: FFI_TABLE_SIZE,
+    release: pybamm_rust_release,
+    n_states: pybamm_rust_n_states,
+    n_inputs: pybamm_rust_n_inputs,
+    jac_nnz: pybamm_rust_jac_nnz,
+    n_sens_params: pybamm_rust_n_sens_params,
+    eval_rhs: pybamm_rust_eval_rhs,
+    jac_assemble: pybamm_rust_jac_assemble,
+    jac_action: pybamm_rust_jac_action,
+    jac_action_batch: pybamm_rust_jac_action_batch,
+    mass_action: pybamm_rust_mass_action,
+    sens_eval_all: pybamm_rust_sens_eval_all,
+    output_sens_project: pybamm_rust_output_sens_project,
+    n_outputs: pybamm_rust_n_outputs,
+    output_len: pybamm_rust_output_len,
+    output_eval_batch: pybamm_rust_output_eval_batch,
+    n_algebraic: pybamm_rust_n_algebraic,
+    alg_jac_nnz: pybamm_rust_alg_jac_nnz,
+    alg_res: pybamm_rust_alg_res,
+    alg_jac_assemble: pybamm_rust_alg_jac_assemble,
+    total_event_len: pybamm_rust_total_event_len,
+    events_eval: pybamm_rust_events_eval,
+    upsampling_len: pybamm_rust_upsampling_len,
+    upsampling_eval: pybamm_rust_upsampling_eval,
+};
+
+/// Free a handle from [`EvaluatorHandle::into_raw`], and its evaluator; null is a no-op.
+///
+/// # Safety
+///
+/// `handle` must be null or a handle not yet released, which no call is using or will use.
+pub unsafe extern "C" fn pybamm_rust_release(handle: *mut EvaluatorHandle) {
+    if handle.is_null() {
+        return;
+    }
+    // SAFETY: the caller hands back a live handle from `into_raw`, whose `model` it boxed.
+    unsafe {
+        let handle = Box::from_raw(handle);
+        drop(Box::from_raw(handle.model.cast::<ModelEvaluator>()));
+    }
+}
 
 /// Run `body` on the model behind `user_data`, rejecting nulls and containing panics.
 ///
@@ -195,7 +354,6 @@ const unsafe fn borrow_slice_mut<'a, T>(pointer: *mut T, len: usize) -> &'a mut 
 /// # Safety
 ///
 /// `y` and `f_out` must hold `n_states` elements.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_eval_rhs(
     t: f64,
     y: *const f64,
@@ -229,7 +387,6 @@ pub unsafe extern "C" fn pybamm_rust_eval_rhs(
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_n_states(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe { with_model(user_data, [], |model| c_count(model.n_states())) }
@@ -240,7 +397,6 @@ pub unsafe extern "C" fn pybamm_rust_n_states(user_data: *const c_void) -> c_int
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_n_inputs(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe { with_model(user_data, [], |model| c_count(model.input_width().get())) }
@@ -251,7 +407,6 @@ pub unsafe extern "C" fn pybamm_rust_n_inputs(user_data: *const c_void) -> c_int
 /// # Safety
 ///
 /// `y` must hold `n_states` elements and `jac_data` `nnz` elements.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_jac_assemble(
     t: f64,
     y: *const f64,
@@ -287,7 +442,6 @@ pub unsafe extern "C" fn pybamm_rust_jac_assemble(
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_jac_nnz(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe { with_model(user_data, [], |model| c_count(model.nnz())) }
@@ -298,7 +452,6 @@ pub unsafe extern "C" fn pybamm_rust_jac_nnz(user_data: *const c_void) -> c_int 
 /// # Safety
 ///
 /// `y`, `v` and `jv` must hold `n_states` elements.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_jac_action(
     t: f64,
     y: *const f64,
@@ -338,7 +491,6 @@ pub unsafe extern "C" fn pybamm_rust_jac_action(
 /// # Safety
 ///
 /// `y` must hold `n_states` elements, and `vs` and `jvs` `n_dirs * n_states`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_jac_action_batch(
     t: f64,
     y: *const f64,
@@ -377,7 +529,6 @@ pub unsafe extern "C" fn pybamm_rust_jac_action_batch(
 /// # Safety
 ///
 /// `v` and `mv` must hold `n_states` elements.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_mass_action(
     v: *const f64,
     mv: *mut f64,
@@ -398,7 +549,6 @@ pub unsafe extern "C" fn pybamm_rust_mass_action(
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_n_sens_params(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe { with_model(user_data, [], |model| c_count(model.n_sens_params())) }
@@ -411,7 +561,6 @@ pub unsafe extern "C" fn pybamm_rust_n_sens_params(user_data: *const c_void) -> 
 /// # Safety
 ///
 /// `y` must hold `n_states` elements and `df_dp_out` `n_sens_params * n_states`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_sens_eval_all(
     t: f64,
     y: *const f64,
@@ -453,7 +602,6 @@ pub unsafe extern "C" fn pybamm_rust_sens_eval_all(
 ///
 /// `y` must hold `n_states`, `y_sens` `n_sens_params * n_states` and `out`
 /// `n_sens_params * total_output_len` elements.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_output_sens_project(
     t: f64,
     y: *const f64,
@@ -496,7 +644,6 @@ pub unsafe extern "C" fn pybamm_rust_output_sens_project(
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_n_outputs(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe { with_model(user_data, [], |model| c_count(model.n_outputs())) }
@@ -507,7 +654,6 @@ pub unsafe extern "C" fn pybamm_rust_n_outputs(user_data: *const c_void) -> c_in
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_output_len(user_data: *const c_void, var_idx: c_int) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe {
@@ -529,7 +675,6 @@ pub unsafe extern "C" fn pybamm_rust_output_len(user_data: *const c_void, var_id
 ///
 /// `ts` must hold `n_points`, `ys` `n_points * n_states` and `out`
 /// `n_points * total_output_len` elements.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_output_eval_batch(
     ts: *const f64,
     ys: *const f64,
@@ -572,7 +717,6 @@ pub unsafe extern "C" fn pybamm_rust_output_eval_batch(
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_n_algebraic(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe {
@@ -587,7 +731,6 @@ pub unsafe extern "C" fn pybamm_rust_n_algebraic(user_data: *const c_void) -> c_
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_alg_jac_nnz(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe {
@@ -602,7 +745,6 @@ pub unsafe extern "C" fn pybamm_rust_alg_jac_nnz(user_data: *const c_void) -> c_
 /// # Safety
 ///
 /// `y` must hold `n_states` elements and `output` `n_algebraic`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_alg_res(
     t: f64,
     y: *const f64,
@@ -638,7 +780,6 @@ pub unsafe extern "C" fn pybamm_rust_alg_res(
 /// # Safety
 ///
 /// `y` must hold `n_states` elements and `output` `alg_jac_nnz`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_alg_jac_assemble(
     t: f64,
     y: *const f64,
@@ -674,7 +815,6 @@ pub unsafe extern "C" fn pybamm_rust_alg_jac_assemble(
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_total_event_len(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe { with_model(user_data, [], |model| c_count(model.total_event_len())) }
@@ -682,13 +822,15 @@ pub unsafe extern "C" fn pybamm_rust_total_event_len(user_data: *const c_void) -
 
 /// Evaluate all events, concatenated in order, or return `ERROR_NO_EVENTS` without any.
 ///
+/// `y_dot` may be null when no event reads it; otherwise a null `y_dot` is `ERROR_NULL_POINTER`.
+///
 /// # Safety
 ///
-/// `y` must hold `n_states` elements and `output` `total_event_len`.
-#[unsafe(no_mangle)]
+/// `y`, and a non-null `y_dot`, must hold `n_states` elements and `output` `total_event_len`.
 pub unsafe extern "C" fn pybamm_rust_events_eval(
     t: f64,
     y: *const f64,
+    y_dot: *const f64,
     inputs: *const f64,
     output: *mut f64,
     user_data: *mut c_void,
@@ -704,12 +846,20 @@ pub unsafe extern "C" fn pybamm_rust_events_eval(
                     return ERROR_NO_EVENTS;
                 }
                 let n_states = model.n_states();
+                let y_dot: &[f64] = if !y_dot.is_null() {
+                    borrow_slice(y_dot, n_states)
+                } else if model.events_read_y_dot().contains(&true) {
+                    return ERROR_NULL_POINTER;
+                } else {
+                    &[]
+                };
                 let total_len = model.total_event_len();
                 model.eval_observables(
                     ws,
                     ObservableKind::Events,
                     t,
                     borrow_slice(y, n_states),
+                    y_dot,
                     inputs,
                     borrow_slice_mut(output, total_len),
                 );
@@ -724,7 +874,6 @@ pub unsafe extern "C" fn pybamm_rust_events_eval(
 /// # Safety
 ///
 /// `user_data` must point to a live `ModelEvaluator`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_upsampling_len(user_data: *const c_void) -> c_int {
     // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
     unsafe { with_model(user_data, [], |model| c_count(model.upsampling_len())) }
@@ -735,7 +884,6 @@ pub unsafe extern "C" fn pybamm_rust_upsampling_len(user_data: *const c_void) ->
 /// # Safety
 ///
 /// `y` must hold `n_states` elements and `output` `upsampling_len`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pybamm_rust_upsampling_eval(
     t: f64,
     y: *const f64,
@@ -760,6 +908,7 @@ pub unsafe extern "C" fn pybamm_rust_upsampling_eval(
                     ObservableKind::Upsampling,
                     t,
                     borrow_slice(y, n_states),
+                    &[],
                     inputs,
                     borrow_slice_mut(output, len),
                 );
@@ -793,6 +942,31 @@ mod tests {
     /// `f(y) = 2*y` with an identity mass matrix.
     fn create_test_model() -> Box<ModelEvaluator> {
         evaluator(doubling_model(2))
+    }
+
+    #[test]
+    fn a_handle_serves_its_model_through_its_own_table() {
+        let handle =
+            EvaluatorHandle::into_raw(ModelEvaluator::from_compiled(Arc::new(doubling_model(2))));
+        let (ffi, model) = unsafe { (handle.as_ref().ffi, handle.as_ref().model) };
+        assert!(std::ptr::eq(ffi, &raw const FFI_TABLE));
+        assert_eq!(
+            (ffi.abi_version, ffi.size as usize),
+            (RUST_ABI_VERSION, size_of::<FfiTable>())
+        );
+
+        let y = [1.0, 3.0];
+        let mut f_out = [0.0; 2];
+        let status =
+            unsafe { (ffi.eval_rhs)(0.0, y.as_ptr(), std::ptr::null(), f_out.as_mut_ptr(), model) };
+        assert_eq!(status, SUCCESS);
+        assert_eq!(f_out.map(f64::to_bits), [2.0_f64, 6.0].map(f64::to_bits));
+        unsafe { (ffi.release)(handle.as_ptr()) };
+    }
+
+    #[test]
+    fn releasing_a_null_handle_does_nothing() {
+        unsafe { (FFI_TABLE.release)(std::ptr::null_mut()) };
     }
 
     #[test]
@@ -1217,6 +1391,7 @@ mod tests {
                 0.0,
                 y.as_ptr(),
                 std::ptr::null(),
+                std::ptr::null(),
                 out.as_mut_ptr(),
                 user_data,
             )
@@ -1236,6 +1411,7 @@ mod tests {
                     0.0,
                     y.as_ptr(),
                     std::ptr::null(),
+                    std::ptr::null(),
                     out.as_mut_ptr(),
                     user_data,
                 )
@@ -1247,6 +1423,38 @@ mod tests {
                 out[0]
             );
         }
+    }
+
+    #[test]
+    fn test_rust_events_eval_reads_y_dot() {
+        // g = y_dot[0] + 1, the shape of an event on `x.diff(pybamm.t)`
+        let mut model = observed_test_model(ObservableKind::Events, |arena, _| {
+            let y_dot = arena.alloc(Node::StateVectorDot { start: 0, end: 2 });
+            let y_dot0 = element(arena, y_dot, 0);
+            let one = arena.alloc(Node::Scalar(1.0));
+            arena.alloc(Node::Add(y_dot0, one))
+        });
+        assert_eq!(model.compiled.events_read_y_dot(), [true]);
+        let user_data: *mut c_void = std::ptr::from_mut(model.as_mut()).cast();
+        let (y, y_dot) = ([1.0, 2.0], [-3.0, 4.0]);
+        let mut out = [f64::NAN];
+        let eval = |y_dot: *const f64, out: &mut [f64; 1]| unsafe {
+            pybamm_rust_events_eval(
+                0.0,
+                y.as_ptr(),
+                y_dot,
+                std::ptr::null(),
+                out.as_mut_ptr(),
+                user_data,
+            )
+        };
+        assert_eq!(eval(y_dot.as_ptr(), &mut out), SUCCESS);
+        assert!((out[0] + 2.0).abs() < 1e-12, "got {}", out[0]);
+        assert_eq!(
+            eval(std::ptr::null(), &mut out),
+            ERROR_NULL_POINTER,
+            "an event reading y_dot needs it"
+        );
     }
 
     #[test]
@@ -1428,7 +1636,7 @@ mod tests {
                 pybamm_rust_total_event_len(std::ptr::null())
             }),
             ("pybamm_rust_events_eval", unsafe {
-                pybamm_rust_events_eval(0.0, input, input, output, nil_data)
+                pybamm_rust_events_eval(0.0, input, input, input, output, nil_data)
             }),
             ("pybamm_rust_upsampling_len", unsafe {
                 pybamm_rust_upsampling_len(std::ptr::null())
@@ -1561,7 +1769,7 @@ mod tests {
         assert_eq!(alg_jac(nil, ok), ERROR_NULL_POINTER, "y");
         assert_eq!(alg_jac(ok_const, nil_mut), ERROR_NULL_POINTER, "output");
 
-        let events = |y, out| unsafe { pybamm_rust_events_eval(0.0, y, nil, out, user_data) };
+        let events = |y, out| unsafe { pybamm_rust_events_eval(0.0, y, nil, nil, out, user_data) };
         assert_eq!(events(nil, ok), ERROR_NULL_POINTER, "y");
         assert_eq!(events(ok_const, nil_mut), ERROR_NULL_POINTER, "output");
     }
