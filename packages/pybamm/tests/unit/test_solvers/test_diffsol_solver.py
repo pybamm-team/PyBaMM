@@ -1,5 +1,6 @@
 """General ``DiffsolSolver`` behaviour on small models."""
 
+import logging
 import multiprocessing
 import pickle
 import re
@@ -865,6 +866,16 @@ class TestDiffsolIntegrationTime:
 
 def _python_callable(x):
     return x
+
+
+class TestDiffsolModelFormat:
+    def test_a_casadi_model_is_converted_with_a_warning(self, caplog):
+        model = _decay_model()
+        model.convert_to_format = "casadi"
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            pybamm.DiffsolSolver().solve(model, np.linspace(0, 1, 5))
+        assert "converts Unnamed model from convert_to_format='casadi'" in caplog.text
+        assert model.convert_to_format == "rust"
 
 
 class TestDiffsolUnsupportedModels:

@@ -172,3 +172,9 @@ uv sync --extra all --group dev --reinstall-package pybamm
 pybammsolvers and `pybamm.rust._core` were built for different ABI versions,
 or the core's table is older than the one pybammsolvers reads. Rebuild both
 extensions from the same tree (see "Rebuilding after changes").
+
+## Supported features
+
+Feature coverage (events, DAEs, forward sensitivities, output variables,
+experiments) and the expression types the backend can lower are documented in
+the [Rust backend user guide](../user_guide/rust_backend.rst).

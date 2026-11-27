@@ -59,6 +59,7 @@ class TestCompositeSolver:
 
         failing_solver = FailingSolver()
         working_solver = pybamm.CasadiAlgebraicSolver()
+        model.convert_to_format = "casadi"
         composite = pybamm.CompositeSolver([failing_solver, working_solver])
 
         solution = composite.solve(model)
