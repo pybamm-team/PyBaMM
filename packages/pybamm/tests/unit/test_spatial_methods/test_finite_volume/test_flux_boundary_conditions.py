@@ -42,16 +42,21 @@ class TestFluxBoundaryConditions:
 
         sp_meth = pybamm.FiniteVolume()
         sp_meth.build(mesh)
-        # Gradient without boundary conditions
-        gradient_symbol = sp_meth.gradient(var, discretised_symbol, {})
+
+        # Evaluate gradient with flux boundary condtions
+        gradient_symbol = sp_meth.gradient(var, discretised_symbol, bcs)
+
+        # Construct gradient from matrix with no extrapolation or boundary conditions
+        gradient_matrix = sp_meth.gradient_matrix(var.domain, var.domains)
+        gradient_nobc = sp_meth._apply_matrix(gradient_matrix, discretised_symbol)
 
         # extrapolate at both boundaries at once:
         extrapolated_symbol = sp_meth._extrapolate_gradient_to_boundaries(
-            var, gradient_symbol, ["left", "right"], var.domain
+            var, gradient_nobc, ["left", "right"], var.domain
         )
         # extrapolate boundaries separately:
         extrapolated_symbol2 = sp_meth._extrapolate_gradient_to_boundaries(
-            var, gradient_symbol, ["right"], var.domain
+            var, gradient_nobc, ["right"], var.domain
         )
         extrapolated_symbol2 = sp_meth._extrapolate_gradient_to_boundaries(
             var, extrapolated_symbol2, ["left"], var.domain
@@ -60,20 +65,24 @@ class TestFluxBoundaryConditions:
             extrapolated_symbol.evaluate(y=y_test),
             extrapolated_symbol2.evaluate(y=y_test),
         )
+        np.testing.assert_allclose(
+            extrapolated_symbol.evaluate(y=y_test),
+            gradient_symbol.evaluate(y=y_test),
+        )
 
-        # Assert extrapolation applied in gradient method
-        gradient_symbol2 = sp_meth.gradient(var, discretised_symbol, bcs)
+        # No boundary conditions should give the same result since extrapolation is applied for missing bcs
+        gradient_symbol2 = sp_meth.gradient(var, discretised_symbol, {})
         np.testing.assert_allclose(
             extrapolated_symbol.evaluate(y=y_test), gradient_symbol2.evaluate(y=y_test)
         )
 
         # Add flux boundary conditions and check that the values are correct
-        flux_bc_symbol = sp_meth.add_flux_values(flux, extrapolated_symbol, bcs)
+        flux_bc_symbol = sp_meth.add_flux_values(flux, gradient_symbol, bcs)
         evaluated_flux_bc = flux_bc_symbol.evaluate(y=y_test)
         assert np.isclose(evaluated_flux_bc[0], expected_lbc)
         assert np.isclose(evaluated_flux_bc[-1], expected_rbc)
         np.testing.assert_allclose(
-            gradient_symbol.evaluate(y=y_test), evaluated_flux_bc[1:-1], atol=1e-12
+            gradient_nobc.evaluate(y=y_test), evaluated_flux_bc[1:-1], atol=1e-12
         )
 
     def _setup_model(self, no_simplification):

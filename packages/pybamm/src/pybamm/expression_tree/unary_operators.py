@@ -674,7 +674,11 @@ class Divergence(SpatialOperator):
             )
         # Allow TensorField of rank >= 1, or symbols that evaluate on edges
         is_tensor = isinstance(child, pybamm.TensorField) and child.rank >= 1
-        if not is_tensor and child.evaluates_on_edges("primary") is False:
+        if (
+            not is_tensor
+            and not isinstance(child, pybamm.FluxConcatenation)
+            and child.evaluates_on_edges("primary") is False
+        ):
             raise TypeError(
                 f"Cannot take divergence of '{child}' since it does not "
                 + "evaluate on edges. Usually, a gradient should be taken before the "

@@ -473,9 +473,11 @@ class TestFiniteVolumeGradDiv:
         grad_eqn = pybamm.grad(var)
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         constant_y = np.ones_like(mesh["cylindrical domain"].nodes[:, np.newaxis])
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros((14, 1)),
+            np.zeros((16, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test divergence
@@ -592,9 +594,11 @@ class TestFiniteVolumeGradDiv:
         grad_eqn = pybamm.grad(var)
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         constant_y = np.ones_like(mesh["spherical domain"].nodes[:, np.newaxis])
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros((14, 1)),
+            np.zeros((16, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test divergence

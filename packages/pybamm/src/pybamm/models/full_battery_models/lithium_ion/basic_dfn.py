@@ -165,22 +165,16 @@ class BasicDFN(BaseModel):
         # multiplication at the discretisation stage
         N_s_n = -self.param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
         N_s_p = -self.param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -pybamm.div(N_s_n)
-        self.rhs[c_s_p] = -pybamm.div(N_s_p)
+        self.rhs[c_s_n] = -pybamm.div(N_s_n, no_simplification=True)
+        self.rhs[c_s_p] = -pybamm.div(N_s_p, no_simplification=True)
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (
-                -j_n / (self.param.F * pybamm.surf(self.param.n.prim.D(c_s_n, T))),
-                "Neumann",
-            ),
+            "left": (pybamm.Scalar(0), ("Flux", N_s_n)),
+            "right": (j_n / self.param.F, ("Flux", N_s_n)),
         }
         self.boundary_conditions[c_s_p] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (
-                -j_p / (self.param.F * pybamm.surf(self.param.p.prim.D(c_s_p, T))),
-                "Neumann",
-            ),
+            "left": (pybamm.Scalar(0), ("Flux", N_s_p)),
+            "right": (j_p / self.param.F, ("Flux", N_s_p)),
         }
         self.initial_conditions[c_s_n] = self.param.n.prim.c_init
         self.initial_conditions[c_s_p] = self.param.p.prim.c_init
@@ -194,15 +188,19 @@ class BasicDFN(BaseModel):
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
         # multiply by Lx**2 to improve conditioning
-        self.algebraic[phi_s_n] = self.param.L_x**2 * (pybamm.div(i_s_n) + a_j_n)
-        self.algebraic[phi_s_p] = self.param.L_x**2 * (pybamm.div(i_s_p) + a_j_p)
+        self.algebraic[phi_s_n] = self.param.L_x**2 * (
+            pybamm.div(i_s_n, no_simplification=True) + a_j_n
+        )
+        self.algebraic[phi_s_p] = self.param.L_x**2 * (
+            pybamm.div(i_s_p, no_simplification=True) + a_j_p
+        )
         self.boundary_conditions[phi_s_n] = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
-            "right": (pybamm.Scalar(0), "Neumann"),
+            "right": (pybamm.Scalar(0), ("Flux", i_s_n)),
         }
         self.boundary_conditions[phi_s_p] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (i_cell / pybamm.boundary_value(-sigma_eff_p, "right"), "Neumann"),
+            "left": (pybamm.Scalar(0), ("Flux", i_s_p)),
+            "right": (i_cell, ("Flux", i_s_p)),
         }
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent initial
@@ -217,10 +215,12 @@ class BasicDFN(BaseModel):
             self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         # multiply by Lx**2 to improve conditioning
-        self.algebraic[phi_e] = self.param.L_x**2 * (pybamm.div(i_e) - a_j)
+        self.algebraic[phi_e] = self.param.L_x**2 * (
+            pybamm.div(i_e, no_simplification=True) - a_j
+        )
         self.boundary_conditions[phi_e] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (pybamm.Scalar(0), "Neumann"),
+            "left": (pybamm.Scalar(0), ("Flux", i_e)),
+            "right": (pybamm.Scalar(0), ("Flux", i_e)),
         }
         self.initial_conditions[phi_e] = -self.param.n.prim.U_init
 
@@ -233,10 +233,12 @@ class BasicDFN(BaseModel):
             -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
             + self.param.t_plus(c_e, T) * i_e / self.param.F
         )
-        self.rhs[c_e] = (1 / eps) * (-pybamm.div(N_e) + a_j / self.param.F)
+        self.rhs[c_e] = (1 / eps) * (
+            -pybamm.div(N_e, no_simplification=True) + a_j / self.param.F
+        )
         self.boundary_conditions[c_e] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (pybamm.Scalar(0), "Neumann"),
+            "left": (pybamm.Scalar(0), ("Flux", N_e)),
+            "right": (pybamm.Scalar(0), ("Flux", N_e)),
         }
         self.initial_conditions[c_e] = self.param.c_e_init
 

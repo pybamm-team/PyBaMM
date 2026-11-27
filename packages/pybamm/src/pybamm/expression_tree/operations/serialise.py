@@ -18,6 +18,7 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.tracing import tracing
+from pybamm.util import _is_flux_boundary_condition
 
 # geometry, spatial-method, var_pts and submesh-type files
 SUPPORTED_SCHEMA_VERSION = "1.1"
@@ -536,7 +537,9 @@ class Serialise:
                     {
                         side: [
                             encode_symbol(expression),
-                            boundary_type,
+                            ["Flux", encode_symbol(boundary_type[1])]
+                            if _is_flux_boundary_condition(boundary_type)
+                            else boundary_type,
                         ]
                         for side, (expression, boundary_type) in conditions.items()
                     },
@@ -1558,6 +1561,14 @@ class Serialise:
                 for side, (expression_json, boundary_type) in condition_dict.items():
                     try:
                         expr = _require_symbol(expression_json, nodes)
+                        if (
+                            isinstance(boundary_type, list)
+                            and boundary_type[0] == "Flux"
+                        ):
+                            boundary_type = (
+                                "Flux",
+                                _require_symbol(boundary_type[1], nodes),
+                            )
                         sides[side] = (expr, boundary_type)
                     except Exception as e:
                         raise ValueError(
