@@ -1,20 +1,31 @@
-"""Rust expression graphs for a discretised model."""
+"""Shared lowering of a discretised model into a Rust ``CompiledModel``."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
+
+import numpy as np
+import numpy.typing as npt
 
 import pybamm
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from pybamm.rust import CompiledFunction, ExprGraph
+    from pybamm.rust import CompiledFunction, CompiledModel, Expr, ExprGraph
+    from pybamm.solvers.rust_evaluator import RustEvaluator
 
 
 def rust_input_parameter_widths(model: pybamm.BaseModel) -> dict[str, int]:
     """Map each input parameter name to its packed width for the Rust backend."""
     return {ip.name: ip._expected_size or 1 for ip in model.input_parameters}
+
+
+# CasADi's error for a conversion without y_dot, raised alike on the Rust backend
+_Y_DOT_REQUIRED = (
+    "Must provide a 'y_dot' for converting state vectors differentiated "
+    "in time, e.g. by `symbol.diff(pybamm.t)`"
+)
 
 
 def reject_y_dot(function: CompiledFunction) -> None:
@@ -26,10 +37,21 @@ def reject_y_dot(function: CompiledFunction) -> None:
         If ``function`` reads ``y_dot``, as the CasADi conversion does without it.
     """
     if function.uses_y_dot:
-        raise pybamm.ModelError(
-            "Must provide a 'y_dot' for converting state vectors differentiated "
-            "in time, e.g. by `symbol.diff(pybamm.t)`"
-        )
+        raise pybamm.ModelError(_Y_DOT_REQUIRED)
+
+
+def _reject_y_dot_symbol(symbol: pybamm.Symbol) -> None:
+    """Refuse a solver output reading ``y_dot`` with CasADi's error.
+
+    The compiled model would refuse it too, but with a message of its own.
+
+    Raises
+    ------
+    :class:`pybamm.ModelError`
+        If ``symbol`` contains a time derivative of a state.
+    """
+    if symbol.has_symbol_of_classes(pybamm.StateVectorDot):
+        raise pybamm.ModelError(_Y_DOT_REQUIRED)
 
 
 def rust_graph_with_inputs(
@@ -58,3 +80,248 @@ def rust_graph_with_inputs(
     for name in input_names:
         graph.input_parameter(name, widths.get(name, 1))
     return graph
+
+
+class RustModelLowering:
+    """Lower one discretised model into a Rust ``CompiledModel``.
+
+    Every part shares one ``ExprGraph``; only the key order of ``inputs_dict`` is used.
+    """
+
+    def __init__(self, model: pybamm.BaseModel, inputs_dict: dict):
+        self.model = model
+        self.input_name_order = list(inputs_dict)
+        self.graph = rust_graph_with_inputs(model, self.input_name_order)
+        self._symbols: dict = {}
+        self._state_residual: Expr | None = None
+        self._output_exprs: list[Expr] = []
+        self._output_lens: list[int] = []
+        self._event_exprs: list[Expr] = []
+        self._upsampling_expr: Expr | None = None
+        self._algebraic_expr: Expr | None = None
+        self._algebraic_var_indices: list[int] = []
+        self._sens_param_indices: list[int] = []
+
+    def lower(self, symbol: pybamm.Symbol) -> Expr:
+        """Lower one symbol into this graph, reusing already-lowered subtrees."""
+        return symbol.to_rust(self.graph, self._symbols)
+
+    def state_residual(self, algebraic_only: bool = False) -> Expr:
+        """Lower the right-hand side, concatenated with the algebraic block."""
+        model = self.model
+        if algebraic_only:
+            residual = model.concatenated_algebraic
+        elif model.len_alg > 0:
+            residual = pybamm.numpy_concatenation(
+                model.concatenated_rhs, model.concatenated_algebraic
+            )
+        else:
+            residual = model.concatenated_rhs
+        self._state_residual = self.lower(residual)
+        return self._state_residual
+
+    def algebraic_block(self) -> tuple[Expr | None, list[int]]:
+        """Lower the algebraic sub-block used by the Newton initialisation."""
+        model = self.model
+        if model.len_alg == 0:
+            return None, []
+        self._algebraic_expr = self.lower(model.concatenated_algebraic)
+        self._algebraic_var_indices = list(range(model.len_rhs, model.len_rhs_and_alg))
+        return self._algebraic_expr, self._algebraic_var_indices
+
+    def outputs(
+        self,
+        output_variables: Iterable[str],
+        time_integral_vars: dict[str, pybamm.ProcessedVariableTimeIntegral]
+        | None = None,
+    ) -> tuple[list[Expr], list[int]]:
+        """Lower the requested output variables; lengths are flattened component counts.
+
+        A name in ``time_integral_vars`` lowers its ``sum_node``, summed post-solve.
+
+        Raises
+        ------
+        pybamm.SolverError
+            If an output variable is a tensor field.
+        pybamm.ModelError
+            If an output variable reads the state derivatives, ``y_dot``.
+        """
+        time_integral_vars = time_integral_vars or {}
+        for name in output_variables:
+            time_integral = time_integral_vars.get(name)
+            if time_integral is not None:
+                symbol = time_integral.sum_node
+            else:
+                symbol = self.model.get_processed_variable_or_event(name)
+            if isinstance(symbol, pybamm.TensorField):
+                raise pybamm.SolverError(
+                    f"Output variable '{name}' is a tensor field, which cannot be "
+                    "read back from a Solution. Request a scalar component with "
+                    "pybamm.Component instead."
+                )
+            _reject_y_dot_symbol(symbol)
+            self._output_exprs.append(self.lower(symbol))
+            shape = getattr(symbol, "shape", ())
+            self._output_lens.append(int(np.prod(shape)) if shape else 1)
+        return self._output_exprs, self._output_lens
+
+    def upsampling(self, name: str, symbol: pybamm.Symbol) -> Expr:
+        """Lower ``symbol``, the upsampling output read from the variable ``name``.
+
+        Raises
+        ------
+        pybamm.SolverError
+            If ``symbol`` is not scalar.
+        pybamm.ModelError
+            If ``symbol`` reads the state derivatives, ``y_dot``.
+        """
+        # A shape-only walk, as for the termination events
+        if np.prod(np.shape(symbol.evaluate_for_shape())) != 1:
+            raise pybamm.SolverError(
+                f"upsampling_tolerance needs a scalar variable, got '{name}'"
+            )
+        _reject_y_dot_symbol(symbol)
+        self._upsampling_expr = self.lower(symbol)
+        return self._upsampling_expr
+
+    def termination_events(self) -> list[Expr]:
+        """Lower every termination event expression, for root-finding.
+
+        Raises
+        ------
+        pybamm.SolverError
+            If an event expression is not scalar.
+        """
+        events = [
+            event
+            for event in self.model.events
+            if event.event_type == pybamm.EventType.TERMINATION
+        ]
+        for event in events:
+            # A shape-only walk: Symbol.shape would evaluate every event numerically
+            shape = np.shape(event.expression.evaluate_for_shape())
+            if np.prod(shape) != 1:
+                raise pybamm.SolverError(
+                    f"Termination event '{event.name}' has shape "
+                    f"{shape}, but a root function must be scalar. "
+                    "Reduce it with pybamm.min or pybamm.max."
+                )
+        self._event_exprs = [self.lower(event.expression) for event in events]
+        return self._event_exprs
+
+    def rhs_evaluator(self) -> RustEvaluator:
+        """Build an evaluator for the differential block alone, over this graph."""
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        compiled = self.graph.compile(
+            self.lower(self.model.concatenated_rhs),
+            name="RHS",
+            n_states=self.model.len_rhs_and_alg,
+        )
+        return RustEvaluator(compiled, "func")
+
+    def algebraic_evaluators(self) -> tuple[RustEvaluator, RustEvaluator]:
+        """Build ``func`` and ``jac`` evaluators for the algebraic block alone."""
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        compiled = self.graph.compile(
+            self.lower(self.model.concatenated_algebraic),
+            name="algebraic",
+            n_states=self.model.len_rhs_and_alg,
+        )
+        return RustEvaluator(compiled, "func"), RustEvaluator(compiled, "jac")
+
+    def bind_generic_evaluators(
+        self,
+        rust_model: CompiledModel,
+        root_method: pybamm.BaseSolver | None = None,
+    ) -> None:
+        """Serve ``rhs_eval`` and ``terminate_events_eval`` from this lowering.
+
+        A DAE also gets ``algebraic_eval`` and ``jac_algebraic_eval`` when
+        ``root_method`` will read them. Event evaluators view ``rust_model``'s own
+        event tapes, so they match the integrator's roots.
+        """
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        self.model.rhs_eval = self.rhs_evaluator()
+        self.model.terminate_events_eval = [
+            RustEvaluator(compiled, "func") for compiled in rust_model.events
+        ]
+        # NonlinearSolver lowers its own system, and stands in for a CasADi root
+        # method on rust models; other root methods read algebraic_eval
+        reads_algebraic = root_method is not None and not isinstance(
+            root_method, pybamm.NonlinearSolver | pybamm.CasadiAlgebraicSolver
+        )
+        if reads_algebraic and self.model.len_alg > 0:
+            self.model.algebraic_eval, self.model.jac_algebraic_eval = (
+                self.algebraic_evaluators()
+            )
+
+    def sensitivity_indices(
+        self, sensitivity_names: Iterable[str] | None
+    ) -> tuple[list[int], list[str]]:
+        """Map sensitivity names to graph input indices.
+
+        Raises
+        ------
+        pybamm.SolverError
+            If a name is not one of the inputs this lowering was built with.
+        """
+        sensitivity_names = list(sensitivity_names or [])
+        unknown = [
+            name for name in sensitivity_names if name not in self.input_name_order
+        ]
+        if unknown:
+            raise pybamm.SolverError(
+                f"Sensitivities were requested for {unknown}, but the model's "
+                f"inputs are {self.input_name_order}"
+            )
+        # The graph numbers the inputs, which registration ordered as the solver's;
+        # every name is registered, as checked above
+        indices = [
+            cast(int, self.graph.input_index(name)) for name in sensitivity_names
+        ]
+        self._sens_param_indices = indices
+        return indices, sensitivity_names
+
+    @property
+    def n_inputs(self) -> int:
+        """Packed width of every registered input, including any added by lowering."""
+        return self.graph.n_inputs()
+
+    def mass_matrix_csr(
+        self,
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.int64], npt.NDArray[np.int64]]:
+        """Return the mass matrix as the ``(data, indptr, indices)`` CSR triple."""
+        mass = self.model.mass_matrix.entries
+        return (
+            mass.data.astype(np.float64),
+            mass.indptr.astype(np.int64),
+            mass.indices.astype(np.int64),
+        )
+
+    def compile(self) -> CompiledModel:
+        """Compile everything lowered so far into a ``CompiledModel``."""
+        from pybamm.rust import CompiledModel
+
+        if self._state_residual is None:
+            raise pybamm.SolverError(
+                "Cannot compile a Rust model before lowering its state residual; "
+                "call state_residual() first."
+            )
+        data, indptr, indices = self.mass_matrix_csr()
+        return CompiledModel.from_expr(
+            self.graph,
+            self._state_residual,
+            data,
+            indptr,
+            indices,
+            n_inputs=self.n_inputs,
+            sens_param_indices=self._sens_param_indices,
+            output_exprs=self._output_exprs,
+            algebraic_expr=self._algebraic_expr,
+            algebraic_variable_indices=self._algebraic_var_indices,
+            event_exprs=self._event_exprs,
+            upsampling_expr=self._upsampling_expr,
+        )

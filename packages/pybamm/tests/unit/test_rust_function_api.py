@@ -777,6 +777,150 @@ class TestInstructionCounts:
         assert reported(2) == reported(6)
 
 
+class TestCompiledModelBundle:
+    def _setup(self, n_inputs=1, sens_param_indices=()):
+        from pybamm.rust import CompiledModel
+
+        g = ExprGraph()
+        a = g.input_parameter("a")
+        y0 = g.state_vector(0, 1)
+        y1 = g.state_vector(1, 2)
+        rhs = g.concat([g.mul(a, y1), g.neg(y0)])
+        out = g.mul(y0, y1)
+        event = g.sub(y0, g.scalar(10.0))
+        mass = np.array([1.0, 1.0])
+        indptr = np.array([0, 1, 2], dtype=np.int64)
+        indices = np.array([0, 1], dtype=np.int64)
+        model = CompiledModel.from_expr(
+            g,
+            rhs,
+            mass,
+            indptr,
+            indices,
+            n_inputs=n_inputs,
+            sens_param_indices=list(sens_param_indices),
+            output_exprs=[out],
+            event_exprs=[event],
+        )
+        return g, model
+
+    def _check_views(self, model, p):
+        y = np.array([1.0, 2.0])
+        np.testing.assert_array_equal(model.rhs(0.0, y, p), [6.0, -1.0])
+        np.testing.assert_array_equal(model.outputs[0](0.0, y, p), [2.0])
+        np.testing.assert_array_equal(model.events[0](0.0, y, p), [-9.0])
+        np.testing.assert_allclose(
+            model.jacobian(0.0, y, p).toarray(), [[0.0, 3.0], [-1.0, 0.0]]
+        )
+
+    def test_views_keep_the_inputs_the_model_was_compiled_with(self):
+        # A later lowering, such as Solution.observe, can register inputs on the graph.
+        g, model = self._setup()
+        g.input_parameter("late")
+        self._check_views(model, np.array([3.0]))
+        assert model.rhs.input_names == ("a",)
+
+    def test_a_late_input_survives_a_pickle_round_trip(self):
+        g, model = self._setup(sens_param_indices=[0])
+        g.input_parameter("late")
+        restored = pickle.loads(pickle.dumps(model))
+        assert restored.n_inputs == 1
+        assert restored.n_sens_params == 1
+        assert restored.__reduce__()[1][1:] == model.__reduce__()[1][1:]
+        self._check_views(restored, np.array([3.0]))
+
+    def test_rebuild_refuses_a_node_count_that_misses_a_root_or_the_graph(self):
+        g, model = self._setup()
+        rebuild, args = model.__reduce__()
+        before, after = args[:9], args[10:]
+        with pytest.raises(ValueError, match=r"root \d+ is not among the 1 nodes"):
+            rebuild(*before, 1, *after)
+        too_many = g.n_nodes + 1
+        with pytest.raises(
+            ValueError, match=rf"n_nodes={too_many} exceeds the graph's {g.n_nodes}"
+        ):
+            rebuild(*before, too_many, *after)
+
+    def test_views_of_a_widened_model_take_its_width(self):
+        _, model = self._setup(n_inputs=3)
+        wide = np.array([3.0, 0.0, 0.0])
+        self._check_views(model, wide)
+        restored = pickle.loads(pickle.dumps(model.rhs))
+        np.testing.assert_array_equal(
+            restored(0.0, np.array([1.0, 2.0]), wide), [6.0, -1.0]
+        )
+        with pytest.raises(ValueError, match=r"rhs: expected 3 input values"):
+            model.rhs(0.0, np.array([1.0, 2.0]), np.array([3.0]))
+
+    def test_rhs_view(self):
+        _, model = self._setup()
+        f = model.rhs
+        y = np.array([1.0, 2.0])
+        p = np.array([3.0])
+        np.testing.assert_array_equal(f(0.0, y, p), [6.0, -1.0])
+        assert f.n_states == 2
+
+    def test_jacobian_view_is_pure_df_dy(self):
+        _, model = self._setup()
+        J = model.jacobian
+        mat = J(0.0, np.array([1.0, 2.0]), np.array([3.0]))
+        # df/dy = [[0, a], [-1, 0]] — no mass, no cj
+        np.testing.assert_allclose(mat.toarray(), [[0.0, 3.0], [-1.0, 0.0]])
+
+    def test_outputs_and_events_views(self):
+        _, model = self._setup()
+        (out_fn,) = model.outputs
+        (event_fn,) = model.events
+        y = np.array([1.0, 2.0])
+        p = np.array([3.0])
+        np.testing.assert_array_equal(out_fn(0.0, y, p), [2.0])
+        np.testing.assert_array_equal(event_fn(0.0, y, p), [-9.0])
+
+    def test_algebraic_views_none_for_ode(self):
+        _, model = self._setup()
+        assert model.algebraic_residual is None
+        assert model.algebraic_jacobian is None
+
+    def test_algebraic_jacobian_view_is_the_compiled_artifact(self):
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(model)
+        sim.build()
+        sim.solver.set_up(sim.built_model, inputs=[{}])
+        rust_model = sim.solver._setup["rust_model"]
+        assert rust_model.has_algebraic
+
+        view = rust_model.algebraic_jacobian
+        n_algebraic = rust_model.n_algebraic
+        assert view.shape == (n_algebraic, n_algebraic)
+        assert view.nnz == rust_model.algebraic_jacobian_nnz
+        rows, _ = rust_model.algebraic_jacobian_sparsity_pattern()
+        assert sorted(np.asarray(rows).tolist()) == sorted(
+            np.asarray(view.sparsity()[1]).tolist()
+        )
+
+    def test_views_are_cached_objects(self):
+        _, model = self._setup()
+        assert model.rhs is model.rhs
+        assert model.jacobian is model.jacobian
+        assert model.outputs[0] is model.outputs[0]
+        assert model.events[0] is model.events[0]
+
+    def test_kept_solver_surface(self):
+        _, model = self._setup()
+        assert model.n_states == 2
+        assert model.nnz >= 2
+        assert model.n_colors >= 1
+        assert repr(model.evaluator()).startswith(
+            '<capsule object "pybamm.rust.evaluator"'
+        )
+        model.csc_sparsity_pattern()
+        stats = model.jacobian_stats()
+        assert stats["n_dense_rows"] == 0
+        assert stats["dense_row_entries"] == 0
+        assert stats["dense_row_tape_instructions"] == 0
+
+
 class TestJvpTrajectory:
     def _setup(self):
         _, f = _make_fn()
@@ -976,6 +1120,7 @@ class TestExtensionModuleLocation:
 
         for name in (
             "CompiledFunction",
+            "CompiledModel",
             "ExprGraph",
         ):
             assert hasattr(pybamm.rust, name), name
