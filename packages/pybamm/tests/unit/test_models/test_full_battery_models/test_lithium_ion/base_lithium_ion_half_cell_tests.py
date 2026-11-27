@@ -59,11 +59,40 @@ class BaseUnitTestLithiumIonHalfCell:
         }
         self.check_well_posedness(options)
 
-    def test_coupled_ion_electron_transfer_lithium_metal_not_supported(self):
+    def test_well_posed_scalar_coupled_ion_electron_transfer(self):
         options = {"intercalation kinetics": "coupled ion-electron transfer"}
+        self.check_well_posedness(options)
+
+    def test_coupled_ion_electron_transfer_lithium_metal_not_supported(self):
+        options = {
+            "intercalation kinetics": (
+                "coupled ion-electron transfer",
+                "coupled ion-electron transfer",
+            )
+        }
         if self.model is not None:
             with pytest.raises(pybamm.OptionError, match=r"lithium metal electrode"):
                 self.check_well_posedness(options)
+
+    @pytest.mark.parametrize(
+        "ocp",
+        [
+            "current sigmoid",
+            "one-state hysteresis",
+            "one-state differential capacity hysteresis",
+        ],
+    )
+    def test_well_posed_scalar_open_circuit_potential(self, ocp):
+        self.check_well_posedness({"open-circuit potential": ocp})
+
+    def test_well_posed_scalar_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+            "number of MSMR reactions": ("none", "6"),
+        }
+        self.check_well_posedness(options)
 
     def test_well_posed_constant_sei(self):
         options = {"SEI": "constant"}

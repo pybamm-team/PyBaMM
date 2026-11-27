@@ -902,6 +902,54 @@ class TestElectrodeCompatibility:
             }
         )
 
+    @pytest.mark.parametrize(
+        ("option", "value", "lithium_metal_value"),
+        [
+            ("open-circuit potential", "current sigmoid", "single"),
+            ("open-circuit potential", "one-state hysteresis", "single"),
+            (
+                "open-circuit potential",
+                "one-state differential capacity hysteresis",
+                "single",
+            ),
+            (
+                "intercalation kinetics",
+                "coupled ion-electron transfer",
+                "symmetric Butler-Volmer",
+            ),
+        ],
+    )
+    def test_half_cell_host_lattice_scalar(self, option, value, lithium_metal_value):
+        options = BatteryModelOptions({"working electrode": "positive", option: value})
+        assert options[option] == value
+        assert options.negative[option] == lithium_metal_value
+        assert options.positive[option] == value
+        # a full cell is unchanged
+        options = BatteryModelOptions({option: value})
+        assert options.negative[option] == value
+
+    def test_half_cell_lithium_metal_kinetics_still_apply(self):
+        options = BatteryModelOptions(
+            {"working electrode": "positive", "intercalation kinetics": "linear"}
+        )
+        assert options.negative["intercalation kinetics"] == "linear"
+
+    def test_half_cell_host_lattice_on_lithium_metal(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Option 'intercalation kinetics' at negative is 'coupled "
+            r"ion-electron transfer', which needs a host lattice",
+        ):
+            BatteryModelOptions(
+                {
+                    "working electrode": "positive",
+                    "intercalation kinetics": (
+                        "coupled ion-electron transfer",
+                        "coupled ion-electron transfer",
+                    ),
+                }
+            )
+
     def test_sei_on_cracks_requires_cracking_per_electrode(self):
         with pytest.raises(
             pybamm.OptionError,
