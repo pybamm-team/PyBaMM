@@ -388,6 +388,33 @@ class TestIDAKLUSolver:
             atol=1e-5,
         )
 
+    def test_an_input_free_model_takes_zero_width_inputs_rows(self):
+        # An empty input stack is 1 x 0, so each solver must copy no values from a row
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver()
+        t_eval = np.array([0.0, 1.0])
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(
+            solution["u"](t_eval), np.exp(-t_eval), rtol=1e-3, atol=1e-6
+        )
+
+        group = solver._setup["solver"]
+        with pytest.raises(
+            ValueError, match=r"wrong number of cols\. Expected 0 but got 1"
+        ):
+            group.solve(
+                t_eval,
+                np.array([]),
+                np.ones((1, 1)),
+                np.zeros((1, 1)),
+                np.ones((1, 1)),
+            )
+
     def test_input_params(self):
         # test a mix of scalar and vector input params
         model = pybamm.BaseModel()
@@ -2002,11 +2029,17 @@ class TestIDAKLUSolver:
         solution = pybamm.Simulation(model).solve([0, 3600])
         assert solution.termination == "event: dV/dt > -1e-4 V/s"
 
-        reference = pybamm.Simulation(model_class()).solve(np.linspace(0, 3600, 36001))[
-            "Voltage [V]"
-        ]
         t = solution.t[-1]
-        slope = (reference(t + 0.05) - reference(t - 0.05)) / 0.1
+        half_window = 0.05
+        assert half_window < t < 3600 - half_window
+        # tight tolerances decouple the reference from the event solve's errors;
+        # stopping either side of t avoids interpolating between solver steps
+        reference = pybamm.Simulation(
+            model_class(), solver=pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-11)
+        ).solve(np.array([0, t - half_window, t + half_window, 3600]))["Voltage [V]"]
+        slope = (reference(t + half_window) - reference(t - half_window)) / (
+            2 * half_window
+        )
         np.testing.assert_allclose(slope, -1e-4, rtol=1e-2)
 
     def test_state_derivative_termination_in_experiment(self):

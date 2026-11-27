@@ -34,9 +34,9 @@ impl CompiledModel {
     /// Compile `roots` as this model's observables of `kind`, replacing any set before.
     ///
     /// Every root is validated and checked against the declared states and inputs before any
-    /// compiles. The roots are simplified together once, and their tapes and tangents derive
-    /// from that graph, so they agree with each other. Two or more also fuse into one tape, so
-    /// shared subexpressions run once.
+    /// compiles; only events may read `y_dot`. The roots are simplified together once, and
+    /// their tapes and tangents derive from that graph, so they agree with each other. Two or
+    /// more also fuse into one tape, so shared subexpressions run once.
     pub fn set_observables(
         &mut self,
         kind: ObservableKind,
@@ -44,8 +44,9 @@ impl CompiledModel {
         roots: &[NodeId],
     ) -> Result<(), CoreError> {
         validate(arena, roots.iter().copied())?;
+        let allow_y_dot = kind == ObservableKind::Events;
         for &root in roots {
-            verify_state_extent(DagRef::new(arena, root), self.n_states)?;
+            verify_state_extent(DagRef::new(arena, root), self.n_states, allow_y_dot)?;
         }
         // Whole-arena, as for the rhs; a parameter registered since the build widens `dp`.
         let registry = ParamRegistry::from_arena(arena)?;
@@ -117,6 +118,12 @@ impl CompiledModel {
         self.events.total_len()
     }
 
+    /// Whether each event's tape reads `y_dot`, in the order the events were set.
+    #[inline]
+    pub fn events_read_y_dot(&self) -> &[bool] {
+        self.events.reads_y_dot()
+    }
+
     /// Length of the upsampling observables concatenated: 0 until they are set.
     #[inline]
     pub const fn upsampling_len(&self) -> usize {
@@ -124,17 +131,24 @@ impl CompiledModel {
     }
 
     /// Evaluate every observable of `kind` into `output`, concatenated.
+    ///
+    /// `y_dot` may be empty unless an observable reads it.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn eval_observables(
         &self,
         ws: &mut Workspace,
         kind: ObservableKind,
         t: f64,
         y: &[f64],
+        y_dot: &[f64],
         inputs: &[f64],
         output: &mut [f64],
     ) {
-        self.observables(kind)
-            .eval_all(ws.observable_scratch(kind), t, y, inputs, output);
+        let set = self.observables(kind);
+        if set.reads_y_dot().contains(&true) {
+            check_len("y_dot", y_dot.len(), self.n_states);
+        }
+        set.eval_all(ws.observable_scratch(kind), t, y, y_dot, inputs, output);
     }
 
     /// Batch-evaluate every output over `k` points: `y_cols` `(n_states, k)`, `out`
@@ -270,6 +284,59 @@ mod tests {
     }
 
     #[test]
+    fn only_events_may_read_y_dot() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let rhs = arena.alloc(Node::Neg(y));
+        let y0 = element(&mut arena, y, 0);
+        let y_dot = arena.alloc(Node::StateVectorDot { start: 0, end: 2 });
+        let y_dot1 = element(&mut arena, y_dot, 1);
+        let wide_y_dot = arena.alloc(Node::StateVectorDot { start: 0, end: 8 });
+
+        let mut model = compile(&arena, rhs, identity_mass_matrix(2), 2, 0);
+        for kind in [ObservableKind::Outputs, ObservableKind::Upsampling] {
+            let err = model
+                .set_observables(kind, &arena, &[y_dot1])
+                .expect_err("only events are given y_dot");
+            assert!(
+                matches!(err, CoreError::StateDotRead),
+                "unexpected error: {err}"
+            );
+        }
+        let err = model
+            .set_observables(ObservableKind::Events, &arena, &[wide_y_dot])
+            .expect_err("an event reading y_dot past n_states must be refused");
+        assert!(
+            matches!(
+                err,
+                CoreError::StateCountTooSmall {
+                    declared: 2,
+                    extent: 8
+                }
+            ),
+            "unexpected error: {err}"
+        );
+
+        model
+            .set_observables(ObservableKind::Events, &arena, &[y0, y_dot1])
+            .expect("events may read y_dot");
+        assert_eq!(model.events_read_y_dot(), [false, true]);
+        let mut ws = model.create_workspace();
+        let mut out = [0.0; 2];
+        let events = ObservableKind::Events;
+        model.eval_observables(
+            &mut ws,
+            events,
+            0.0,
+            &[3.0, 4.0],
+            &[5.0, 6.0],
+            &[],
+            &mut out,
+        );
+        assert_eq!(out, [3.0, 6.0]);
+    }
+
+    #[test]
     fn an_output_past_the_declared_state_count_is_rejected() {
         let mut arena = Arena::new();
         let narrow = arena.alloc(Node::StateVector { start: 0, end: 2 });
@@ -356,6 +423,7 @@ mod tests {
             0.0,
             &[3.0, 4.0],
             &[],
+            &[],
             &mut out,
         );
         assert!((out[0] - 6.0).abs() < 1e-12);
@@ -400,6 +468,7 @@ mod tests {
             ObservableKind::Outputs,
             0.0,
             &y_vals,
+            &[],
             &inputs,
             &mut out,
         );
@@ -428,7 +497,7 @@ mod tests {
         let mut ws = model.create_workspace();
         let mut out = [0.0; 1];
         for (y, want) in [([0.7, 1.0], 0.2), ([0.5, 1.0], 0.0), ([0.3, 1.0], -0.2)] {
-            model.eval_observables(&mut ws, events, 0.0, &y, &[], &mut out);
+            model.eval_observables(&mut ws, events, 0.0, &y, &[], &[], &mut out);
             assert!((out[0] - want).abs() < 1e-12, "{y:?}: got {}", out[0]);
         }
 
@@ -438,7 +507,7 @@ mod tests {
         assert_eq!((model.n_events(), model.total_event_len()), (2, 2));
         let mut ws = model.create_workspace();
         let mut out = [0.0; 2];
-        model.eval_observables(&mut ws, events, 0.0, &[0.7, 1.5], &[], &mut out);
+        model.eval_observables(&mut ws, events, 0.0, &[0.7, 1.5], &[], &[], &mut out);
         assert!((out[0] - 0.2).abs() < 1e-12);
         assert!((out[1] - 0.5).abs() < 1e-12);
     }
@@ -467,12 +536,21 @@ mod tests {
         let mut ws = model.create_workspace();
         let (mut out_val, mut event_val) = ([0.0; 1], [0.0; 1]);
         let y = [3.0, 4.0];
-        model.eval_observables(&mut ws, ObservableKind::Outputs, 0.0, &y, &[], &mut out_val);
+        model.eval_observables(
+            &mut ws,
+            ObservableKind::Outputs,
+            0.0,
+            &y,
+            &[],
+            &[],
+            &mut out_val,
+        );
         model.eval_observables(
             &mut ws,
             ObservableKind::Events,
             0.0,
             &y,
+            &[],
             &[],
             &mut event_val,
         );
@@ -523,7 +601,7 @@ mod tests {
             for (lane, &t) in ts.iter().enumerate() {
                 let mut fused = [0.0; 2];
                 let y = &y_cols[lane * 2..(lane + 1) * 2];
-                model.eval_observables(&mut ws, kind, t, y, &[], &mut fused);
+                model.eval_observables(&mut ws, kind, t, y, &[], &[], &mut fused);
                 assert_eq!(fused[0].to_bits(), expected[lane * 2].to_bits());
                 assert_eq!(fused[1].to_bits(), expected[lane * 2 + 1].to_bits());
             }
@@ -621,8 +699,8 @@ mod tests {
         let h = 1e-6;
         let central = |ws: &mut Workspace, plus: (&[f64], &[f64]), minus: (&[f64], &[f64])| {
             let (mut at_plus, mut at_minus) = (vec![0.0; len], vec![0.0; len]);
-            model.eval_observables(ws, kind, t, plus.0, plus.1, &mut at_plus);
-            model.eval_observables(ws, kind, t, minus.0, minus.1, &mut at_minus);
+            model.eval_observables(ws, kind, t, plus.0, &[], plus.1, &mut at_plus);
+            model.eval_observables(ws, kind, t, minus.0, &[], minus.1, &mut at_minus);
             let quotient = |(p, m): (&f64, &f64)| (p - m) / (2.0 * h);
             at_plus
                 .iter()
@@ -679,7 +757,7 @@ mod tests {
         let mut ws = model.create_workspace();
         let mut out = [0.0; 1];
         let upsampling = ObservableKind::Upsampling;
-        model.eval_observables(&mut ws, upsampling, 0.0, &[3.0, 4.0], &[2.5], &mut out);
+        model.eval_observables(&mut ws, upsampling, 0.0, &[3.0, 4.0], &[], &[2.5], &mut out);
         assert_eq!(out[0].to_bits(), 10.0_f64.to_bits());
     }
 

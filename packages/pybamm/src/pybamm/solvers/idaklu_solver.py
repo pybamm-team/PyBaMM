@@ -706,7 +706,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # Collect all casadi functions for AOT compilation. With compile=True,
         # all functions are bundled into a single shared library via one gcc
         # invocation; each serialized Function then points at its entry point.
-        has_sens = (len(stacked_inputs) > 0) and model.calculate_sensitivities
+        has_sens = stacked_inputs.size > 0 and bool(model.calculate_sensitivities)
         fns = dict(
             zip(
                 _SETUP_FCN_KEYS,
@@ -736,7 +736,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         self._setup = {
             "number_of_states": len(y0),
-            "inputs": len(stacked_inputs),
+            # Not len: an empty stack is 1 x 0, and each solved row must be this wide
+            "inputs": stacked_inputs.size,
             "jac_bandwidth_upper": jac_bw_upper,
             "jac_bandwidth_lower": jac_bw_lower,
             "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,

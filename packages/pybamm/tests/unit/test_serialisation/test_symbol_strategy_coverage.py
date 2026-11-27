@@ -123,24 +123,30 @@ _BRANCH_CLASSES = sorted(
     key=lambda cls: cls.__name__,
 )
 
-_FIND_SETTINGS = settings(max_examples=20, deadline=None, database=None)
+# Up to 100 nodes per child shape are built and round-tripped; a failing node is
+# shrunk before it is reported.
+_FIND_SETTINGS = settings(max_examples=100, deadline=None, database=None)
+
+
+def _changes_on_round_trip(node: pybamm.Symbol) -> bool:
+    return convert_symbol_from_json(convert_symbol_to_json(node)).id != node.id
 
 
 @pytest.mark.parametrize("child_key", sorted(_EXEMPLAR_CHILDREN))
 @pytest.mark.parametrize("cls", _BRANCH_CLASSES, ids=lambda cls: cls.__name__)
 def test_branch_factories_handle_every_child_shape(cls, child_key):
-    """Every branch factory must, for every child shape, either build a
-    constructor-valid node that round-trips or reject the child cleanly
+    """Every branch factory must, for every child shape, either build
+    constructor-valid nodes that round-trip or reject the child cleanly
     (constructive guard / filter) — never leak a constructor error at
     generation time."""
     child = _EXEMPLAR_CHILDREN[child_key]()
     strategy = _STRATEGIES[cls](st.just(child))
     try:
-        node = find(strategy, lambda _: True, settings=_FIND_SETTINGS)
+        node = find(strategy, _changes_on_round_trip, settings=_FIND_SETTINGS)
     except (NoSuchExample, Unsatisfiable):
-        return  # the factory rejects this child shape by construction
+        return  # every node round-tripped, or the factory rejects this child
     restored = convert_symbol_from_json(convert_symbol_to_json(node))
-    assert restored.id == node.id, (
+    pytest.fail(
         f"{cls.__name__} round-trip changed identity for child "
         f"{child_key!r}.\n  original: {node!r}\n  restored: {restored!r}"
     )

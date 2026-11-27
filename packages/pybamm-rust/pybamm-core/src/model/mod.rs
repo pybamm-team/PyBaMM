@@ -196,7 +196,7 @@ impl CompiledModel {
         validate(rhs.arena(), std::iter::once(rhs.root()).chain(residual))?;
         let params = verify_widths(rhs, n_states, input_width)?;
         if let Some(residual) = residual {
-            verify_state_extent(DagRef::new(rhs.arena(), residual), n_states)?;
+            verify_state_extent(DagRef::new(rhs.arena(), residual), n_states, false)?;
         }
         let mass_shape = mass_matrix.shape();
         if mass_shape.rows != n_states || mass_shape.cols != n_states {
@@ -488,12 +488,17 @@ pub(crate) fn check_len(name: &str, len: usize, needed: usize) {
     );
 }
 
-/// Refuse an expression that reads `y_dot`, or more of `y` than `n_states` declares.
+/// Refuse an expression that reads more of `y` or `y_dot` than `n_states` declares, or reads
+/// `y_dot` at all unless `allow_y_dot`.
 ///
 /// Scans only what `dag`'s root reaches, so discarded wider expressions in the arena are ignored.
-fn verify_state_extent(dag: DagRef<'_>, n_states: usize) -> Result<(), CoreError> {
+fn verify_state_extent(
+    dag: DagRef<'_>,
+    n_states: usize,
+    allow_y_dot: bool,
+) -> Result<(), CoreError> {
     let extents = ReadExtents::scan(dag.arena(), dag.root());
-    if extents.y_dot.is_some() {
+    if extents.y_dot.is_some() && !allow_y_dot {
         return Err(CoreError::StateDotRead);
     }
     resolve_state_count(Some(n_states), extents.n_states())?;
@@ -506,7 +511,7 @@ fn verify_widths(
     n_states: usize,
     input_width: PackedWidth,
 ) -> Result<ParamRegistry, CoreError> {
-    verify_state_extent(rhs, n_states)?;
+    verify_state_extent(rhs, n_states, false)?;
     let registry = ParamRegistry::from_arena(rhs.arena())?;
     resolve_input_width(Some(input_width), registry.packed_width())?;
     Ok(registry)
