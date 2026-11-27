@@ -10,12 +10,10 @@ from pybamm.solvers.base_solver import stack_inputs
 
 
 class AlgebraicSolver(pybamm.BaseSolver):
-    """Solve a discretised model which contains only (time independent) algebraic
-    equations using a root finding algorithm.
-    Uses scipy.optimize.root.
-    Note: this solver could be extended for quasi-static models, or models in
-    which the time derivative is manually discretised and results in a (possibly
-    nonlinear) algebaric system at each time level.
+    """Solve a discretised model containing only algebraic equations using SciPy.
+
+    If the equations depend on time, solve the algebraic system separately at
+    each requested time.
 
     Parameters
     ----------
@@ -160,21 +158,21 @@ class AlgebraicSolver(pybamm.BaseSolver):
             if jac:
                 if issparse(jac(t_eval[0], y0, inputs)):
 
-                    def jac_fn(y_alg, jac=jac):
+                    def jac_fn(y_alg, jac=jac, t=t):
                         """
                         Evaluates Jacobian using y0_diff (fixed) and y_alg (varying)
                         """
                         y = np.concatenate([y0_diff, y_alg])
-                        return jac(0, y, inputs)[:, len_rhs:].toarray()
+                        return jac(t, y, inputs)[:, len_rhs:].toarray()
 
                 else:
 
-                    def jac_fn(y_alg, jac=jac):
+                    def jac_fn(y_alg, jac=jac, t=t):
                         """
                         Evaluates Jacobian using y0_diff (fixed) and y_alg (varying)
                         """
                         y = np.concatenate([y0_diff, y_alg])
-                        return jac(0, y, inputs)[:, len_rhs:]
+                        return jac(t, y, inputs)[:, len_rhs:]
 
             else:
                 jac_fn = None
