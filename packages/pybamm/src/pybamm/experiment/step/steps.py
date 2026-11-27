@@ -1,4 +1,5 @@
 import copy
+import re
 
 import numpy as np
 
@@ -65,16 +66,27 @@ def string(text, **kwargs):
     # Extra spaces or newlines would otherwise end up inside the parsed units
     text = " ".join(text.split())
 
-    # extract period
-    if "period)" in text:
+    # extract period, e.g. "Charge at 1 C for 1 hour (1 minute period)"
+    if "period" in text:
         if "period" in kwargs:
             raise ValueError(
                 "Period cannot be specified both as a keyword argument "
                 "and in the string"
             )
-        text, period_full = text.split(" (")
-        period, _ = period_full.split(" period)")
-        kwargs["period"] = period
+        match = re.fullmatch(r"(.*?) ?\( ?([^()]+?) period ?\)", text)
+        if match is None or text.count("period") > 1:
+            raise ValueError(
+                "The period must be given once, in brackets at the end of the "
+                "string, e.g. 'Charge at 1 C for 1 hour (1 minute period)'."
+            )
+        text, kwargs["period"] = match.groups()
+    # "for" or "until" with nothing after it
+    if text.endswith((" for", " until")):
+        raise ValueError(
+            f"'{text.split()[-1]}' must be followed by a "
+            f"{'duration' if text.endswith(' for') else 'condition'}, e.g. "
+            "'Charge at 1 C for 1 hour or until 4.2 V'."
+        )
     # extract termination condition based on "until" keyword
     if " until " in text:
         if text.count(" until ") > 1:

@@ -283,6 +283,42 @@ class TestExperimentSteps:
             pybamm.step.string("Charge at 1 C until 4.2 V for 1 hour")
 
     @pytest.mark.parametrize(
+        "text",
+        [
+            # used to fail with "too many values to unpack"
+            "Charge at 1 C for 1 hour (1 minute period) (2 minute period)",
+            # used to complain about the time units
+            "Charge at 1 C for 1 hour (1 minute period",
+            # used to drop the text after the period without an error
+            "Charge at 1 C for 1 hour (1 minute period) and more",
+            # used to drop the duration and say there is no 'for'
+            "Charge at 1 C (1 minute period) for 1 hour",
+        ],
+    )
+    def test_step_string_bad_period(self, text):
+        with pytest.raises(ValueError, match=r"period must be given once"):
+            pybamm.step.string(text)
+
+    @pytest.mark.parametrize("keyword", ["for", "until"])
+    def test_step_string_nothing_after_keyword(self, keyword):
+        # used to say the string must contain 'for' or 'until', although it does
+        with pytest.raises(ValueError, match=rf"'{keyword}' must be followed by"):
+            pybamm.step.string(f"Charge at 1 A {keyword}")
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Charge at 1 C for 1 hour (1 minute period )",
+            "Charge at 1 C for 1 hour ( 1 minute period)",
+            "Charge at 1 C for 1 hour(1 minute period)",
+        ],
+    )
+    def test_step_string_period_spacing(self, text):
+        step = pybamm.step.string(text)
+        assert step.duration == 3600
+        assert step.period == 60
+
+    @pytest.mark.parametrize(
         ("text", "value"),
         [
             ("Discharge at 1 A for 1 hour  ", 1),
