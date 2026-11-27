@@ -7,6 +7,7 @@ import numpy as np
 
 import pybamm
 from pybamm.solvers.grid_interpolation import RectilinearGrid
+from pybamm.solvers.variable_observer import pack_sensitivity_dict
 
 from .base_processed_variable import BaseProcessedVariable
 
@@ -51,6 +52,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     # Defaults for a variable pickled before __init__ set these
     time_integral = None
     _unjoinable = False
+    _unreadable_message = None
     _interp_args = None
 
     def __init__(
@@ -149,7 +151,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # Not thread-safe: concurrent first reads may run initialise twice.
         # Instances are constructed and read on the same thread in the standard
         # solve flow, so callers parallelising reads must serialise them.
-        self._raise_if_unjoinable()
+        self._raise_if_unreadable()
         if not self._initialised:
             self._initialise_method()
             self._initialised = True
@@ -187,6 +189,11 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             state.pop(name, None)
         self.__dict__.update(state)
 
+    @property
+    def _time_points(self):
+        """The times the data holds: only the final one for a time integral."""
+        return self.t_pts[-1:] if self.time_indep else self.t_pts
+
     def as_computed(self) -> ProcessedVariableComputed:
         return self
 
@@ -207,7 +214,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         len_space = self.base_eval_shape[0]
         return (
             self._concatenate(realdata)
-            .reshape((len(self.t_pts), len_space))
+            .reshape((len(self._time_points), len_space))
             .transpose()
         )
 
@@ -336,7 +343,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # set up interpolation
         self._interp_args = (
             entries_for_interp,
-            {self.first_dimension: pts_for_interp, "t": self.t_pts},
+            {self.first_dimension: pts_for_interp, "t": self._time_points},
         )
 
     def initialise_2D(self):
@@ -695,7 +702,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         using interpolation
         """
         if self.time_indep:
-            return self.entries
+            # A time integral has one value for the whole solution, whatever t is
+            if all(arg is None for arg in (x, r, y, z, R)):
+                return self.entries
+            t = None
         queries = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         queries = {key: value for key, value in queries.items() if value is not None}
         values, grid = self._interpolation_grid()
@@ -714,7 +724,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
         points, and n_p is the size of the input parameter
         """
-        self._raise_if_unjoinable()
+        self._raise_if_unreadable()
         # No sensitivities if there are no inputs
         if len(self.all_inputs[0]) == 0:
             return {}
@@ -795,19 +805,25 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         Return the data and sensitivities of the time integral over this
         variable's segments plus the one over other's.
         """
-        other_sensitivities = other.sensitivities or {}
-        sensitivities = {
-            k: value + other_sensitivities[k]
-            for k, value in (self.sensitivities or {}).items()
-        }
         # other's integral starts again from its initial condition
-        initial_condition = float(other.time_integral.initial_condition)
-        return [self.entries + other.entries - initial_condition], sensitivities
+        time_integral, inputs = other.time_integral, other.all_inputs[0]
+        initial_condition = time_integral.initial_condition_value(inputs)
+        data = self.entries.reshape(-1) + other.entries.reshape(-1) - initial_condition
+        self_sensitivities = self.sensitivities or {}
+        if not self_sensitivities:
+            return [data], {}
+        names = [name for name in self_sensitivities if name != "all"]
+        all_sensitivities = (
+            self_sensitivities["all"]
+            + other.sensitivities["all"]
+            - time_integral.initial_condition_sensitivities(inputs, names)
+        )
+        return [data], pack_sensitivity_dict(all_sensitivities, names)
 
     def _time_integrals_joinable(self, other):
         """Return whether this variable and other are joinable time integrals."""
-        # Every segment samples its end points, so a DiscreteTimeSum would count the
-        # boundary twice; a function of an integral cannot be split across segments
+        # A DiscreteTimeSum would count a discrete time on a segment boundary in both
+        # segments; a function of an integral cannot be split across segments
         return all(
             time_integral is not None
             and time_integral.method == "continuous"
@@ -815,7 +831,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             for time_integral in (self.time_integral, other.time_integral)
         )
 
-    def _raise_if_unjoinable(self):
+    def _raise_if_unreadable(self):
+        if self._unreadable_message is not None:
+            raise pybamm.SolverError(self._unreadable_message)
         if self._unjoinable:
             raise NotImplementedError(
                 "This variable joins solution segments (multi-step experiments or "

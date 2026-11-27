@@ -144,7 +144,8 @@ class ProcessedVariable(BaseProcessedVariable):
 
         entries = self.observe_raw()
 
-        t = self.t_pts
+        # A time integral holds one value per entry, at the final time
+        t = self.t_pts if self.time_integral is None else self.t_pts[-1:]
         entries_for_interp, coords = self._interp_setup(entries, t)
 
         self._entries_raw = entries
@@ -172,6 +173,8 @@ class ProcessedVariable(BaseProcessedVariable):
         """
         Evaluate the base variable at the given time points and y values.
         """
+        if self.time_integral is not None:
+            return self._observe_time_integral()
         t = self.t_pts
         return self._observe_postfix(self._observe_raw(), t)
 
@@ -179,6 +182,29 @@ class ProcessedVariable(BaseProcessedVariable):
     def has_t_additive(self) -> bool:
         """Whether ``t_pts`` includes times without stored states."""
         return len(self.t_pts) != sum(len(t) for t in self.all_ts)
+
+    def _observe_time_integral(self):
+        """The time integral's value, shaped like the variable at one time."""
+        time_integral = self.time_integral
+        time_integral.warn_times_after_end(self._name, self.t_pts[-1])
+        if (
+            self.hermite_interpolation
+            and time_integral.sample_indices(self.t_pts) is None
+        ):
+            # Interpolate the summand to the discrete times the solver did not stop at
+            t = time_integral.sample_times(self.t_pts)
+            entries = self._observe_postfix(self._observe_hermite(t), t)
+        else:
+            indices = time_integral.checked_sample_indices(
+                self._name, self.t_pts, "the solution has no Hermite interpolant"
+            )
+            t = self.t_pts[indices]
+            entries = self._observe_postfix(self._observe_raw(), self.t_pts)
+            entries = entries[..., indices]
+        value = time_integral.postfix(
+            np.moveaxis(entries, -1, 0), t, self.all_inputs[0]
+        )
+        return value.reshape(self._shape(self.t_pts[-1:]))
 
     def _observe_raw(self):
         # Hermite interpolation fills in the times without stored states
@@ -237,6 +263,23 @@ class ProcessedVariable(BaseProcessedVariable):
         R=None,
         fill_value=np.nan,
     ):
+        if self.time_integral is not None:
+            # A time integral has one value for the whole solution, whatever t is
+            self.initialise()
+            if all(arg is None for arg in (x, r, y, z, R)):
+                return self._entries_raw
+            return self._interpolate(
+                self._entries_for_interp_raw,
+                self._grid_raw,
+                None,
+                x,
+                r,
+                y,
+                z,
+                R,
+                fill_value,
+            )
+
         # Check to see if we are interpolating exactly onto the raw solution time points
         t_observe, observe_raw = self._check_observe_raw(t)
 
@@ -267,20 +310,17 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.initialise()
                 entries_for_interp, grid = self._entries_for_interp_raw, self._grid_raw
 
-            if self.time_integral is None:
-                processed_entries = self._interpolate(
-                    entries_for_interp,
-                    grid,
-                    t,
-                    x,
-                    r,
-                    y,
-                    z,
-                    R,
-                    fill_value,
-                )
-            else:
-                processed_entries = entries_for_interp
+            processed_entries = self._interpolate(
+                entries_for_interp,
+                grid,
+                t,
+                x,
+                r,
+                y,
+                z,
+                R,
+                fill_value,
+            )
         else:
             processed_entries = entries
 
@@ -334,16 +374,6 @@ class ProcessedVariable(BaseProcessedVariable):
             t_observe (np.ndarray): time points to observe
             observe_raw (bool): True if observing the raw data
         """
-        # if this is a time integral variable, t must be None and we observe either the
-        # data times (for a discrete sum) or the solution times (for a continuous sum)
-        if self.time_integral is not None:
-            if self.time_integral.method == "discrete":
-                # discrete sum should be observed at the discrete times
-                t = self.time_integral.discrete_times
-            else:
-                # assume we can do a sufficiently accurate trapezoidal integration at t_pts
-                t = self.t_pts
-
         observe_raw = (t is None) or (
             np.asarray(t).size == len(self.t_pts) and np.all(t == self.t_pts)
         )
@@ -462,14 +492,9 @@ class ProcessedVariable(BaseProcessedVariable):
             # Rows as an output_variables solve returns them: before per-class reordering
             observed = self._observe_raw()
             base_data = [observed.reshape(-1, len(self.t_pts), order="F").T]
-        elif isinstance(self, ProcessedVariable0D):
-            # output_variables stores a time integral as its single summed value
-            base_data = [self.entries]
         else:
-            raise NotImplementedError(
-                f"Variable {self._name!r}: as_computed() does not support time "
-                "integrals of spatially varying variables."
-            )
+            # output_variables stores a time integral as its flattened value
+            base_data = [self.entries.reshape(-1)]
 
         cpv = pybamm.ProcessedVariableComputed(
             self.base_variables,
@@ -503,13 +528,6 @@ class ProcessedVariable0D(ProcessedVariable):
             observer,
             solution,
             time_integral=time_integral,
-        )
-
-    def _observe_postfix(self, entries, t):
-        if self.time_integral is None:
-            return entries
-        return self.time_integral.postfix(
-            entries, self.t_pts, self.all_inputs_stacked[0]
         )
 
     def _interp_setup(self, entries, t):
