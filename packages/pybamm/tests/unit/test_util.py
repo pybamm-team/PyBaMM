@@ -80,6 +80,12 @@ class TestUtil:
         with pytest.raises(KeyError, match=r"open circuit voltage"):
             d.__getitem__("Measured open circuit voltage [V]")
 
+        with pytest.raises(KeyError, match=r"Core to surface heat flux \[W\]"):
+            d.__getitem__("Surface total cooling [W]")
+
+        with pytest.raises(KeyError, match=r"Surface to environment heat flux"):
+            d.__getitem__("Environment total cooling [W]")
+
         with pytest.raises(KeyError, match=r"Lower voltage"):
             d.__getitem__("Open-circuit voltage at 0% SOC [V]")
 

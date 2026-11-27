@@ -46,6 +46,7 @@ class LeadAcidParameters(BaseParameters):
         self.T_amb = self.therm.T_amb
         self.h_edge = self.therm.h_edge
         self.h_total = self.therm.h_total
+        self.R_core_surface = self.therm.R_core_surface
         self.rho_c_p_eff = self.therm.rho_c_p_eff
 
         # Macroscale geometry

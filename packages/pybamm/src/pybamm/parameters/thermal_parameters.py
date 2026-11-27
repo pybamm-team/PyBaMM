@@ -38,6 +38,11 @@ class ThermalParameters(BaseParameters):
         # Cooling coefficient
         self.h_total = pybamm.Parameter("Total heat transfer coefficient [W.m-2.K-1]")
 
+        # Core-to-surface conduction, used by the lumped surface temperature model
+        self.R_core_surface = pybamm.Parameter(
+            "Core-to-surface thermal resistance [K.W-1]"
+        )
+
         # Initial temperature
         self.T_init = pybamm.Parameter("Initial temperature [K]")
 

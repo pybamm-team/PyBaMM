@@ -136,7 +136,7 @@ class TestThermal:
         parameter_values.update(
             {
                 "Casing heat capacity [J.K-1]": 30,
-                "Environment thermal resistance [K.W-1]": 10,
+                "Core-to-surface thermal resistance [K.W-1]": 20,
             }
         )
 
@@ -153,6 +153,20 @@ class TestThermal:
             T_ambient_model = sols["ambient"][var].entries[1:]
             T_lumped_model = sols["lumped"][var].entries[1:]
             np.testing.assert_array_less(T_ambient_model, T_lumped_model)
+
+        # Heat flows are positive in the direction they name while the cell heats
+        for sol in sols.values():
+            core_surface = sol["Core to surface heat flux [W]"].entries[1:]
+            surface_env = sol["Surface to environment heat flux [W]"].entries[1:]
+            assert np.all(core_surface > 0)
+            assert np.all(surface_env > 0)
+        # With an ambient surface, heat reaching the surface leaves the cell
+        np.testing.assert_allclose(
+            sols["ambient"]["Surface to environment heat flux [W]"].entries,
+            sols["ambient"]["Core to surface heat flux [W]"].entries,
+            rtol=1e-12,
+            atol=0,
+        )
 
     def test_lumped_contact_resistance(self):
         # Test that the heating with contact resistance is greater than without

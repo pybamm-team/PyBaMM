@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import numbers
-import os
-import sys
 from datetime import datetime
 from enum import StrEnum
 from warnings import catch_warnings, filterwarnings, warn
@@ -179,7 +177,7 @@ class BaseStep:
                     f"operator, e.g. 'until > {term.value} V' or "
                     f"'until < {term.value} V'.",
                     UserWarning,
-                    stacklevel=_user_stacklevel(),
+                    stacklevel=pybamm.util.user_stacklevel(),
                 )
 
         self.temperature = _convert_temperature_to_kelvin(temperature)
@@ -654,18 +652,6 @@ _type_to_units = {
     "power": "[W]",
     "resistance": "[Ohm]",
 }
-
-
-def _user_stacklevel():
-    """Stack level of the first frame outside PyBaMM, so that a warning raised while
-    building a step points at the user's code whichever subclass built it."""
-    pybamm_dir = os.path.dirname(pybamm.__file__)
-    level = 1
-    frame = sys._getframe(1)
-    while frame is not None and frame.f_code.co_filename.startswith(pybamm_dir):
-        frame = frame.f_back
-        level += 1
-    return level
 
 
 def _constant_value(parameter_values, target):

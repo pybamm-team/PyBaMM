@@ -8,6 +8,7 @@ import numbers
 import os
 import pathlib
 import pickle
+import sys
 import timeit
 import weakref
 from warnings import warn
@@ -51,6 +52,17 @@ class FuzzyDict(dict):
                     f"Variable '{domain} electrode SOC' has been renamed to "
                     f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
+                ) from error
+            renamed_heat_flows = {
+                "Surface total cooling [W]": "Core to surface heat flux [W]",
+                "Surface total cooling [W.m-3]": "Core to surface heat flux [W.m-3]",
+                "Environment total cooling [W]": "Surface to environment heat flux [W]",
+            }
+            if key in renamed_heat_flows:
+                raise KeyError(
+                    f"Variable '{key}' has been renamed to "
+                    f"'{renamed_heat_flows[key]}', which is positive in the direction "
+                    "it names (the opposite sign to the old cooling variable)"
                 ) from error
             if "Measured open circuit voltage" in key:
                 raise KeyError(
@@ -445,6 +457,25 @@ def has_jax():
     return (importlib.util.find_spec("jax") is not None) and (
         importlib.util.find_spec("jaxlib") is not None
     )
+
+
+def user_stacklevel():
+    """
+    Stack level of the first frame outside PyBaMM, relative to the caller.
+
+    Returns
+    -------
+    int
+        A ``stacklevel`` for :func:`warnings.warn` that attributes the warning to user
+        code, so the default warning filters show it.
+    """
+    pybamm_dir = os.path.dirname(pybamm.__file__)
+    level = 1
+    frame = sys._getframe(1)
+    while frame is not None and frame.f_code.co_filename.startswith(pybamm_dir):
+        frame = frame.f_back
+        level += 1
+    return level
 
 
 def is_macos_intel():

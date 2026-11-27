@@ -27,7 +27,6 @@ class Ambient(pybamm.BaseSubModel):
             {
                 "Surface temperature [K]": T_amb,
                 "Volume-averaged surface temperature [K]": T_amb_av,
-                "Environment total cooling [W]": pybamm.Scalar(0),
             }
         )
         return variables

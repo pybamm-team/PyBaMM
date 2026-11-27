@@ -28,7 +28,7 @@ parameter_values = pybamm.ParameterValues("Chen2020")
 parameter_values.update(
     {
         "Casing heat capacity [J.K-1]": 30,
-        "Environment thermal resistance [K.W-1]": 10,
+        "Core-to-surface thermal resistance [K.W-1]": 20,
     }
 )
 
@@ -54,7 +54,7 @@ pybamm.dynamic_plot(
         "Voltage [V]",
         "Bulk temperature [°C]",
         "Surface temperature [°C]",
-        "Surface total cooling [W]",
-        "Environment total cooling [W]",
+        "Core to surface heat flux [W]",
+        "Surface to environment heat flux [W]",
     ],
 )

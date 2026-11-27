@@ -1758,6 +1758,70 @@ class TestParameterValues:
         # This would require a key to appear in both processed and untouched scalars
         # which shouldn't happen in normal operation
 
+    def test_environment_thermal_resistance_is_mapped(self):
+        options = {"thermal": "lumped", "surface temperature": "lumped"}
+        old_values = pybamm.ParameterValues("Chen2020")
+        old_values.update(
+            {
+                "Casing heat capacity [J.K-1]": 30,
+                "Environment thermal resistance [K.W-1]": 10,
+            }
+        )
+        h = old_values["Total heat transfer coefficient [W.m-2.K-1]"]
+        area = old_values["Cell cooling surface area [m2]"]
+        new_values = pybamm.ParameterValues("Chen2020")
+        new_values.update(
+            {
+                "Casing heat capacity [J.K-1]": 30,
+                "Core-to-surface thermal resistance [K.W-1]": 1 / (h * area),
+                "Total heat transfer coefficient [W.m-2.K-1]": 1 / (10 * area),
+            }
+        )
+
+        with pytest.warns(DeprecationWarning, match=r"Environment thermal resistance"):
+            sol_old = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(options), parameter_values=old_values
+            ).solve([0, 600])
+        sol_new = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(options), parameter_values=new_values
+        ).solve([0, 600])
+
+        t = np.linspace(0, 600, 20)
+        for name in ["Volume-averaged cell temperature [K]", "Surface temperature [K]"]:
+            np.testing.assert_allclose(
+                sol_old[name](t), sol_new[name](t), rtol=1e-8, atol=1e-10
+            )
+        # The caller's parameter values are left untouched
+        assert old_values["Total heat transfer coefficient [W.m-2.K-1]"] == h
+
+    def test_process_model_attaches_mapped_copy(self):
+        model = pybamm.lithium_ion.SPM(
+            {"thermal": "lumped", "surface temperature": "lumped"}
+        )
+        values = pybamm.ParameterValues("Chen2020")
+        values["Casing heat capacity [J.K-1]"] = 30
+        values["Environment thermal resistance [K.W-1]"] = 10
+        with pytest.warns(DeprecationWarning, match=r"Mapping the old values"):
+            values.process_model(model, delayed_variable_processing=True)
+        attached = model.symbol_processor.parameter_values
+        assert attached is not values
+        assert "Core-to-surface thermal resistance [K.W-1]" in attached
+        assert "Core-to-surface thermal resistance [K.W-1]" not in values
+
+    def test_environment_thermal_resistance_not_mapped(self):
+        lumped = pybamm.lithium_ion.SPM(
+            {"thermal": "lumped", "surface temperature": "lumped"}
+        )
+        values = pybamm.ParameterValues("Chen2020")
+        values["Environment thermal resistance [K.W-1]"] = 10
+        # Ambient surface models never use the old parameter
+        ambient = pybamm.lithium_ion.SPM({"thermal": "lumped"})
+        assert values._map_environment_thermal_resistance(ambient) is values
+        # With the new parameter set, the old one is ignored with a warning
+        values["Core-to-surface thermal resistance [K.W-1]"] = 20
+        with pytest.warns(DeprecationWarning, match=r"It is ignored"):
+            assert values._map_environment_thermal_resistance(lumped) is values
+
     def test_process_model_attaches_to_symbol_processor(self):
         """Test that process_model attaches parameter_values to model's symbol_processor."""
         model = pybamm.lithium_ion.SPM()

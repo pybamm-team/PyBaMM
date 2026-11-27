@@ -888,8 +888,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "surface temperature" : str
                 Sets the surface temperature model to use. Can be "ambient" (default),
                 which sets the surface temperature equal to the ambient temperature, or
-                "lumped", which adds an ODE for the surface temperature (e.g. to model
-                internal heating of a thermal chamber).
+                "lumped", which adds an ODE for the surface (casing) temperature. With
+                "lumped", heat conducts from the core to the surface through the
+                core-to-surface thermal resistance, and the total heat transfer
+                coefficient couples the surface to the ambient.
             * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full". The 'cell geometry' option must be set to
