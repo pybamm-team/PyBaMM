@@ -282,22 +282,29 @@ class TestCoupledVariable:
         [
             {"scale": pybamm.Parameter("Scale")},
             {"reference": pybamm.Parameter("Scale") - 1},
+            {
+                "scale": pybamm.Parameter("Scale"),
+                "reference": pybamm.Parameter("Scale"),
+            },
         ],
     )
     def test_coupled_variable_after_parameter_processing(self, variable_kwargs):
         # targets must match the parameter-processed rhs keys
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u", **variable_kwargs)
-        model.rhs = {u: -pybamm.CoupledVariable("w")}
-        model.initial_conditions = {u: pybamm.Scalar(1)}
-        model.variables = {"u": u, "v": 2 * u, "w": pybamm.CoupledVariable("v")}
+        u_end = {}
+        for coupled in [False, True]:
+            model = pybamm.BaseModel()
+            u = pybamm.Variable("u", **variable_kwargs)
+            model.rhs = {u: -pybamm.CoupledVariable("w") if coupled else -2 * u}
+            model.initial_conditions = {u: pybamm.Scalar(1)}
+            model.variables = {"u": u, "v": 2 * u, "w": pybamm.CoupledVariable("v")}
 
-        simulation = pybamm.Simulation(
-            model, parameter_values=pybamm.ParameterValues({"Scale": 1})
-        )
-        solution = simulation.solve([0, 1])
+            simulation = pybamm.Simulation(
+                model, parameter_values=pybamm.ParameterValues({"Scale": 3})
+            )
+            u_end[coupled] = simulation.solve([0, 1])["u"](1.0)
 
-        np.testing.assert_allclose(solution["u"](1.0), np.exp(-2), rtol=1e-3)
+        np.testing.assert_allclose(u_end[True], u_end[False], rtol=1e-8)
+        np.testing.assert_allclose(u_end[True], np.exp(-2), rtol=1e-2)
 
     @pytest.mark.parametrize("with_parameters", [False, True])
     def test_coupled_variable_in_eagerly_processed_variable(self, with_parameters):
@@ -347,3 +354,115 @@ class TestCoupledVariable:
             isinstance(node, pybamm.CoupledVariable)
             for node in processed.rhs[u].pre_order()
         )
+
+    def test_coupled_variable_with_parameter_in_every_equation_type(self):
+        k = pybamm.Parameter("k")
+        u = pybamm.Variable("u", scale=k)
+        a = pybamm.Variable("a")
+        model = pybamm.BaseModel()
+        model.rhs = {u: -pybamm.CoupledVariable("decay")}
+        model.algebraic = {a: a - pybamm.CoupledVariable("double")}
+        model.initial_conditions = {
+            u: pybamm.CoupledVariable("one"),
+            a: pybamm.Scalar(2),
+        }
+        model.events = [
+            pybamm.Event(
+                "Half",
+                pybamm.CoupledVariable("u") - 0.5 * pybamm.CoupledVariable("one"),
+            )
+        ]
+        model.variables = {
+            "u": u,
+            "a": a,
+            "one": k / 2,
+            "decay": k * u,
+            "double": 2 * k * u,
+        }
+
+        simulation = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues({"k": 2})
+        )
+        solution = simulation.solve([0, 1])
+
+        # u = exp(-2t) until it halves at t = ln(2) / 2
+        np.testing.assert_allclose(solution.t[-1], np.log(2) / 2, rtol=1e-3)
+        np.testing.assert_allclose(solution["a"](0.2), 4 * np.exp(-0.4), rtol=1e-3)
+
+    def test_coupled_variable_in_flux_boundary_condition(self):
+        x = pybamm.SpatialVariable("x", domain="rod", coord_sys="cartesian")
+        u = pybamm.Variable("u", domain="rod")
+        uav = {}
+        for coupled in [False, True]:
+            diffusivity = (
+                pybamm.CoupledVariable("Diffusivity")
+                if coupled
+                else pybamm.Parameter("D")
+            )
+            flux = -diffusivity * pybamm.grad(u)
+            model = pybamm.BaseModel()
+            model.rhs = {u: -pybamm.div(flux, no_simplification=True) - u}
+            model.initial_conditions = {u: pybamm.Scalar(1)}
+            model.boundary_conditions = {
+                u: {
+                    "left": (pybamm.Scalar(0), ("Flux", flux)),
+                    "right": (pybamm.Scalar(0), ("Flux", flux)),
+                }
+            }
+            model.variables = {
+                "u": u,
+                "Diffusivity": pybamm.Parameter("D"),
+                "Average": pybamm.Integral(u, x),
+            }
+
+            simulation = pybamm.Simulation(
+                model,
+                parameter_values=pybamm.ParameterValues({"D": 5}),
+                geometry={"rod": {x: {"min": 0, "max": 1}}},
+                submesh_types={"rod": pybamm.Uniform1DSubMesh},
+                spatial_methods={"rod": pybamm.FiniteVolume()},
+                var_pts={x: 20},
+            )
+            uav[coupled] = simulation.solve([0, 1])["Average"](1.0)
+
+        np.testing.assert_allclose(uav[True], uav[False], rtol=1e-10)
+        np.testing.assert_allclose(uav[True], np.exp(-1), rtol=1e-3)
+
+    def test_resolve_before_removing_independent_variables(self):
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model = pybamm.BaseModel()
+        model.rhs = {u: -u, v: -pybamm.CoupledVariable("w")}
+        model.initial_conditions = {u: pybamm.Scalar(1), v: pybamm.Scalar(1)}
+        model.variables = {"u": u, "v": v, "w": 2 * u}
+
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
+        disc_model = disc.process_model(model, inplace=False)
+
+        # v depends on u only through the coupled "w", so it can still be removed
+        assert [var.name for var in disc_model.rhs] == ["u"]
+
+    def test_missing_coupled_target_raises_at_parameter_processing(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -pybamm.CoupledVariable("missing")}
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {"u": u}
+
+        with pytest.raises(ValueError, match="CoupledVariable 'missing' not found"):
+            pybamm.ParameterValues({}).process_model(model)
+
+    @pytest.mark.parametrize("in_equation", [False, True])
+    def test_circular_coupled_variables_raise_model_error(self, in_equation):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -pybamm.CoupledVariable("w") if in_equation else -u}
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {
+            "u": u,
+            "w": pybamm.CoupledVariable("w1"),
+            "w1": pybamm.CoupledVariable("w"),
+        }
+
+        with pytest.raises(pybamm.ModelError, match=r"Circular .* 'w1?'"):
+            pybamm.ParameterValues({}).process_model(model)

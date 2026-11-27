@@ -56,7 +56,9 @@ class Discretisation:
         Default is False.
     resolve_coupled_variables : bool, optional
         If True, resolve CoupledVariables in rhs, algebraic, initial_conditions,
-        boundary_conditions and events before processing. Default is True.
+        boundary_conditions and events before processing. Only affects models that
+        have not been through :meth:`pybamm.ParameterValues.process_model`, which
+        already resolves them. Default is True.
     """
 
     def __init__(
@@ -188,6 +190,11 @@ class Discretisation:
         # Prepare discretisation
         # set variables (we require the full variable not just id)
 
+        # resolve first: the independence search and boundary conditions need the
+        # coupled targets
+        if self._resolve_coupled_variables:
+            model = model._resolve_coupled_variables_in_equations(inplace)
+
         # Search Equations for Independence
         if self._remove_independent_variables_from_rhs_flag:
             model = self.remove_independent_variables_from_rhs(model)
@@ -199,10 +206,6 @@ class Discretisation:
                         "Spatial method has not been given "
                         f"for variable {var.name} with domain {var.domain}"
                     )
-
-        # resolve before boundary conditions are discretised below
-        if self._resolve_coupled_variables:
-            model = model._resolve_coupled_variables_in_equations(inplace)
 
         # Set the y split for variables
         pybamm.logger.verbose(f"Set variable slices for {model.name}")

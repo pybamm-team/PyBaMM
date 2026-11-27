@@ -7,8 +7,9 @@ class CoupledVariable(pybamm.Symbol):
     A node in the expression tree representing a variable whose equation is set by
     a different model or submodel.
 
-    CoupledVariables are resolved lazily during discretisation by looking up the
-    variable name in model.variables. This means you don't need to manually link
+    CoupledVariables are resolved by looking up the variable name in
+    model.variables, when parameter values are set (or at discretisation, for
+    models without parameter values). This means you don't need to manually link
     coupled variables - just ensure the variable with the matching name exists in
     the combined model's variables dictionary.
 
