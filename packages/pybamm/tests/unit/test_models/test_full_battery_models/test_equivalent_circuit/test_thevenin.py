@@ -30,6 +30,16 @@ class TestThevenin:
         # test submesh types
         assert model.default_submesh_types == {"ECMD particle": pybamm.Uniform1DSubMesh}
 
+    def test_ocv_element(self):
+        options = {"open-circuit voltage": "single"}
+        model = pybamm.equivalent_circuit.Thevenin(options=options)
+        model.check_well_posedness()
+
+    def test_ocv_hysteresis_element(self):
+        options = {"open-circuit voltage": "one-state hysteresis"}
+        model = pybamm.equivalent_circuit.Thevenin(options=options)
+        model.check_well_posedness()
+
     def test_changing_number_of_rcs(self):
         options = {"number of rc elements": 0}
         model = pybamm.equivalent_circuit.Thevenin(options=options)

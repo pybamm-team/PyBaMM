@@ -2030,8 +2030,8 @@ class TestSimulationInitialSocSensitivities:
         model = pybamm.equivalent_circuit.Thevenin()
         parameter_values = model.default_parameter_values
         ocv = parameter_values["Open-circuit voltage [V]"]
-        parameter_values["Open-circuit voltage [V]"] = lambda soc: (
-            ocv(soc) + pybamm.InputParameter("OCV shift [V]")
+        parameter_values["Open-circuit voltage [V]"] = lambda T_cell, soc: (
+            ocv(T_cell, soc) + pybamm.InputParameter("OCV shift [V]")
         )
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, cache_esoh=False

@@ -271,8 +271,11 @@ class BaseSimulation:
                     # The initial SoC only depends on inputs through the OCV
                     names = set()
                     if is_voltage:
+                        T_init = (
+                            pybamm.InputParameter("Initial temperature [K]") - 273.15
+                        )
                         soc = pybamm.InputParameter("Initial SoC")
-                        ocv = pv.process_symbol(param.ocv(soc))
+                        ocv = pv.process_symbol(param.ocv(T_init, soc))
                         names = {
                             node.name
                             for node in ocv.pre_order()

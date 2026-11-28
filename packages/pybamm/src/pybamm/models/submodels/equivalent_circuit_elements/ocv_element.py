@@ -19,26 +19,34 @@ class OCVElement(pybamm.BaseSubModel):
         self.model_options = options
 
     def get_fundamental_variables(self):
+        T_cell = pybamm.Variable("Cell temperature [degC]")
         soc = pybamm.Variable("SoC")
-        ocv = self.param.ocv(soc)
-        variables = {"SoC": soc, "Open-circuit voltage [V]": ocv}
+        ocv = self.param.ocv(T_cell, soc)
+
+        variables = {
+            "Cell temperature [degC]": T_cell,
+            "SoC": soc,
+            "Open-circuit voltage [V]": ocv,
+        }
+
         return variables
 
     def get_coupled_variables(self, variables):
         current = variables["Current [A]"]
-
-        ocv = variables["Open-circuit voltage [V]"]
+        soc = variables["SoC"]
         T_cell = variables["Cell temperature [degC]"]
-
-        dUdT = self.param.dUdT(ocv, T_cell)
-
         T_cell_kelvin = variables["Cell temperature [K]"]
+
+        dUdT = self.param.dUdT(T_cell, soc)
+
         Q_rev = -current * T_cell_kelvin * dUdT
+        Q_hys = pybamm.Scalar(0)
 
         variables.update(
             {
                 "Entropic change [V/K]": dUdT,
                 "Reversible heat generation [W]": Q_rev,
+                "Hysteresis heat generation [W]": Q_hys,
             }
         )
 

@@ -70,8 +70,10 @@ class DiffusionElement(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
         z = variables["Distributed SoC"]
         soc = variables["SoC"]
+        T_cell = variables["Cell temperature [degC]"]
+
         z_surf = pybamm.surf(z)
-        eta_diffusion = self.param.ocv(z_surf) - self.param.ocv(soc)
+        eta_diffusion = self.param.ocv(T_cell, z_surf) - self.param.ocv(T_cell, soc)
 
         variables.update(
             {

@@ -54,11 +54,13 @@ class ThermalSubModel(pybamm.BaseSubModel):
         Q_irr += -current * variables["Diffusion overpotential [V]"]
 
         Q_rev = variables["Reversible heat generation [W]"]
+        Q_hys = variables["Hysteresis heat generation [W]"]
+        Q_total = Q_irr + Q_rev + Q_hys
 
         variables.update(
             {
                 "Irreversible heat generation [W]": Q_irr,
-                "Total heat generation [W]": Q_irr + Q_rev,
+                "Total heat generation [W]": Q_total,
             }
         )
 
@@ -70,12 +72,15 @@ class ThermalSubModel(pybamm.BaseSubModel):
 
         Q_irr = variables["Irreversible heat generation [W]"]
         Q_rev = variables["Reversible heat generation [W]"]
+        Q_hys = variables["Hysteresis heat generation [W]"]
 
         Q_cell_cool = variables["Heat transfer from cell to jig [W]"]
         Q_jig_cool = variables["Heat transfer from jig to ambient [W]"]
 
+        Q_total = Q_irr + Q_rev + Q_hys + Q_cell_cool
+
         self.rhs = {
-            T_cell: (Q_irr + Q_rev + Q_cell_cool) / self.param.cth_cell,
+            T_cell: Q_total / self.param.cth_cell,
             T_jig: (Q_jig_cool - Q_cell_cool) / self.param.cth_jig,
         }
 

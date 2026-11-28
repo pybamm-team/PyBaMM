@@ -26,6 +26,11 @@ values = {
     "Entropic change [V/K]": 0,
     "RCR lookup limit [A]": 340,
     "Open-circuit voltage [V]": 3.4,
+    "Initial hysteresis state": 1,
+    "Hysteresis decay rate charge": 10,
+    "Hysteresis decay rate discharge": 10,
+    "Open-circuit voltage charge [V]": 3.5,
+    "Open-circuit voltage discharge [V]": 3.3,
 }
 
 parameter_values = pybamm.ParameterValues(values)
@@ -47,6 +52,7 @@ class TestEcmParameters:
             (param.Q, "Cell capacity [A.h]"),
             (param.current_density_with_time, "Current function [A]"),
             (param.initial_soc, "Initial SoC"),
+            (param.initial_h, "Initial hysteresis state"),
         ]
 
         for symbol, key in simpled_mapped_parameters:
@@ -76,12 +82,25 @@ class TestEcmParameters:
         sym = pybamm.Scalar(1)
 
         mapped_functions = [
-            (param.ocv(sym), "Open-circuit voltage [V]"),
+            (param.ocv(sym, sym), "Open-circuit voltage [V]"),
+            (param.ocv(sym, sym, mode="charge"), "Open-circuit voltage charge [V]"),
+            (
+                param.ocv(sym, sym, mode="discharge"),
+                "Open-circuit voltage discharge [V]",
+            ),
             (param.rcr_element("R0 [Ohm]", sym, sym, sym), "R0 [Ohm]"),
             (param.rcr_element("R1 [Ohm]", sym, sym, sym), "R1 [Ohm]"),
             (param.rcr_element("C1 [F]", sym, sym, sym), "C1 [F]"),
             (param.initial_rc_overpotential(1), "Element-1 initial overpotential [V]"),
             (param.dUdT(sym, sym), "Entropic change [V/K]"),
+            (
+                param.hysteresis_decay(sym, sym, sym, mode="charge"),
+                "Hysteresis decay rate charge",
+            ),
+            (
+                param.hysteresis_decay(sym, sym, sym, mode="discharge"),
+                "Hysteresis decay rate discharge",
+            ),
         ]
 
         for symbol, key in mapped_functions:

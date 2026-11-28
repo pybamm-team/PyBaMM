@@ -15,9 +15,9 @@ c1_data = pybamm.parameters.process_3D_data_csv("ecm_example_c1.csv", path=path)
 dUdT_data = pybamm.parameters.process_2D_data_csv("ecm_example_dudt.csv", path=path)
 
 
-def ocv(sto):
+def ocv(T_cell, soc):
     name, (x, y) = ocv_data
-    return pybamm.Interpolant(x, y, sto, name)
+    return pybamm.Interpolant(x, y, soc, name)
 
 
 def r0(T_cell, current, soc):
@@ -35,9 +35,9 @@ def c1(T_cell, current, soc):
     return pybamm.Interpolant(x, y, [T_cell, current, soc], name)
 
 
-def dUdT(ocv, T_cell):
+def dUdT(T_cell, soc):
     name, (x, y) = dUdT_data
-    return pybamm.Interpolant(x, y, [ocv, T_cell], name)
+    return pybamm.Interpolant(x, y, [T_cell, soc], name)
 
 
 def get_parameter_values():

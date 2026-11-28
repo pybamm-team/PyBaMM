@@ -56,8 +56,9 @@ def set_initial_state(
 
         # Solve simple model for initial soc based on target voltage
         soc_model = pybamm.BaseModel()
+        T_cell = pybamm.Variable("Cell temperature [degC]")
         soc = pybamm.Variable("soc")
-        soc_model.algebraic[soc] = param.ocv(soc) - V_init
+        soc_model.algebraic[soc] = param.ocv(T_cell, soc) - V_init
 
         # initial guess for soc linearly interpolates between 0 and 1
         # based on V linearly interpolating between V_max and V_min
